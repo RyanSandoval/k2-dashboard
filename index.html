@@ -1176,7 +1176,7 @@ function renderProjects() {
           ${projects.map((p, i) => `
             <div class="kanban-card" draggable="true" data-project-id="${p.id}"
                  ondragstart="onDragStart(event, '${p.id}')" ondragend="onDragEnd(event)"
-                 onclick="openProjectModal('${p.id}')"
+                 onclick="openProjectModal('${p.id}')">
               <div class="kanban-card-title">${p.name}</div>
               <div class="kanban-card-desc">${p.description}</div>
               ${p.nextSteps.length ? `
