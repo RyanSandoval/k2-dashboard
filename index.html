@@ -631,7 +631,7 @@
       return;
     }
     // Check if we have a token already
-    let token = sessionStorage.getItem('gh_token');
+    let token = localStorage.getItem('gh_token');
     const tokenInput = document.getElementById('login-token');
     if (!token && tokenInput.value) {
       token = tokenInput.value.trim();
@@ -642,15 +642,15 @@
       document.getElementById('login-token').focus();
       if (!tokenInput.value) return;
     }
-    sessionStorage.setItem('k2auth', 'true');
-    sessionStorage.setItem('gh_token', token);
+    localStorage.setItem('k2auth', 'true');
+    localStorage.setItem('gh_token', token);
     GH_TOKEN = token;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
     loadData();
   }
   // Auto-login if already authed this session
-  if (sessionStorage.getItem('k2auth') === 'true' && sessionStorage.getItem('gh_token')) {
+  if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
     document.getElementById('login-screen').style.display = 'none';
   }
 </script>
@@ -903,7 +903,7 @@ let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [],
 // GitHub API Config
 const GH_REPO = 'RyanSandoval/k2-dashboard';
 const GH_FILE = 'data.json';
-let GH_TOKEN = sessionStorage.getItem('gh_token') || '';
+let GH_TOKEN = localStorage.getItem('gh_token') || '';
 let GH_SHA = ''; // tracks file SHA for updates
 
 async function ghHeaders() {
@@ -1637,12 +1637,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 });
 
 // Show app if already authed
-if (sessionStorage.getItem('k2auth') === 'true') {
+if (localStorage.getItem('k2auth') === 'true') {
   document.getElementById('app-main').style.display = 'flex';
 }
 
 // Init — load from GitHub
-GH_TOKEN = sessionStorage.getItem('gh_token') || '';
+GH_TOKEN = localStorage.getItem('gh_token') || '';
 if (GH_TOKEN) {
   loadData();
 }
