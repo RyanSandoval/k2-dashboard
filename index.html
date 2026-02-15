@@ -985,12 +985,12 @@ let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [],
 // ============================================================
 
 // GitHub API Config
-const GH_REPO = 'RyanSandoval/k2-dashboard';
-const GH_FILE = 'data.json';
+// Data stored in a PRIVATE GitHub Gist (never in the public repo)
+const GIST_FILE = 'k2-data.json';
 let GH_TOKEN = localStorage.getItem('gh_token') || '';
-let GH_SHA = ''; // tracks file SHA for updates
+let GIST_ID = localStorage.getItem('gist_id') || '';
 
-async function ghHeaders() {
+function ghHeaders() {
   return {
     'Authorization': `token ${GH_TOKEN}`,
     'Accept': 'application/vnd.github.v3+json',
@@ -998,16 +998,47 @@ async function ghHeaders() {
   };
 }
 
+// Find or create the private gist
+async function ensureGist() {
+  if (GIST_ID) return GIST_ID;
+  // Search existing gists for ours
+  const res = await fetch('https://api.github.com/gists?per_page=100', { headers: ghHeaders() });
+  if (res.ok) {
+    const gists = await res.json();
+    const existing = gists.find(g => g.files && g.files[GIST_FILE]);
+    if (existing) {
+      GIST_ID = existing.id;
+      localStorage.setItem('gist_id', GIST_ID);
+      return GIST_ID;
+    }
+  }
+  // Create new private gist
+  const createRes = await fetch('https://api.github.com/gists', {
+    method: 'POST',
+    headers: ghHeaders(),
+    body: JSON.stringify({
+      description: 'K-2 Command Center Data (private)',
+      public: false,
+      files: { [GIST_FILE]: { content: JSON.stringify(DATA, null, 2) } }
+    })
+  });
+  if (!createRes.ok) throw new Error(`Failed to create gist: ${createRes.status}`);
+  const gist = await createRes.json();
+  GIST_ID = gist.id;
+  localStorage.setItem('gist_id', GIST_ID);
+  return GIST_ID;
+}
+
 async function loadData() {
   if (!GH_TOKEN) return;
   try {
-    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
-      headers: await ghHeaders()
-    });
+    const gistId = await ensureGist();
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: ghHeaders() });
     if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-    const file = await res.json();
-    GH_SHA = file.sha;
-    const d = JSON.parse(atob(file.content));
+    const gist = await res.json();
+    const content = gist.files[GIST_FILE]?.content;
+    if (!content) throw new Error('Gist file not found');
+    const d = JSON.parse(content);
     DATA.projects = d.projects || [];
     DATA.discussions = d.discussions || [];
     DATA.tasks = d.tasks || [];
@@ -1026,26 +1057,15 @@ async function loadData() {
 async function saveData() {
   if (!GH_TOKEN) return;
   try {
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
-    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
-      method: 'PUT',
-      headers: await ghHeaders(),
+    const gistId = await ensureGist();
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH',
+      headers: ghHeaders(),
       body: JSON.stringify({
-        message: `Dashboard update ${new Date().toISOString()}`,
-        content: content,
-        sha: GH_SHA
+        files: { [GIST_FILE]: { content: JSON.stringify(DATA, null, 2) } }
       })
     });
-    if (!res.ok) {
-      // SHA conflict — reload and retry
-      if (res.status === 409) {
-        await loadData();
-        return;
-      }
-      throw new Error(`GitHub API ${res.status}`);
-    }
-    const result = await res.json();
-    GH_SHA = result.content.sha;
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
     console.error('Failed to save data:', e);
