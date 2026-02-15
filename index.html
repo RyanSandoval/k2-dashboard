@@ -452,6 +452,103 @@
     background: rgba(74,158,255,0.05);
   }
 
+  /* Jots */
+  .jots-date-header {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+  }
+  .jots-date-header .dow { color: var(--accent); }
+  .jot-input-wrap {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .jot-input-wrap input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .jot-input-wrap input:focus { border-color: var(--accent); }
+  .jot-input-wrap input::placeholder { color: var(--text-dim); }
+  .jot-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    transition: background 0.1s;
+    position: relative;
+  }
+  .jot-entry:hover { background: var(--surface2); }
+  .jot-entry .jot-check {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .jot-entry .jot-check:hover { border-color: var(--accent); }
+  .jot-entry .jot-check.done { background: var(--green); border-color: var(--green); }
+  .jot-entry .jot-check.done::after { content: "✓"; color: #000; font-size: 13px; font-weight: 700; }
+  .jot-text { flex: 1; font-size: 14px; line-height: 1.5; }
+  .jot-text.done { text-decoration: line-through; color: var(--text-dim); }
+  .jot-text .jot-tag { color: var(--accent); font-weight: 500; }
+  .jot-time { font-size: 11px; color: var(--text-dim); flex-shrink: 0; margin-top: 3px; }
+  .jot-delete {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .jot-entry:hover .jot-delete { opacity: 1; }
+  .jot-delete:hover { color: var(--red); background: rgba(248,113,113,0.1); }
+  .jot-day-section { margin-top: 16px; }
+  .jot-day-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .jot-day-header:hover { color: var(--text); }
+  .jot-day-toggle { font-size: 10px; transition: transform 0.2s; }
+  .jot-day-header.open .jot-day-toggle { transform: rotate(90deg); }
+  .jot-day-entries { display: none; }
+  .jot-day-header.open + .jot-day-entries { display: block; }
+
+  @media (max-width: 768px) {
+    .jot-delete { opacity: 0.6; }
+    .jot-entry .jot-check { width: 28px; height: 28px; }
+    .jot-entry .jot-check.done::after { font-size: 16px; }
+    .jot-entry { padding: 14px 12px; }
+  }
+
   /* Mobile Nav */
   .mobile-nav {
     display: none;
@@ -572,6 +669,9 @@
       </div>
     </div>
     <div class="nav-section">
+      <div class="nav-item" data-page="jots">
+        <span class="icon">✏️</span> Jots
+      </div>
       <div class="nav-section-title">Work</div>
       <div class="nav-item" data-page="projects">
         <span class="icon">🚀</span> Projects
@@ -628,10 +728,31 @@
         </div>
       </div>
 
+      <div id="dashboard-jots-card" class="card" style="margin-bottom:24px;display:none;cursor:pointer;" onclick="navigateTo('jots')">
+        <div class="card-header">
+          <span class="card-title">✏️ Today's Jots</span>
+          <span style="font-size:12px;color:var(--accent);font-weight:500;">View all →</span>
+        </div>
+        <div class="card-body" id="dashboard-jots-entries"></div>
+      </div>
+
       <h3 style="font-size:16px; margin-bottom:12px;">Recent Activity</h3>
       <div class="timeline" id="dashboard-timeline">
         <!-- Populated by JS -->
       </div>
+    </div>
+
+    <!-- Jots Page -->
+    <div class="page" id="page-jots">
+      <div class="page-header">
+        <div class="jots-date-header" id="jots-today-date"></div>
+        <p>Quick capture — type and hit enter</p>
+      </div>
+      <div class="jot-input-wrap">
+        <input type="text" id="jot-input" placeholder="What's on your mind? Use #tags, prefix [] for checkboxes..." onkeydown="if(event.key==='Enter')addJot()">
+      </div>
+      <div id="jots-today-entries"></div>
+      <div id="jots-previous-days"></div>
     </div>
 
     <!-- Projects Page (Kanban) -->
@@ -745,6 +866,9 @@
     <div class="mobile-nav-item active" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
       <span class="icon">📊</span>Home
     </div>
+    <div class="mobile-nav-item" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
+      <span class="icon">✏️</span>Jots
+    </div>
     <div class="mobile-nav-item" data-page="projects" onclick="navigateTo('projects');setMobileActive(this)">
       <span class="icon">🚀</span>Projects
     </div>
@@ -770,7 +894,7 @@ function setMobileActive(el) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [] };
 
 // ============================================================
 // APP LOGIC
@@ -807,6 +931,7 @@ async function loadData() {
     DATA.notes = d.notes || [];
     DATA.timeline = d.timeline || [];
     DATA.inbox = d.inbox || [];
+    DATA.jots = d.jots || [];
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -850,6 +975,7 @@ function renderAll() {
   renderDiscussions();
   renderDecisions();
   renderNotes();
+  renderJots();
 }
 
 // Navigation
@@ -865,6 +991,10 @@ function navigateTo(page) {
   });
   // Scroll to top
   document.querySelector('.main').scrollTop = 0;
+  // Auto-focus jots input
+  if (page === 'jots') {
+    setTimeout(() => document.getElementById('jot-input')?.focus(), 100);
+  }
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -1359,6 +1489,142 @@ function addNote() {
   input.value = '';
   saveData();
   renderNotes();
+}
+
+// ============================================================
+// JOTS
+// ============================================================
+
+function getTodayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getJotDay(date) {
+  return DATA.jots.find(j => j.date === date);
+}
+
+function formatJotText(text) {
+  return text.replace(/#([\w-]+)/g, '<span class="jot-tag">#$1</span>');
+}
+
+function renderJots() {
+  const today = getTodayStr();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const d = new Date();
+  document.getElementById('jots-today-date').innerHTML =
+    `<span class="dow">${days[d.getDay()]}</span>, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+
+  // Today's entries
+  const todayJot = getJotDay(today);
+  const todayEntries = todayJot ? [...todayJot.entries].reverse() : [];
+  document.getElementById('jots-today-entries').innerHTML = todayEntries.length ?
+    todayEntries.map(e => renderJotEntry(today, e)).join('') :
+    '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13px;">No jots yet today. Start typing above! ✏️</div>';
+
+  // Previous days
+  const prevDays = DATA.jots.filter(j => j.date !== today).sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById('jots-previous-days').innerHTML = prevDays.map(day => {
+    const dd = new Date(day.date + 'T12:00:00');
+    const label = `${days[dd.getDay()]}, ${months[dd.getMonth()]} ${dd.getDate()}`;
+    const entries = [...day.entries].reverse();
+    return `
+      <div class="jot-day-section">
+        <div class="jot-day-header" onclick="this.classList.toggle('open')">
+          <span class="jot-day-toggle">▶</span>
+          ${label} <span style="font-weight:400;color:var(--text-dim);margin-left:4px;">(${day.entries.length})</span>
+        </div>
+        <div class="jot-day-entries">
+          ${entries.map(e => renderJotEntry(day.date, e)).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Dashboard card
+  renderDashboardJots();
+}
+
+function renderJotEntry(date, e) {
+  return `
+    <div class="jot-entry">
+      <div class="jot-check ${e.done ? 'done' : ''}" onclick="toggleJotDone('${date}',${e.id})"></div>
+      <span class="jot-time">${e.time}</span>
+      <div class="jot-text ${e.done ? 'done' : ''}">${formatJotText(e.text)}</div>
+      <button class="jot-delete" onclick="deleteJot('${date}',${e.id})" title="Delete">✕</button>
+    </div>
+  `;
+}
+
+function renderDashboardJots() {
+  const today = getTodayStr();
+  const todayJot = getJotDay(today);
+  const card = document.getElementById('dashboard-jots-card');
+  const container = document.getElementById('dashboard-jots-entries');
+  if (!todayJot || todayJot.entries.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  const recent = [...todayJot.entries].reverse().slice(0, 4);
+  container.innerHTML = recent.map(e => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;${e.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">
+      <span style="color:var(--text-dim);font-size:11px;flex-shrink:0;">${e.time}</span>
+      ${formatJotText(e.text)}
+    </div>
+  `).join('') + (todayJot.entries.length > 4 ? `<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">+${todayJot.entries.length - 4} more</div>` : '');
+}
+
+function addJot() {
+  const input = document.getElementById('jot-input');
+  let text = input.value.trim();
+  if (!text) return;
+
+  const today = getTodayStr();
+  const now = new Date();
+  const time = now.toTimeString().slice(0, 5);
+
+  // Extract tags
+  const tags = [];
+  text.replace(/#([\w-]+)/g, (_, tag) => { tags.push(tag); });
+
+  // Check for checkbox prefix
+  let done = false;
+  text = text.replace(/^\s*(-\s*)?\[\s*[xX]\s*\]\s*/, () => { done = true; return ''; });
+  text = text.replace(/^\s*(-\s*)?\[\s*\]\s*/, '');
+
+  let dayJot = getJotDay(today);
+  if (!dayJot) {
+    dayJot = { date: today, entries: [] };
+    DATA.jots.push(dayJot);
+  }
+  const id = dayJot.entries.length ? Math.max(...dayJot.entries.map(e => e.id)) + 1 : 1;
+  dayJot.entries.push({ id, text, time, tags, done });
+
+  input.value = '';
+  saveData();
+  renderJots();
+  renderDashboard();
+  input.focus();
+}
+
+function toggleJotDone(date, id) {
+  const day = getJotDay(date);
+  if (!day) return;
+  const entry = day.entries.find(e => e.id === id);
+  if (entry) { entry.done = !entry.done; saveData(); renderJots(); }
+}
+
+function deleteJot(date, id) {
+  const day = getJotDay(date);
+  if (!day) return;
+  day.entries = day.entries.filter(e => e.id !== id);
+  if (day.entries.length === 0) {
+    DATA.jots = DATA.jots.filter(j => j.date !== date);
+  }
+  saveData();
+  renderJots();
+  renderDashboard();
 }
 
 // Filter handlers
