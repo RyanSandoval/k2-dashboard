@@ -1094,7 +1094,7 @@ function renderDashboard() {
   const pendingTasks = DATA.tasks.filter(t => !t.done).length;
   const activeProjects = DATA.projects.filter(p => p.status === 'active').length;
   const totalDecisions = DATA.decisions.length;
-  const openQuestions = DATA.discussions.reduce((n, d) => n + d.openQuestions.length, 0);
+  const openQuestions = DATA.discussions.reduce((n, d) => n + (d.openQuestions || []).length, 0);
 
   document.getElementById('stats-row').innerHTML = `
     <div class="stat-card" style="cursor:pointer" onclick="navigateTo('projects')">
@@ -1676,11 +1676,11 @@ function renderDiscussions() {
         <ul style="padding-left:16px;margin-top:4px">
           ${d.keyPoints.map(k => `<li>${k}</li>`).join('')}
         </ul>
-        ${d.openQuestions.length ? `
+        ${(d.openQuestions || []).length ? `
           <div style="margin-top:12px">
             <strong style="color:var(--yellow)">Open Questions:</strong>
             <ul style="padding-left:16px;margin-top:4px">
-              ${d.openQuestions.map(q => `<li>${q}</li>`).join('')}
+              ${(d.openQuestions || []).map(q => `<li>${q}</li>`).join('')}
             </ul>
           </div>
         ` : ''}
