@@ -664,12 +664,12 @@
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Overview</div>
-      <div class="nav-item active" data-page="dashboard">
+      <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
     </div>
     <div class="nav-section">
-      <div class="nav-item" data-page="jots">
+      <div class="nav-item active" data-page="jots">
         <span class="icon">✏️</span> Jots
       </div>
       <div class="nav-section-title">Work</div>
@@ -703,7 +703,7 @@
   <div class="main">
 
     <!-- Dashboard Page -->
-    <div class="page active" id="page-dashboard">
+    <div class="page" id="page-dashboard">
       <div class="page-header">
         <h2>Dashboard</h2>
         <p>Overview of active work and recent activity</p>
@@ -743,7 +743,7 @@
     </div>
 
     <!-- Jots Page -->
-    <div class="page" id="page-jots">
+    <div class="page active" id="page-jots">
       <div class="page-header">
         <div class="jots-date-header" id="jots-today-date"></div>
         <p>Quick capture — type and hit enter</p>
@@ -863,10 +863,10 @@
 
   <!-- Mobile Bottom Nav -->
   <div class="mobile-nav" id="mobile-nav">
-    <div class="mobile-nav-item active" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
+    <div class="mobile-nav-item" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
       <span class="icon">📊</span>Home
     </div>
-    <div class="mobile-nav-item" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
+    <div class="mobile-nav-item active" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
       <span class="icon">✏️</span>Jots
     </div>
     <div class="mobile-nav-item" data-page="projects" onclick="navigateTo('projects');setMobileActive(this)">
