@@ -542,19 +542,9 @@
     padding: 8px 10px; color: var(--text); font-size: 13px; font-family: inherit; resize: vertical;
     min-height: 36px; outline: none; line-height: 1.5;
   }
-  .jot-edit-actions { display: flex; gap: 6px; margin-top: 4px; }
-  .jot-edit-actions button {
-    padding: 3px 10px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer;
-  }
-  .jot-edit-save { background: var(--accent); color: #fff; }
-  .jot-edit-cancel { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border) !important; }
-  .jot-edit-btn {
-    background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px;
-    opacity: 0; transition: opacity 0.15s; padding: 4px 6px; border-radius: 4px; position: absolute;
-    right: 32px; top: 50%; transform: translateY(-50%);
-  }
-  .jot-entry:hover .jot-edit-btn { opacity: 1; }
-  .jot-edit-btn:hover { color: var(--accent); background: rgba(74,158,255,0.1); }
+  /* edit actions removed — blur/enter to save */
+  .jot-text { cursor: pointer; }
+  .jot-text:hover { opacity: 0.85; }
   .jot-entry {
     display: flex;
     align-items: flex-start;
@@ -1682,13 +1672,11 @@ function renderJots() {
 }
 
 function renderJotEntry(date, e) {
-  const escaped = e.text.replace(/'/g,'&#39;').replace(/"/g,'&quot;');
   return `
     <div class="jot-entry" id="jot-${date}-${e.id}">
       <div class="jot-check ${e.done ? 'done' : ''}" onclick="toggleJotDone('${date}',${e.id})"></div>
       <span class="jot-time">${e.time}</span>
-      <div class="jot-text ${e.done ? 'done' : ''}">${formatJotText(e.text, e.images)}</div>
-      <button class="jot-edit-btn" onclick="startEditJot('${date}',${e.id})" title="Edit">✏️</button>
+      <div class="jot-text ${e.done ? 'done' : ''}" onclick="startEditJot('${date}',${e.id})">${formatJotText(e.text, e.images)}</div>
       <button class="jot-delete" onclick="deleteJot('${date}',${e.id})" title="Delete">✕</button>
     </div>
   `;
@@ -1701,18 +1689,14 @@ function startEditJot(date, id) {
   if (!entry) return;
   const el = document.getElementById(`jot-${date}-${id}`);
   const textEl = el.querySelector('.jot-text');
-  const editBtn = el.querySelector('.jot-edit-btn');
-  editBtn.style.display = 'none';
   const escaped = entry.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   textEl.outerHTML = `
     <div class="jot-edit-wrap">
-      <textarea onkeydown="if(event.key==='Escape')cancelEditJot('${date}',${id});if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveEditJot('${date}',${id})}">${escaped}</textarea>
-      <div class="jot-edit-actions">
-        <button class="jot-edit-save" onclick="saveEditJot('${date}',${id})">Save</button>
-        <button class="jot-edit-cancel" onclick="cancelEditJot('${date}',${id})">Cancel</button>
-      </div>
+      <textarea onkeydown="if(event.key==='Escape'){event.preventDefault();cancelEditJot('${date}',${id})}if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveEditJot('${date}',${id})}" onblur="setTimeout(()=>saveEditJot('${date}',${id}),150)">${escaped}</textarea>
     </div>`;
-  el.querySelector('.jot-edit-wrap textarea').focus();
+  const ta = el.querySelector('.jot-edit-wrap textarea');
+  ta.focus();
+  ta.selectionStart = ta.value.length;
 }
 
 function saveEditJot(date, id) {
