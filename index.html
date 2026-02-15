@@ -1185,7 +1185,7 @@ function renderProjects() {
               <div class="kanban-card-desc">${p.description}</div>
               ${p.nextSteps.length ? `
                 <div style="font-size:11px;color:var(--text);margin-bottom:8px;">
-                  <strong>Next:</strong> <span style="color:var(--text-dim)">${p.nextSteps[0]}</span>
+                  <strong>Next:</strong> <span style="color:var(--text-dim)">${typeof p.nextSteps[0] === 'string' ? p.nextSteps[0] : p.nextSteps[0].text}</span>
                   ${p.nextSteps.length > 1 ? `<span style="color:var(--text-dim);font-style:italic"> +${p.nextSteps.length - 1} more</span>` : ''}
                 </div>
               ` : ''}
@@ -1302,16 +1302,27 @@ async function sendTaskMessage() {
 function openProjectModal(projectId) {
   const p = DATA.projects.find(pr => pr.id === projectId);
   if (!p) return;
+  if (!p.notes) p.notes = [];
+  if (!p.goal) p.goal = '';
   const tasks = DATA.tasks.filter(t => t.project === p.id);
   const decisions = DATA.decisions.filter(d => d.project === p.id);
   const discussions = DATA.discussions.filter(d => d.project === p.id);
+
+  const priorityColors = { high: 'var(--red)', medium: 'var(--yellow)', low: 'var(--text-dim)' };
+  const priorityDots = { high: '🔴', medium: '🟡', low: '⚪' };
 
   document.getElementById('modal-content').innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <span class="status-dot status-${p.status}" style="width:12px;height:12px;"></span>
       <h3 style="font-size:18px;font-weight:700;">${p.name}</h3>
     </div>
-    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">${p.description}</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;" onclick="editProjectField('${p.id}','description',this)" title="Click to edit">${p.description}</p>
+
+    <!-- Goal / Definition of Done -->
+    <div style="margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:12px;border-left:3px solid var(--green);">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--green);font-weight:600;margin-bottom:4px;">🎯 Goal / What Done Looks Like</div>
+      <p style="font-size:13px;color:var(--text);line-height:1.6;cursor:pointer;" onclick="editProjectField('${p.id}','goal',this)" title="Click to edit">${p.goal || '<span style=color:var(--text-dim)>Click to define the goal...</span>'}</p>
+    </div>
 
     <div style="margin-bottom:16px;">
       <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Status</label>
@@ -1330,14 +1341,33 @@ function openProjectModal(projectId) {
 
     ${p.nextSteps.length ? `
       <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Next Steps</div>
-        <ul style="padding-left:16px;font-size:13px;color:var(--text-dim);line-height:1.8;">
-          ${p.nextSteps.map(s => `<li>${s}</li>`).join('')}
-        </ul>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:600;">Next Steps</div>
+          <button onclick="addNextStep('${p.id}')" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:4px 10px;cursor:pointer;">+ Add</button>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;overflow:hidden;">
+          ${p.nextSteps.map((s, i) => {
+            const text = typeof s === 'string' ? s : s.text;
+            const pri = typeof s === 'string' ? 'medium' : (s.priority || 'medium');
+            return `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;">
+              <span style="cursor:pointer;font-size:14px;" onclick="cycleStepPriority('${p.id}',${i})" title="${pri} priority">${priorityDots[pri]}</span>
+              <span style="flex:1;cursor:pointer;" onclick="editNextStep('${p.id}',${i},this)" title="Click to edit">${text}</span>
+              <button onclick="removeNextStep('${p.id}',${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:2px 6px;" title="Remove">✕</button>
+            </div>`;
+          }).join('')}
+        </div>
       </div>
-    ` : ''}
+    ` : `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:600;">Next Steps</div>
+          <button onclick="addNextStep('${p.id}')" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:4px 10px;cursor:pointer;">+ Add</button>
+        </div>
+      </div>
+    `}
 
-    ${p.links.length ? `
+    ${p.links && p.links.length ? `
       <div style="margin-bottom:16px;">
         <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Files</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -1374,19 +1404,37 @@ function openProjectModal(projectId) {
     ` : ''}
 
     ${discussions.length ? `
-      <div>
+      <div style="margin-bottom:16px;">
         <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Discussions</div>
         ${discussions.map(d => `
           <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px;">
             <div style="font-size:12px;font-weight:600;">${d.title}</div>
             <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${d.summary}</div>
-            ${d.openQuestions.length ? `
+            ${d.openQuestions && d.openQuestions.length ? `
               <div style="margin-top:8px;font-size:11px;color:var(--yellow);">⚠ ${d.openQuestions.length} open question${d.openQuestions.length > 1 ? 's' : ''}</div>
             ` : ''}
           </div>
         `).join('')}
       </div>
     ` : ''}
+
+    <!-- Notes / Feedback -->
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:600;">💬 Notes & Feedback</div>
+      </div>
+      ${p.notes.length ? p.notes.map((n, i) => `
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px;position:relative;">
+          <span style="cursor:pointer;" onclick="editProjectNote('${p.id}',${i},this)">${n.text}</span>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${n.author || 'You'} · ${n.date}</div>
+          <button onclick="removeProjectNote('${p.id}',${i})" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;">✕</button>
+        </div>
+      `).join('') : ''}
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" id="project-note-input" placeholder="Add a note..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;" onkeydown="if(event.key==='Enter')addProjectNote('${p.id}')">
+        <button onclick="addProjectNote('${p.id}')" style="background:var(--accent);border:none;border-radius:8px;color:#fff;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:600;">Add</button>
+      </div>
+    </div>
   `;
 
   document.getElementById('project-modal').style.display = 'block';
@@ -1406,6 +1454,105 @@ function changeProjectStatus(projectId, newStatus) {
     renderProjects();
     renderDashboard();
   }
+}
+
+// Edit project text fields inline (description, goal)
+function editProjectField(projectId, field, el) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const current = p[field] || '';
+  const textarea = document.createElement('textarea');
+  textarea.value = current;
+  textarea.style.cssText = 'width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:10px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;min-height:60px;outline:none;font-family:inherit;';
+  textarea.onblur = () => { p[field] = textarea.value.trim(); saveData(); openProjectModal(projectId); };
+  textarea.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); textarea.blur(); } if (e.key === 'Escape') openProjectModal(projectId); };
+  el.replaceWith(textarea);
+  textarea.focus();
+}
+
+// Next step management
+function addNextStep(projectId) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const text = prompt('New next step:');
+  if (!text) return;
+  if (!Array.isArray(p.nextSteps)) p.nextSteps = [];
+  p.nextSteps.push({ text, priority: 'medium' });
+  saveData();
+  openProjectModal(projectId);
+}
+
+function editNextStep(projectId, idx, el) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const step = p.nextSteps[idx];
+  const text = typeof step === 'string' ? step : step.text;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = text;
+  input.style.cssText = 'flex:1;background:var(--bg);border:1px solid var(--accent);border-radius:4px;padding:4px 8px;color:var(--text);font-size:12px;outline:none;';
+  input.onblur = () => {
+    if (typeof step === 'string') { p.nextSteps[idx] = { text: input.value.trim(), priority: 'medium' }; }
+    else { step.text = input.value.trim(); }
+    saveData(); openProjectModal(projectId);
+  };
+  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') openProjectModal(projectId); };
+  el.replaceWith(input);
+  input.focus();
+}
+
+function cycleStepPriority(projectId, idx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const step = p.nextSteps[idx];
+  const cycle = { high: 'medium', medium: 'low', low: 'high' };
+  if (typeof step === 'string') { p.nextSteps[idx] = { text: step, priority: 'low' }; }
+  else { step.priority = cycle[step.priority] || 'high'; }
+  saveData();
+  openProjectModal(projectId);
+}
+
+function removeNextStep(projectId, idx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  p.nextSteps.splice(idx, 1);
+  saveData();
+  openProjectModal(projectId);
+}
+
+// Notes management
+function addProjectNote(projectId) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const input = document.getElementById('project-note-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!p.notes) p.notes = [];
+  const today = new Date().toISOString().split('T')[0];
+  p.notes.push({ text, date: today, author: 'Ryan' });
+  saveData();
+  openProjectModal(projectId);
+}
+
+function editProjectNote(projectId, idx, el) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.notes[idx]) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = p.notes[idx].text;
+  input.style.cssText = 'width:100%;background:var(--bg);border:1px solid var(--accent);border-radius:4px;padding:4px 8px;color:var(--text);font-size:12px;outline:none;';
+  input.onblur = () => { p.notes[idx].text = input.value.trim(); saveData(); openProjectModal(projectId); };
+  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') openProjectModal(projectId); };
+  el.replaceWith(input);
+  input.focus();
+}
+
+function removeProjectNote(projectId, idx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  p.notes.splice(idx, 1);
+  saveData();
+  openProjectModal(projectId);
 }
 
 // Drag and drop
