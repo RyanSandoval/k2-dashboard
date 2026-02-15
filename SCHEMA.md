@@ -145,3 +145,26 @@ CONTENT=$(base64 -i /tmp/k2-data.json)
 gh api repos/RyanSandoval/k2-data/contents/data.json -X PUT \
   -f message="Update" -f content="$CONTENT" -f sha="$SHA"
 ```
+
+### Command (in `commands` array)
+```json
+{
+  "id": "number (Date.now())",
+  "type": "execute-step|rework-step",
+  "projectId": "string",
+  "projectName": "string",
+  "stepIndex": "number",
+  "stepText": "string",
+  "reason": "string?",        // Only for rework-step
+  "status": "pending|in-progress|completed",
+  "createdAt": "ISO-8601",
+  "createdBy": "string",
+  "completedAt": "ISO-8601?"
+}
+```
+
+### Next Step Status Flow
+```
+pending → [user clicks "Do it"] → queued → [K-2 picks up] → in-progress → [K-2 completes] → review → [user accepts] → done
+                                                                                              ↘ [user rejects] → pending (with rework command)
+```
