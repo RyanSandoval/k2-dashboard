@@ -464,8 +464,9 @@
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
+    align-items: flex-end;
   }
-  .jot-input-wrap input {
+  .jot-input-wrap textarea {
     flex: 1;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -474,9 +475,86 @@
     color: var(--text);
     font-size: 14px;
     outline: none;
+    resize: none;
+    overflow: hidden;
+    min-height: 48px;
+    max-height: 200px;
+    font-family: inherit;
+    line-height: 1.5;
   }
-  .jot-input-wrap input:focus { border-color: var(--accent); }
-  .jot-input-wrap input::placeholder { color: var(--text-dim); }
+  .jot-input-wrap textarea:focus { border-color: var(--accent); }
+  .jot-input-wrap textarea::placeholder { color: var(--text-dim); }
+  .jot-attach-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 12px;
+    font-size: 18px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .jot-attach-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .jot-images-preview { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .jot-images-preview .jot-img-thumb {
+    width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);
+    position: relative; cursor: pointer;
+  }
+  .jot-images-preview .jot-img-remove {
+    position: absolute; top: -6px; right: -6px; background: var(--red); color: #fff; border: none;
+    border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; line-height: 1;
+  }
+  .jot-img-wrap { position: relative; display: inline-block; }
+  /* Markdown rendering in jots */
+  .jot-text h2 { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
+  .jot-text h3 { font-size: 14px; font-weight: 600; margin: 3px 0 2px; }
+  .jot-text code {
+    background: rgba(74,158,255,0.12); padding: 1px 5px; border-radius: 4px;
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12.5px; color: var(--accent);
+  }
+  .jot-text pre {
+    background: #1e1e2e; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; margin: 6px 0; overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+  }
+  .jot-text pre code {
+    background: none; padding: 0; color: #abb2bf; font-size: 12.5px;
+  }
+  .jot-text pre .kw { color: #c678dd; }
+  .jot-text pre .str { color: #98c379; }
+  .jot-text pre .num { color: #d19a66; }
+  .jot-text pre .cmt { color: #5c6370; font-style: italic; }
+  .jot-text pre .fn { color: #61afef; }
+  .jot-text pre .op { color: #56b6c2; }
+  .jot-text ul { margin: 4px 0 4px 18px; font-size: 14px; }
+  .jot-text li { margin: 2px 0; }
+  .jot-text a { color: var(--accent); text-decoration: underline; }
+  .jot-text .jot-img-full { max-width: 100%; border-radius: 8px; margin: 6px 0; max-height: 300px; }
+  /* Edit mode */
+  .jot-edit-wrap { flex: 1; }
+  .jot-edit-wrap textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--accent); border-radius: 8px;
+    padding: 8px 10px; color: var(--text); font-size: 13px; font-family: inherit; resize: vertical;
+    min-height: 36px; outline: none; line-height: 1.5;
+  }
+  .jot-edit-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .jot-edit-actions button {
+    padding: 3px 10px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer;
+  }
+  .jot-edit-save { background: var(--accent); color: #fff; }
+  .jot-edit-cancel { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border) !important; }
+  .jot-edit-btn {
+    background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px;
+    opacity: 0; transition: opacity 0.15s; padding: 4px 6px; border-radius: 4px; position: absolute;
+    right: 32px; top: 50%; transform: translateY(-50%);
+  }
+  .jot-entry:hover .jot-edit-btn { opacity: 1; }
+  .jot-edit-btn:hover { color: var(--accent); background: rgba(74,158,255,0.1); }
   .jot-entry {
     display: flex;
     align-items: flex-start;
@@ -748,8 +826,11 @@
         <div class="jots-date-header" id="jots-today-date"></div>
         <p>Quick capture — type and hit enter</p>
       </div>
+      <div id="jot-images-preview" class="jot-images-preview"></div>
       <div class="jot-input-wrap">
-        <input type="text" id="jot-input" placeholder="What's on your mind? Use #tags, prefix [] for checkboxes..." onkeydown="if(event.key==='Enter')addJot()">
+        <textarea id="jot-input" rows="1" placeholder="What's on your mind? Use #tags, [] for checkboxes, **bold**, *italic*..." onkeydown="handleJotKeydown(event)" oninput="autoExpandTextarea(this)"></textarea>
+        <input type="file" id="jot-file-input" accept="image/*" multiple style="display:none" onchange="handleJotFileAttach(event)">
+        <button class="jot-attach-btn" onclick="document.getElementById('jot-file-input').click()" title="Attach image">📎</button>
       </div>
       <div id="jots-today-entries"></div>
       <div id="jots-previous-days"></div>
@@ -1503,8 +1584,63 @@ function getJotDay(date) {
   return DATA.jots.find(j => j.date === date);
 }
 
-function formatJotText(text) {
-  return text.replace(/#([\w-]+)/g, '<span class="jot-tag">#$1</span>');
+function highlightCode(code) {
+  // Basic syntax highlighting
+  return code
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm, '<span class="cmt">$1</span>')
+    .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, '<span class="str">$1</span>')
+    .replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>')
+    .replace(/\b(function|const|let|var|if|else|return|for|while|class|import|export|from|new|this|true|false|null|undefined|async|await|try|catch|throw|switch|case|break|default|typeof|instanceof)\b/g, '<span class="kw">$1</span>');
+}
+
+function formatJotText(text, images) {
+  // Process code blocks first
+  let blocks = [];
+  let processed = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = blocks.length;
+    blocks.push('<pre><code>' + highlightCode(code.trim()) + '</code></pre>');
+    return `%%BLOCK${idx}%%`;
+  });
+
+  // Escape HTML in remaining text
+  processed = processed.replace(/%%BLOCK(\d+)%%/g, '##BLOCK$1##');
+  processed = processed.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  processed = processed.replace(/##BLOCK(\d+)##/g, '%%BLOCK$1%%');
+
+  // Inline code
+  processed = processed.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Headers (## and ###)
+  processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  processed = processed.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+
+  // Bold and italic
+  processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Links
+  processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+  // Lists (- items)
+  processed = processed.replace(/^- (.+)$/gm, '<li>$1</li>');
+  processed = processed.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+  // Tags
+  processed = processed.replace(/#([\w-]+)/g, '<span class="jot-tag">#$1</span>');
+
+  // Newlines (outside blocks)
+  processed = processed.replace(/\n/g, '<br>');
+
+  // Restore code blocks
+  processed = processed.replace(/%%BLOCK(\d+)%%/g, (_, i) => blocks[i]);
+
+  // Images
+  if (images && images.length) {
+    processed += images.map(src => `<img class="jot-img-full" src="${src}" loading="lazy">`).join('');
+  }
+
+  return processed;
 }
 
 function renderJots() {
@@ -1546,14 +1682,56 @@ function renderJots() {
 }
 
 function renderJotEntry(date, e) {
+  const escaped = e.text.replace(/'/g,'&#39;').replace(/"/g,'&quot;');
   return `
-    <div class="jot-entry">
+    <div class="jot-entry" id="jot-${date}-${e.id}">
       <div class="jot-check ${e.done ? 'done' : ''}" onclick="toggleJotDone('${date}',${e.id})"></div>
       <span class="jot-time">${e.time}</span>
-      <div class="jot-text ${e.done ? 'done' : ''}">${formatJotText(e.text)}</div>
+      <div class="jot-text ${e.done ? 'done' : ''}">${formatJotText(e.text, e.images)}</div>
+      <button class="jot-edit-btn" onclick="startEditJot('${date}',${e.id})" title="Edit">✏️</button>
       <button class="jot-delete" onclick="deleteJot('${date}',${e.id})" title="Delete">✕</button>
     </div>
   `;
+}
+
+function startEditJot(date, id) {
+  const day = getJotDay(date);
+  if (!day) return;
+  const entry = day.entries.find(e => e.id === id);
+  if (!entry) return;
+  const el = document.getElementById(`jot-${date}-${id}`);
+  const textEl = el.querySelector('.jot-text');
+  const editBtn = el.querySelector('.jot-edit-btn');
+  editBtn.style.display = 'none';
+  const escaped = entry.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  textEl.outerHTML = `
+    <div class="jot-edit-wrap">
+      <textarea onkeydown="if(event.key==='Escape')cancelEditJot('${date}',${id});if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveEditJot('${date}',${id})}">${escaped}</textarea>
+      <div class="jot-edit-actions">
+        <button class="jot-edit-save" onclick="saveEditJot('${date}',${id})">Save</button>
+        <button class="jot-edit-cancel" onclick="cancelEditJot('${date}',${id})">Cancel</button>
+      </div>
+    </div>`;
+  el.querySelector('.jot-edit-wrap textarea').focus();
+}
+
+function saveEditJot(date, id) {
+  const day = getJotDay(date);
+  if (!day) return;
+  const entry = day.entries.find(e => e.id === id);
+  if (!entry) return;
+  const el = document.getElementById(`jot-${date}-${id}`);
+  const text = el.querySelector('.jot-edit-wrap textarea').value.trim();
+  if (!text) return;
+  entry.text = text;
+  entry.tags = [];
+  text.replace(/#([\w-]+)/g, (_, tag) => { entry.tags.push(tag); });
+  saveData();
+  renderJots();
+}
+
+function cancelEditJot(date, id) {
+  renderJots();
 }
 
 function renderDashboardJots() {
@@ -1570,15 +1748,75 @@ function renderDashboardJots() {
   container.innerHTML = recent.map(e => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;${e.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">
       <span style="color:var(--text-dim);font-size:11px;flex-shrink:0;">${e.time}</span>
-      ${formatJotText(e.text)}
+      ${formatJotText(e.text, e.images)}
     </div>
   `).join('') + (todayJot.entries.length > 4 ? `<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">+${todayJot.entries.length - 4} more</div>` : '');
 }
 
+// Pending image attachments for new jot
+let pendingJotImages = [];
+
+function handleJotKeydown(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    addJot();
+  }
+}
+
+function autoExpandTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+function handleJotFileAttach(event) {
+  const files = Array.from(event.target.files);
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      pendingJotImages.push(e.target.result);
+      renderJotImagePreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = '';
+}
+
+function renderJotImagePreview() {
+  const container = document.getElementById('jot-images-preview');
+  container.innerHTML = pendingJotImages.map((src, i) =>
+    `<div class="jot-img-wrap"><img class="jot-img-thumb" src="${src}"><button class="jot-img-remove" onclick="removePendingImage(${i})">✕</button></div>`
+  ).join('');
+}
+
+function removePendingImage(idx) {
+  pendingJotImages.splice(idx, 1);
+  renderJotImagePreview();
+}
+
+// Support paste images into jot input
+document.addEventListener('paste', function(e) {
+  const input = document.getElementById('jot-input');
+  if (document.activeElement !== input) return;
+  const items = Array.from(e.clipboardData.items);
+  items.forEach(item => {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        pendingJotImages.push(ev.target.result);
+        renderJotImagePreview();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+});
+
 function addJot() {
   const input = document.getElementById('jot-input');
   let text = input.value.trim();
-  if (!text) return;
+  if (!text && !pendingJotImages.length) return;
 
   const today = getTodayStr();
   const now = new Date();
@@ -1599,9 +1837,14 @@ function addJot() {
     DATA.jots.push(dayJot);
   }
   const id = dayJot.entries.length ? Math.max(...dayJot.entries.map(e => e.id)) + 1 : 1;
-  dayJot.entries.push({ id, text, time, tags, done });
+  const entry = { id, text: text || '(image)', time, tags, done };
+  if (pendingJotImages.length) entry.images = [...pendingJotImages];
+  dayJot.entries.push(entry);
 
   input.value = '';
+  input.style.height = 'auto';
+  pendingJotImages = [];
+  renderJotImagePreview();
   saveData();
   renderJots();
   renderDashboard();
