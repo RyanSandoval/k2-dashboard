@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-2 Command Center</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #8888a0;
+    --accent: #4a9eff;
+    --accent2: #7c5cff;
+    --green: #4ade80;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --orange: #fb923c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; }
+  .sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sidebar-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .sidebar-header h1 span { color: var(--accent); }
+  .sidebar-header p { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .nav-section { padding: 8px 12px; }
+  .nav-section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding: 8px 8px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent); color: #fff; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-item .badge {
+    margin-left: auto;
+    background: var(--accent2);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Main Content */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header {
+    margin-bottom: 24px;
+  }
+  .page-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .page-header p { color: var(--text-dim); font-size: 14px; margin-top: 4px; }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .card-title { font-size: 15px; font-weight: 600; }
+  .card-body { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+  .card-footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Tags & Badges */
+  .tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .tag-blue { background: rgba(74,158,255,0.15); color: var(--accent); }
+  .tag-purple { background: rgba(124,92,255,0.15); color: var(--accent2); }
+  .tag-green { background: rgba(74,222,128,0.15); color: var(--green); }
+  .tag-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .tag-red { background: rgba(248,113,113,0.15); color: var(--red); }
+  .tag-orange { background: rgba(251,146,60,0.15); color: var(--orange); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-active { background: var(--green); }
+  .status-planning { background: var(--yellow); }
+  .status-blocked { background: var(--red); }
+  .status-idea { background: var(--accent); }
+
+  /* Stat Cards */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .stat-card .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .stat-card .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Discussion Thread */
+  .thread {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .thread-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .thread-header:hover { background: var(--surface2); }
+  .thread-title { font-weight: 600; font-size: 14px; flex: 1; }
+  .thread-date { font-size: 12px; color: var(--text-dim); }
+  .thread-body {
+    padding: 0 20px 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    display: none;
+  }
+  .thread.open .thread-body { display: block; }
+  .thread-toggle { color: var(--text-dim); font-size: 12px; transition: transform 0.2s; }
+  .thread.open .thread-toggle { transform: rotate(90deg); }
+
+  /* Tasks */
+  .task-list { list-style: none; }
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-check {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .task-check:hover { border-color: var(--accent); }
+  .task-check.done { background: var(--green); border-color: var(--green); }
+  .task-check.done::after { content: "✓"; color: #000; font-size: 12px; font-weight: 700; }
+  .task-content { flex: 1; }
+  .task-content.done { text-decoration: line-through; color: var(--text-dim); }
+  .task-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .task-priority {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .priority-high { background: rgba(248,113,113,0.15); color: var(--red); }
+  .priority-medium { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .priority-low { background: rgba(74,158,255,0.15); color: var(--accent); }
+
+  /* Quick Add */
+  .quick-add {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .quick-add input, .quick-add select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .quick-add input { flex: 1; }
+  .quick-add input:focus { border-color: var(--accent); }
+  .quick-add select { width: 120px; }
+  .quick-add button {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .quick-add button:hover { opacity: 0.9; }
+
+  /* Notes */
+  .note-editor {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .note-editor textarea {
+    width: 100%;
+    min-height: 120px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+  }
+  .note-editor textarea:focus { border-color: var(--accent); }
+  .note-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .timeline-item {
+    position: relative;
+    padding-bottom: 24px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+  }
+  .timeline-date { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .timeline-content { font-size: 13px; line-height: 1.6; }
+
+  /* Filter Bar */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Kanban */
+  .kanban {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    min-height: 500px;
+  }
+  .kanban-column {
+    min-width: 280px;
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 160px);
+  }
+  .kanban-column-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .kanban-column-header .count {
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .kanban-cards {
+    padding: 12px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .kanban-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    cursor: grab;
+    transition: all 0.15s;
+  }
+  .kanban-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .kanban-card.dragging { opacity: 0.5; }
+  .kanban-card-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .kanban-card-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-bottom: 10px; }
+  .kanban-card-footer { display: flex; gap: 4px; flex-wrap: wrap; }
+  .kanban-card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .kanban-card-date { font-size: 10px; color: var(--text-dim); }
+  .kanban-card-tasks { font-size: 10px; color: var(--text-dim); }
+  .column-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-idea { background: var(--accent); }
+  .dot-planning { background: var(--yellow); }
+  .dot-active { background: var(--orange); }
+  .dot-review { background: var(--accent2); }
+  .dot-done { background: var(--green); }
+  .kanban-drop-zone {
+    min-height: 40px;
+    border: 2px dashed transparent;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .kanban-drop-zone.over {
+    border-color: var(--accent);
+    background: rgba(74,158,255,0.05);
+  }
+
+  /* Mobile Nav */
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 0 env(safe-area-inset-bottom, 8px);
+    z-index: 100;
+    justify-content: space-around;
+  }
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 10px;
+    color: var(--text-dim);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav-item .icon { font-size: 20px; }
+  .mobile-nav-item.active { color: var(--accent); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .mobile-nav { display: flex; }
+    .main { padding: 16px; padding-bottom: 80px; }
+    .card-grid { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .kanban { flex-direction: column; min-height: auto; gap: 12px; }
+    .kanban-column { width: 100%; min-width: 100%; max-height: none; }
+    .kanban-card { cursor: pointer; }
+    .quick-add { flex-wrap: wrap; }
+    .quick-add input { min-width: 100%; }
+    .quick-add select { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<!-- Login Screen -->
+<div id="login-screen" style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:320px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px;">🤖</div>
+    <h2 style="font-size:20px;margin-bottom:4px;">K-2 HQ</h2>
+    <p style="color:var(--text-dim);font-size:13px;margin-bottom:24px;">Enter access code</p>
+    <input type="password" id="login-code" placeholder="Access code" 
+      style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;outline:none;margin-bottom:12px;"
+      onkeydown="if(event.key==='Enter')checkLogin()">
+    <div id="token-field" style="display:none;">
+      <input type="password" id="login-token" placeholder="GitHub token (first time only)" 
+        style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;text-align:center;outline:none;margin-bottom:12px;"
+        onkeydown="if(event.key==='Enter')checkLogin()">
+      <p style="font-size:10px;color:var(--text-dim);margin-bottom:12px;">Stored in browser session only. Never sent anywhere except GitHub API.</p>
+    </div>
+    <button onclick="checkLogin()" 
+      style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+      Enter
+    </button>
+    <p id="login-error" style="color:var(--red);font-size:12px;margin-top:12px;display:none;">Wrong code. Try again.</p>
+  </div>
+</div>
+<script>
+  const ACCESS_HASH = "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"; // SHA-256 of "123"
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  async function checkLogin() {
+    const code = document.getElementById('login-code').value;
+    const hash = await sha256(code);
+    if (hash !== ACCESS_HASH) {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('login-code').value = '';
+      return;
+    }
+    // Check if we have a token already
+    let token = sessionStorage.getItem('gh_token');
+    const tokenInput = document.getElementById('login-token');
+    if (!token && tokenInput.value) {
+      token = tokenInput.value.trim();
+    }
+    if (!token) {
+      // Show token field
+      document.getElementById('token-field').style.display = 'block';
+      document.getElementById('login-token').focus();
+      if (!tokenInput.value) return;
+    }
+    sessionStorage.setItem('k2auth', 'true');
+    sessionStorage.setItem('gh_token', token);
+    GH_TOKEN = token;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-main').style.display = 'flex';
+    loadData();
+  }
+  // Auto-login if already authed this session
+  if (sessionStorage.getItem('k2auth') === 'true' && sessionStorage.getItem('gh_token')) {
+    document.getElementById('login-screen').style.display = 'none';
+  }
+</script>
+
+<div class="app" id="app-main" style="display:none;">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>🤖 <span>K-2</span> HQ</h1>
+      <p>Command Center</p>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Overview</div>
+      <div class="nav-item active" data-page="dashboard">
+        <span class="icon">📊</span> Dashboard
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Work</div>
+      <div class="nav-item" data-page="projects">
+        <span class="icon">🚀</span> Projects
+        <span class="badge">2</span>
+      </div>
+      <div class="nav-item" data-page="tasks">
+        <span class="icon">✅</span> Tasks
+        <span class="badge" id="task-count">5</span>
+      </div>
+      <div class="nav-item" data-page="discussions">
+        <span class="icon">💬</span> Discussions
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Reference</div>
+      <div class="nav-item" data-page="decisions">
+        <span class="icon">⚖️</span> Decisions
+      </div>
+      <div class="nav-item" data-page="notes">
+        <span class="icon">📝</span> Notes
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      Last synced: <span id="last-sync">just now</span>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <!-- Dashboard Page -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Overview of active work and recent activity</p>
+      </div>
+
+      <div class="stat-row" id="stats-row">
+        <!-- Populated by JS -->
+      </div>
+
+      <h3 style="font-size:16px; margin-bottom:12px;">Active Projects</h3>
+      <div class="card-grid" id="dashboard-projects">
+        <!-- Populated by JS -->
+      </div>
+
+      <div id="inbox-alert" style="display:none;background:rgba(74,158,255,0.1);border:1px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:20px;">📨</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;">Pending messages for K-2</div>
+            <div id="inbox-count" style="font-size:12px;color:var(--text-dim);"></div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:16px; margin-bottom:12px;">Recent Activity</h3>
+      <div class="timeline" id="dashboard-timeline">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Projects Page (Kanban) -->
+    <div class="page" id="page-projects">
+      <div class="page-header">
+        <h2>Projects</h2>
+        <p>Drag cards between columns to update status</p>
+      </div>
+      <div class="kanban" id="kanban-board">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Tasks Page -->
+    <div class="page" id="page-tasks">
+      <div class="page-header">
+        <h2>Tasks</h2>
+        <p>Things to get done</p>
+      </div>
+      <div class="quick-add">
+        <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+        <select id="new-task-priority">
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+        <select id="new-task-project">
+          <option value="">No Project</option>
+        </select>
+        <button onclick="addTask()">Add</button>
+      </div>
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all" data-group="tasks">All</button>
+        <button class="filter-btn" data-filter="pending" data-group="tasks">Pending</button>
+        <button class="filter-btn" data-filter="done" data-group="tasks">Done</button>
+      </div>
+      <div class="card">
+        <ul class="task-list" id="task-list">
+          <!-- Populated by JS -->
+        </ul>
+      </div>
+    </div>
+
+    <!-- Discussions Page -->
+    <div class="page" id="page-discussions">
+      <div class="page-header">
+        <h2>Discussions</h2>
+        <p>Key conversations and their context</p>
+      </div>
+      <div id="discussions-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Decisions Page -->
+    <div class="page" id="page-decisions">
+      <div class="page-header">
+        <h2>Decisions</h2>
+        <p>Choices made and their rationale</p>
+      </div>
+      <div id="decisions-timeline" class="timeline">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Notes Page -->
+    <div class="page" id="page-notes">
+      <div class="page-header">
+        <h2>Notes</h2>
+        <p>Quick reference and scratch pad</p>
+      </div>
+      <div class="note-editor">
+        <textarea id="note-input" placeholder="Write a note..."></textarea>
+        <div class="note-actions">
+          <button class="btn btn-primary" onclick="addNote()">Save Note</button>
+        </div>
+      </div>
+      <div id="notes-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Task Detail Modal -->
+  <div id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeTaskModal()">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:500px;margin:40px auto;display:flex;flex-direction:column;max-height:calc(100vh - 80px);position:relative;">
+      <button onclick="closeTaskModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;z-index:1;">✕</button>
+      <div id="task-modal-content" style="padding:24px;overflow-y:auto;flex:1;"></div>
+      <div id="task-modal-input" style="padding:12px 24px 24px;border-top:1px solid var(--border);flex-shrink:0;">
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="task-msg-input" placeholder="Message or instruction for K-2..." 
+            style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter')sendTaskMessage()">
+          <button onclick="sendTaskMessage()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Send to K-2</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Detail Modal -->
+  <div id="project-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeProjectModal()">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:500px;margin:40px auto;padding:24px;position:relative;">
+      <button onclick="closeProjectModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <div class="mobile-nav" id="mobile-nav">
+    <div class="mobile-nav-item active" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
+      <span class="icon">📊</span>Home
+    </div>
+    <div class="mobile-nav-item" data-page="projects" onclick="navigateTo('projects');setMobileActive(this)">
+      <span class="icon">🚀</span>Projects
+    </div>
+    <div class="mobile-nav-item" data-page="tasks" onclick="navigateTo('tasks');setMobileActive(this)">
+      <span class="icon">✅</span>Tasks
+    </div>
+    <div class="mobile-nav-item" data-page="discussions" onclick="navigateTo('discussions');setMobileActive(this)">
+      <span class="icon">💬</span>Chats
+    </div>
+    <div class="mobile-nav-item" data-page="notes" onclick="navigateTo('notes');setMobileActive(this)">
+      <span class="icon">📝</span>Notes
+    </div>
+  </div>
+</div>
+
+<script>
+function setMobileActive(el) {
+  document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ============================================================
+// DATA STORE — loaded from server, synced on every change
+// ============================================================
+
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [] };
+
+// ============================================================
+// APP LOGIC
+// ============================================================
+
+// GitHub API Config
+const GH_REPO = 'RyanSandoval/k2-dashboard';
+const GH_FILE = 'data.json';
+let GH_TOKEN = sessionStorage.getItem('gh_token') || '';
+let GH_SHA = ''; // tracks file SHA for updates
+
+async function ghHeaders() {
+  return {
+    'Authorization': `token ${GH_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+}
+
+async function loadData() {
+  if (!GH_TOKEN) return;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: await ghHeaders()
+    });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const file = await res.json();
+    GH_SHA = file.sha;
+    const d = JSON.parse(atob(file.content));
+    DATA.projects = d.projects || [];
+    DATA.discussions = d.discussions || [];
+    DATA.tasks = d.tasks || [];
+    DATA.decisions = d.decisions || [];
+    DATA.notes = d.notes || [];
+    DATA.timeline = d.timeline || [];
+    DATA.inbox = d.inbox || [];
+    renderAll();
+    document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('Failed to load data:', e);
+  }
+}
+
+async function saveData() {
+  if (!GH_TOKEN) return;
+  try {
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
+    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: await ghHeaders(),
+      body: JSON.stringify({
+        message: `Dashboard update ${new Date().toISOString()}`,
+        content: content,
+        sha: GH_SHA
+      })
+    });
+    if (!res.ok) {
+      // SHA conflict — reload and retry
+      if (res.status === 409) {
+        await loadData();
+        return;
+      }
+      throw new Error(`GitHub API ${res.status}`);
+    }
+    const result = await res.json();
+    GH_SHA = result.content.sha;
+    document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error('Failed to save data:', e);
+  }
+}
+
+function renderAll() {
+  renderDashboard();
+  renderProjects();
+  renderTasks();
+  renderDiscussions();
+  renderDecisions();
+  renderNotes();
+}
+
+// Navigation
+function navigateTo(page) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (navItem) navItem.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  // Sync mobile nav
+  document.querySelectorAll('.mobile-nav-item').forEach(i => {
+    i.classList.toggle('active', i.dataset.page === page);
+  });
+  // Scroll to top
+  document.querySelector('.main').scrollTop = 0;
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => navigateTo(item.dataset.page));
+});
+
+// Render Dashboard
+function renderDashboard() {
+  const pendingTasks = DATA.tasks.filter(t => !t.done).length;
+  const activeProjects = DATA.projects.filter(p => p.status === 'active').length;
+  const totalDecisions = DATA.decisions.length;
+  const openQuestions = DATA.discussions.reduce((n, d) => n + d.openQuestions.length, 0);
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('projects')">
+      <div class="label">Active Projects</div>
+      <div class="value" style="color:var(--accent)">${activeProjects}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('tasks')">
+      <div class="label">Pending Tasks</div>
+      <div class="value" style="color:var(--yellow)">${pendingTasks}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('decisions')">
+      <div class="label">Decisions Made</div>
+      <div class="value" style="color:var(--green)">${totalDecisions}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('discussions')">
+      <div class="label">Open Questions</div>
+      <div class="value" style="color:var(--orange)">${openQuestions}</div>
+    </div>
+  `;
+
+  document.getElementById('dashboard-projects').innerHTML = DATA.projects.map(p => `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">${p.name}</span>
+        <span class="status-dot status-${p.status}"></span>
+      </div>
+      <div class="card-body">${p.description}</div>
+      <div class="card-footer">
+        ${p.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  const sortedTimeline = [...(DATA.timeline || [])].sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById('dashboard-timeline').innerHTML = sortedTimeline.slice(0, 8).map(t => `
+    <div class="timeline-item">
+      <div class="timeline-date">${t.date}</div>
+      <div class="timeline-content">${t.event}</div>
+    </div>
+  `).join('');
+
+  // Inbox alert
+  const inbox = (DATA.inbox || []).filter(m => !m.read);
+  const inboxAlert = document.getElementById('inbox-alert');
+  if (inboxAlert) {
+    if (inbox.length > 0) {
+      inboxAlert.style.display = 'block';
+      document.getElementById('inbox-count').textContent = `${inbox.length} message${inbox.length > 1 ? 's' : ''} waiting`;
+    } else {
+      inboxAlert.style.display = 'none';
+    }
+  }
+}
+
+// Kanban columns config
+const KANBAN_COLUMNS = [
+  { id: 'idea', label: 'Ideas', dot: 'dot-idea' },
+  { id: 'planning', label: 'Planning', dot: 'dot-planning' },
+  { id: 'active', label: 'In Progress', dot: 'dot-active' },
+  { id: 'review', label: 'Review', dot: 'dot-review' },
+  { id: 'done', label: 'Done', dot: 'dot-done' }
+];
+
+function renderProjects() {
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = KANBAN_COLUMNS.map(col => {
+    const projects = DATA.projects.filter(p => p.status === col.id);
+    const taskCounts = projects.map(p => {
+      const total = DATA.tasks.filter(t => t.project === p.id).length;
+      const done = DATA.tasks.filter(t => t.project === p.id && t.done).length;
+      return { total, done };
+    });
+
+    return `
+      <div class="kanban-column" data-column="${col.id}"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event, '${col.id}')">
+        <div class="kanban-column-header">
+          <span class="column-dot ${col.dot}"></span>
+          ${col.label}
+          <span class="count">${projects.length}</span>
+        </div>
+        <div class="kanban-cards">
+          ${projects.map((p, i) => `
+            <div class="kanban-card" draggable="true" data-project-id="${p.id}"
+                 ondragstart="onDragStart(event, '${p.id}')" ondragend="onDragEnd(event)"
+                 onclick="openProjectModal('${p.id}')"
+              <div class="kanban-card-title">${p.name}</div>
+              <div class="kanban-card-desc">${p.description}</div>
+              ${p.nextSteps.length ? `
+                <div style="font-size:11px;color:var(--text);margin-bottom:8px;">
+                  <strong>Next:</strong> <span style="color:var(--text-dim)">${p.nextSteps[0]}</span>
+                  ${p.nextSteps.length > 1 ? `<span style="color:var(--text-dim);font-style:italic"> +${p.nextSteps.length - 1} more</span>` : ''}
+                </div>
+              ` : ''}
+              <div class="kanban-card-footer">
+                ${p.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
+              </div>
+              <div class="kanban-card-meta">
+                <span class="kanban-card-date">Since ${p.started}</span>
+                ${taskCounts[i].total > 0 ? `
+                  <span class="kanban-card-tasks">✅ ${taskCounts[i].done}/${taskCounts[i].total}</span>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+          <div class="kanban-drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event, '${col.id}')"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Task Detail Modal
+let activeTaskId = null;
+
+function openTaskModal(taskId) {
+  activeTaskId = taskId;
+  const task = DATA.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (!task.messages) task.messages = [];
+  
+  const project = DATA.projects.find(p => p.id === task.project);
+  const projectName = project ? project.name : 'General';
+
+  document.getElementById('task-modal-content').innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+      <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${task.id});openTaskModal(${task.id})" style="margin-top:2px;flex-shrink:0;"></div>
+      <div>
+        <h3 style="font-size:16px;font-weight:700;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}">${task.text}</h3>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+          <span class="tag tag-blue">${projectName}</span>
+          <span class="task-priority priority-${task.priority}">${task.priority}</span>
+          <span class="tag tag-purple">${task.created}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-dim);">Thread</div>
+    <div id="task-thread" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
+      ${task.messages.length === 0 ? 
+        '<div style="font-size:12px;color:var(--text-dim);padding:16px;text-align:center;background:var(--surface2);border-radius:8px;">No messages yet. Send an instruction or update below.</div>' :
+        task.messages.map(m => `
+          <div style="display:flex;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;${m.from === 'k2' ? 'border-left:3px solid var(--accent)' : 'border-left:3px solid var(--green)'};">
+            <div style="flex-shrink:0;font-size:14px;">${m.from === 'k2' ? '🤖' : '👤'}</div>
+            <div style="flex:1;">
+              <div style="font-size:11px;color:var(--text-dim);margin-bottom:2px;">${m.from === 'k2' ? 'K-2' : 'Ryan'} · ${m.time}</div>
+              <div style="font-size:13px;line-height:1.5;">${m.text}</div>
+            </div>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+
+  document.getElementById('task-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  
+  // Scroll thread to bottom
+  setTimeout(() => {
+    const thread = document.getElementById('task-thread');
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }, 50);
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  activeTaskId = null;
+}
+
+async function sendTaskMessage() {
+  const input = document.getElementById('task-msg-input');
+  const text = input.value.trim();
+  if (!text || !activeTaskId) return;
+
+  const task = DATA.tasks.find(t => t.id === activeTaskId);
+  if (!task) return;
+  if (!task.messages) task.messages = [];
+
+  const now = new Date();
+  const time = now.toISOString().replace('T', ' ').slice(0, 16);
+
+  task.messages.push({
+    from: 'ryan',
+    text: text,
+    time: time
+  });
+
+  // Also add to inbox for K-2 to pick up
+  if (!DATA.inbox) DATA.inbox = [];
+  DATA.inbox.push({
+    taskId: activeTaskId,
+    taskText: task.text,
+    message: text,
+    time: time,
+    read: false
+  });
+
+  input.value = '';
+  await saveData();
+  openTaskModal(activeTaskId); // Re-render
+}
+
+// Project Detail Modal
+function openProjectModal(projectId) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const tasks = DATA.tasks.filter(t => t.project === p.id);
+  const decisions = DATA.decisions.filter(d => d.project === p.id);
+  const discussions = DATA.discussions.filter(d => d.project === p.id);
+
+  document.getElementById('modal-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span class="status-dot status-${p.status}" style="width:12px;height:12px;"></span>
+      <h3 style="font-size:18px;font-weight:700;">${p.name}</h3>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">${p.description}</p>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Status</label>
+      <select onchange="changeProjectStatus('${p.id}', this.value)" style="display:block;width:100%;margin-top:4px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+        ${KANBAN_COLUMNS.map(col => `<option value="${col.id}" ${p.status === col.id ? 'selected' : ''}>${col.label}</option>`).join('')}
+      </select>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tags</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        ${p.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
+        <span class="tag tag-purple">Since ${p.started}</span>
+      </div>
+    </div>
+
+    ${p.nextSteps.length ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Next Steps</div>
+        <ul style="padding-left:16px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+          ${p.nextSteps.map(s => `<li>${s}</li>`).join('')}
+        </ul>
+      </div>
+    ` : ''}
+
+    ${p.links.length ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Files</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${p.links.map(l => `<span class="tag tag-purple">${l.label}</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${tasks.length ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>t.done).length}/${tasks.length})</div>
+        <div style="background:var(--surface2);border-radius:8px;overflow:hidden;">
+          ${tasks.map(t => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;">
+              <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${t.id});openProjectModal('${p.id}')" style="width:16px;height:16px;flex-shrink:0;"></div>
+              <span style="${t.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}">${t.text}</span>
+              <span class="task-priority priority-${t.priority}" style="margin-left:auto">${t.priority}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    ${decisions.length ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Decisions</div>
+        ${decisions.map(d => `
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:600;color:var(--green);">${d.decision}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${d.rationale}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    ${discussions.length ? `
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Discussions</div>
+        ${discussions.map(d => `
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:600;">${d.title}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${d.summary}</div>
+            ${d.openQuestions.length ? `
+              <div style="margin-top:8px;font-size:11px;color:var(--yellow);">⚠ ${d.openQuestions.length} open question${d.openQuestions.length > 1 ? 's' : ''}</div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('project-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProjectModal() {
+  document.getElementById('project-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function changeProjectStatus(projectId, newStatus) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (p) {
+    p.status = newStatus;
+    saveData();
+    renderProjects();
+    renderDashboard();
+  }
+}
+
+// Drag and drop
+let draggedProjectId = null;
+
+function onDragStart(e, projectId) {
+  draggedProjectId = projectId;
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragEnd(e) {
+  e.target.classList.remove('dragging');
+  document.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.remove('over'));
+  document.querySelectorAll('.kanban-column').forEach(c => c.style.background = '');
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const col = e.target.closest('.kanban-column');
+  if (col) {
+    col.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.add('over'));
+  }
+}
+
+function onDragLeave(e) {
+  const col = e.target.closest('.kanban-column');
+  if (col && !col.contains(e.relatedTarget)) {
+    col.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.remove('over'));
+  }
+}
+
+function onDrop(e, newStatus) {
+  e.preventDefault();
+  if (!draggedProjectId) return;
+  const project = DATA.projects.find(p => p.id === draggedProjectId);
+  if (project && project.status !== newStatus) {
+    project.status = newStatus;
+    renderProjects();
+    renderDashboard();
+    saveData();
+  }
+  document.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.remove('over'));
+  draggedProjectId = null;
+}
+
+// Render Tasks
+function renderTasks(filter = 'all') {
+  let tasks = DATA.tasks;
+  if (filter === 'pending') tasks = tasks.filter(t => !t.done);
+  if (filter === 'done') tasks = tasks.filter(t => t.done);
+
+  // Sort: pending first, then by priority
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  tasks.sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+  });
+
+  document.getElementById('task-list').innerHTML = tasks.map(t => {
+    const msgCount = (t.messages || []).length;
+    const unread = (t.messages || []).filter(m => m.from === 'k2' && !m.readByUser).length;
+    return `
+    <li class="task-item" style="cursor:pointer;" onclick="openTaskModal(${t.id})">
+      <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})"></div>
+      <div class="task-content ${t.done ? 'done' : ''}">
+        ${t.text}
+        <div class="task-meta">${t.project || 'General'} • ${t.created}${msgCount ? ` • 💬 ${msgCount}` : ''}${unread ? ` <span style="color:var(--accent);font-weight:600;">(${unread} new)</span>` : ''}</div>
+      </div>
+      <span class="task-priority priority-${t.priority}">${t.priority}</span>
+    </li>
+  `}).join('');
+
+  document.getElementById('task-count').textContent = DATA.tasks.filter(t => !t.done).length;
+
+  // Populate project dropdown
+  const sel = document.getElementById('new-task-project');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">No Project</option>' +
+    DATA.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  sel.value = currentVal;
+}
+
+function toggleTask(id) {
+  const task = DATA.tasks.find(t => t.id === id);
+  if (task) { task.done = !task.done; saveData(); renderTasks(); renderDashboard(); }
+}
+
+function addTask() {
+  const input = document.getElementById('new-task-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const priority = document.getElementById('new-task-priority').value;
+  const project = document.getElementById('new-task-project').value;
+  const id = Math.max(0, ...DATA.tasks.map(t => t.id)) + 1;
+  DATA.tasks.push({
+    id, text, priority, project,
+    done: false,
+    created: new Date().toISOString().split('T')[0]
+  });
+  input.value = '';
+  saveData();
+  renderTasks();
+  renderDashboard();
+}
+
+// Render Discussions
+function renderDiscussions() {
+  document.getElementById('discussions-list').innerHTML = DATA.discussions.map(d => `
+    <div class="thread" onclick="this.classList.toggle('open')">
+      <div class="thread-header">
+        <span class="thread-toggle">▶</span>
+        <span class="thread-title">${d.title}</span>
+        <span class="tag tag-blue">${d.project}</span>
+        <span class="thread-date">${d.date}</span>
+      </div>
+      <div class="thread-body">
+        <p style="margin-bottom:12px">${d.summary}</p>
+        <strong style="color:var(--text)">Key Points:</strong>
+        <ul style="padding-left:16px;margin-top:4px">
+          ${d.keyPoints.map(k => `<li>${k}</li>`).join('')}
+        </ul>
+        ${d.openQuestions.length ? `
+          <div style="margin-top:12px">
+            <strong style="color:var(--yellow)">Open Questions:</strong>
+            <ul style="padding-left:16px;margin-top:4px">
+              ${d.openQuestions.map(q => `<li>${q}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Render Decisions
+function renderDecisions() {
+  const sorted = [...DATA.decisions].sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById('decisions-timeline').innerHTML = sorted.map(d => `
+    <div class="timeline-item">
+      <div class="timeline-date">${d.date} — <span class="tag tag-blue" style="font-size:10px">${d.project}</span></div>
+      <div class="timeline-content">
+        <strong style="color:var(--text)">${d.decision}</strong>
+        <p style="margin-top:4px;color:var(--text-dim)">${d.rationale}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Render Notes
+function renderNotes() {
+  const sorted = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
+  document.getElementById('notes-list').innerHTML = sorted.map(n => `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <span class="thread-date">${n.created}</span>
+      </div>
+      <div class="card-body" style="white-space:pre-wrap">${n.text}</div>
+    </div>
+  `).join('');
+}
+
+function addNote() {
+  const input = document.getElementById('note-input');
+  const text = input.value.trim();
+  if (!text) return;
+  DATA.notes.push({ text, created: new Date().toISOString().replace('T', ' ').slice(0, 16) });
+  input.value = '';
+  saveData();
+  renderNotes();
+}
+
+// Filter handlers
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (btn.dataset.group === 'tasks') renderTasks(btn.dataset.filter);
+  });
+});
+
+// Show app if already authed
+if (sessionStorage.getItem('k2auth') === 'true') {
+  document.getElementById('app-main').style.display = 'flex';
+}
+
+// Init — load from GitHub
+GH_TOKEN = sessionStorage.getItem('gh_token') || '';
+if (GH_TOKEN) {
+  loadData();
+}
+
+// Auto-refresh every 60s to pick up K-2's updates (rate-limit friendly)
+setInterval(() => { if (GH_TOKEN) loadData(); }, 60000);
+</script>
+</body>
+</html>
