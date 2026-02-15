@@ -760,11 +760,11 @@
       <div class="nav-section-title">Work</div>
       <div class="nav-item" data-page="projects">
         <span class="icon">🚀</span> Projects
-        <span class="badge">2</span>
+        <span class="badge" id="project-count">0</span>
       </div>
       <div class="nav-item" data-page="tasks">
         <span class="icon">✅</span> Tasks
-        <span class="badge" id="task-count">5</span>
+        <span class="badge" id="task-count">0</span>
       </div>
       <div class="nav-item" data-page="discussions">
         <span class="icon">💬</span> Discussions
@@ -1716,6 +1716,7 @@ function renderTasks(filter = 'all') {
   `}).join('');
 
   document.getElementById('task-count').textContent = DATA.tasks.filter(t => !t.done).length;
+  document.getElementById('project-count').textContent = DATA.projects.length;
 
   // Populate project dropdown
   const sel = document.getElementById('new-task-project');
