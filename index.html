@@ -982,7 +982,7 @@ function setMobileActive(el) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [] };
 
 // ============================================================
 // APP LOGIC
@@ -1026,6 +1026,7 @@ async function loadData() {
     DATA.timeline = d.timeline || [];
     DATA.inbox = d.inbox || [];
     DATA.jots = d.jots || [];
+    DATA.commands = d.commands || [];
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -1352,10 +1353,24 @@ function openProjectModal(projectId) {
           ${(p.nextSteps||[]).map((s, i) => {
             const text = typeof s === 'string' ? s : s.text;
             const pri = typeof s === 'string' ? 'medium' : (s.priority || 'medium');
+            const status = (typeof s === 'object' && s.status) || 'pending';
+            const statusBadge = status === 'queued' ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px;">⏳ Queued</span>'
+              : status === 'in-progress' ? '<span style="font-size:10px;background:var(--orange);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">🔨 In Progress</span>'
+              : status === 'done' ? '<span style="font-size:10px;background:var(--green);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">✅ Done</span>'
+              : status === 'review' ? '<span style="font-size:10px;background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">👀 Review</span>'
+              : '';
+            const showDoIt = status === 'pending';
+            const showAccept = status === 'review';
             return `
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;${status === 'done' ? 'opacity:0.5;' : ''}">
               <span style="cursor:pointer;font-size:14px;" onclick="cycleStepPriority('${p.id}',${i})" title="${pri} priority">${priorityDots[pri]}</span>
-              <span style="flex:1;cursor:pointer;" onclick="editNextStep('${p.id}',${i},this)" title="Click to edit">${text}</span>
+              <span style="flex:1;cursor:pointer;${status === 'done' ? 'text-decoration:line-through;' : ''}" onclick="editNextStep('${p.id}',${i},this)" title="Click to edit">${text}</span>
+              ${statusBadge}
+              ${showDoIt ? `<button onclick="queueStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;" title="Send to K-2">▶ Do it</button>` : ''}
+              ${showAccept ? `
+                <button onclick="acceptStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Accept">👍</button>
+                <button onclick="rejectStep('${p.id}',${i})" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Reject">👎</button>
+              ` : ''}
               <button onclick="removeNextStep('${p.id}',${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:2px 6px;" title="Remove">✕</button>
             </div>`;
           }).join('')}
@@ -1519,6 +1534,76 @@ function removeNextStep(projectId, idx) {
   const p = DATA.projects.find(pr => pr.id === projectId);
   if (!p) return;
   p.nextSteps.splice(idx, 1);
+  saveData();
+  openProjectModal(projectId);
+}
+
+// Command queue — sends work to K-2
+function queueStep(projectId, idx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const step = p.nextSteps[idx];
+  if (typeof step === 'string') { p.nextSteps[idx] = { text: step, priority: 'medium', status: 'queued' }; }
+  else { step.status = 'queued'; }
+  
+  if (!DATA.commands) DATA.commands = [];
+  DATA.commands.push({
+    id: Date.now(),
+    type: 'execute-step',
+    projectId: p.id,
+    projectName: p.name,
+    stepIndex: idx,
+    stepText: typeof step === 'string' ? step : step.text,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    createdBy: 'Ryan'
+  });
+  
+  saveData();
+  openProjectModal(projectId);
+}
+
+function acceptStep(projectId, idx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const step = p.nextSteps[idx];
+  if (typeof step === 'object') {
+    step.status = 'done';
+    step.acceptedAt = new Date().toISOString();
+  }
+  // Add to notes
+  if (!p.notes) p.notes = [];
+  p.notes.push({ text: `Accepted: "${typeof step === 'object' ? step.text : step}"`, date: new Date().toISOString().split('T')[0], author: 'Ryan' });
+  saveData();
+  openProjectModal(projectId);
+}
+
+function rejectStep(projectId, idx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  const reason = prompt('Why are you rejecting this?');
+  if (reason === null) return;
+  const step = p.nextSteps[idx];
+  if (typeof step === 'object') { step.status = 'pending'; }
+  
+  if (!p.notes) p.notes = [];
+  p.notes.push({ text: `Rejected: "${typeof step === 'object' ? step.text : step}" — ${reason}`, date: new Date().toISOString().split('T')[0], author: 'Ryan' });
+  
+  // Queue a rework command
+  if (!DATA.commands) DATA.commands = [];
+  DATA.commands.push({
+    id: Date.now(),
+    type: 'rework-step',
+    projectId: p.id,
+    projectName: p.name,
+    stepIndex: idx,
+    stepText: typeof step === 'object' ? step.text : step,
+    reason: reason,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    createdBy: 'Ryan'
+  });
+  
   saveData();
   openProjectModal(projectId);
 }
