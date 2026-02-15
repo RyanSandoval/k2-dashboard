@@ -1123,7 +1123,7 @@ function renderDashboard() {
       </div>
       <div class="card-body">${p.description}</div>
       <div class="card-footer">
-        ${p.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
+        ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
       </div>
     </div>
   `).join('');
@@ -1183,14 +1183,14 @@ function renderProjects() {
                  onclick="openProjectModal('${p.id}')">
               <div class="kanban-card-title">${p.name}</div>
               <div class="kanban-card-desc">${p.description}</div>
-              ${p.nextSteps.length ? `
+              ${(p.nextSteps||[]).length ? `
                 <div style="font-size:11px;color:var(--text);margin-bottom:8px;">
-                  <strong>Next:</strong> <span style="color:var(--text-dim)">${typeof p.nextSteps[0] === 'string' ? p.nextSteps[0] : p.nextSteps[0].text}</span>
-                  ${p.nextSteps.length > 1 ? `<span style="color:var(--text-dim);font-style:italic"> +${p.nextSteps.length - 1} more</span>` : ''}
+                  <strong>Next:</strong> <span style="color:var(--text-dim)">${typeof (p.nextSteps||[])[0] === 'string' ? (p.nextSteps||[])[0] : (p.nextSteps||[])[0].text}</span>
+                  ${(p.nextSteps||[]).length > 1 ? `<span style="color:var(--text-dim);font-style:italic"> +${(p.nextSteps||[]).length - 1} more</span>` : ''}
                 </div>
               ` : ''}
               <div class="kanban-card-footer">
-                ${p.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
+                ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
               </div>
               <div class="kanban-card-meta">
                 <span class="kanban-card-date">Since ${p.started}</span>
@@ -1334,19 +1334,19 @@ function openProjectModal(projectId) {
     <div style="margin-bottom:16px;">
       <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tags</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">
-        ${p.tags.map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
+        ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
         <span class="tag tag-purple">Since ${p.started}</span>
       </div>
     </div>
 
-    ${p.nextSteps.length ? `
+    ${(p.nextSteps||[]).length ? `
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:12px;font-weight:600;">Next Steps</div>
           <button onclick="addNextStep('${p.id}')" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:4px 10px;cursor:pointer;">+ Add</button>
         </div>
         <div style="background:var(--surface2);border-radius:8px;overflow:hidden;">
-          ${p.nextSteps.map((s, i) => {
+          ${(p.nextSteps||[]).map((s, i) => {
             const text = typeof s === 'string' ? s : s.text;
             const pri = typeof s === 'string' ? 'medium' : (s.priority || 'medium');
             return `
@@ -1423,7 +1423,7 @@ function openProjectModal(projectId) {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="font-size:12px;font-weight:600;">💬 Notes & Feedback</div>
       </div>
-      ${p.notes.length ? p.notes.map((n, i) => `
+      ${(p.notes||[]).length ? (p.notes||[]).map((n, i) => `
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px;position:relative;">
           <span style="cursor:pointer;" onclick="editProjectNote('${p.id}',${i},this)">${n.text}</span>
           <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${n.author || 'You'} · ${n.date}</div>
