@@ -3064,6 +3064,11 @@ function renderJotEntry(jot) {
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+      let display = url;
+      try { const u = new URL(url); display = u.hostname + (u.pathname.length > 20 ? u.pathname.slice(0,20) + '…' : u.pathname); } catch(e) { if (url.length > 50) display = url.slice(0,50) + '…'; }
+      return '<a href="' + url + '" target="_blank" rel="noopener" title="' + url.replace(/"/g,'&quot;') + '" style="color:var(--accent);text-decoration:underline;word-break:break-all;">' + display + '</a>';
+    })
     .replace(/(#\w+)/g, '<span class="jot-tag">$1</span>');
 
   // Handle checkboxes
