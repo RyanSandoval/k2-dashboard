@@ -124,6 +124,7 @@
     border-radius: 12px;
     padding: 20px;
     transition: border-color 0.15s;
+    position: relative;
   }
   .card:hover { border-color: var(--accent); }
   .card-header {
@@ -141,6 +142,119 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+
+  /* Comment badge on cards */
+  .comment-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 10px;
+    z-index: 1;
+  }
+
+  /* Comments section styles */
+  .comments-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .comments-section h4 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .comment {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border-left: 3px solid var(--green);
+  }
+  .comment.k2 {
+    border-left-color: var(--accent);
+  }
+  .comment-avatar {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .comment-content {
+    flex: 1;
+  }
+  .comment-author {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+    font-weight: 600;
+  }
+  .comment-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .comment-time {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .comment-input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .comment-input {
+    width: 100%;
+    min-height: 60px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+  }
+  .comment-input:focus {
+    border-color: var(--accent);
+  }
+  .comment-input::placeholder {
+    color: var(--text-dim);
+  }
+  .comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .comment-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .comment-btn:hover {
+    opacity: 0.9;
   }
 
   /* Tags & Badges */
@@ -1345,8 +1459,12 @@ function renderFilteredAIInsights() {
                        insight.status === 'In Progress' ? 'var(--yellow)' :
                        insight.status === 'Done' ? 'var(--green)' : 'var(--text-dim)';
 
+    // Get comment count for badge
+    const commentCount = (insight.comments || []).length;
+
     return `
       <div class="card" style="cursor:pointer;" onclick="openAIInsightModal('${insight.id}')">
+        ${commentCount > 0 ? `<div class="comment-badge">${commentCount} 💬</div>` : ''}
         <div class="card-header">
           <span class="card-title">${insight.title}</span>
           <div style="display:flex;gap:4px;align-items:center;">
@@ -1391,6 +1509,11 @@ function setupAIInsightsFilters() {
 function openAIInsightModal(insightId) {
   const insight = DATA.vikingInsights.find(i => i.id === insightId);
   if (!insight) return;
+
+  // Initialize comments array if it doesn't exist
+  if (!insight.comments) {
+    insight.comments = [];
+  }
 
   const modalContent = document.getElementById('ai-insight-modal-content');
   if (!modalContent) return;
@@ -1445,14 +1568,50 @@ function openAIInsightModal(insightId) {
       ${(insight.tags || []).map(tag => `<span class="tag tag-purple">${tag}</span>`).join('')}
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:12px;margin-bottom:20px;">
       <div>Source: ${insight.source}</div>
       <div>Added: ${insight.dateAdded}</div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+      <h4>💬 Comments</h4>
+      <div class="comments-list" id="comments-list-${insight.id}">
+        ${insight.comments.map(comment => `
+          <div class="comment ${comment.author === 'K-2' ? 'k2' : ''}">
+            <div class="comment-avatar">${comment.author === 'K-2' ? '🤖' : '👤'}</div>
+            <div class="comment-content">
+              <div class="comment-author">${comment.author}</div>
+              <div class="comment-text">${comment.text}</div>
+              <div class="comment-time">${new Date(comment.timestamp).toLocaleString()}</div>
+            </div>
+          </div>
+        `).join('')}
+        ${insight.comments.length === 0 ? `
+          <div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px;">
+            No comments yet. Start the discussion below!
+          </div>
+        ` : ''}
+      </div>
+      <div class="comment-input-section">
+        <textarea id="comment-input-${insight.id}" class="comment-input" placeholder="Add your thoughts... (Shift+Enter for new line, Enter to send)" rows="3" onkeydown="handleCommentKeydown(event, '${insight.id}')"></textarea>
+        <div class="comment-actions">
+          <button class="comment-btn" onclick="addComment('${insight.id}')">Send</button>
+        </div>
+      </div>
     </div>
   `;
 
   document.getElementById('ai-insight-modal').style.display = 'block';
   document.body.style.overflow = 'hidden';
+
+  // Auto-scroll to bottom of comments
+  setTimeout(() => {
+    const commentsList = document.getElementById(`comments-list-${insight.id}`);
+    if (commentsList) {
+      commentsList.scrollTop = commentsList.scrollHeight;
+    }
+  }, 100);
 }
 
 function closeAIInsightModal() {
@@ -1471,6 +1630,43 @@ async function updateAIInsightStatus(insightId, newStatus) {
   
   // Re-open modal to show updated status
   setTimeout(() => openAIInsightModal(insightId), 100);
+}
+
+function handleCommentKeydown(event, insightId) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    addComment(insightId);
+  }
+}
+
+async function addComment(insightId) {
+  const insight = DATA.vikingInsights.find(i => i.id === insightId);
+  if (!insight) return;
+
+  const input = document.getElementById(`comment-input-${insightId}`);
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Initialize comments array if it doesn't exist
+  if (!insight.comments) {
+    insight.comments = [];
+  }
+
+  // Add the comment
+  const newComment = {
+    author: 'Ryan',
+    text: text,
+    timestamp: new Date().toISOString()
+  };
+
+  insight.comments.push(newComment);
+  input.value = '';
+
+  await saveData();
+  renderAIInsights(); // Update the comment badges on cards
+  
+  // Re-render the modal content to show the new comment
+  openAIInsightModal(insightId);
 }
 
 // Trading
@@ -2062,9 +2258,9 @@ function openProjectModal(projectId) {
         <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>!t.done).length}/${tasks.length})</div>
         <div style="max-height:120px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:8px;">
           ${tasks.map(t => `
-            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;">
-              <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;cursor:pointer;" onclick="event.stopPropagation();toggleTask(${t.id});openProjectModal('${p.id}')"></div>
-              <span style="flex:1;cursor:pointer;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}" onclick="closeProjectModal();openTaskModal(${t.id})">${t.text}</span>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${t.id})">
+              <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;"></div>
+              <span style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${t.text}</span>
               <span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>
             </div>
           `).join('')}
@@ -2072,21 +2268,19 @@ function openProjectModal(projectId) {
       </div>
     ` : ''}
 
-    <div style="margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Comments & Updates</div>
-      <div style="background:var(--surface2);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;margin-bottom:8px;" id="project-comments-list">
-        ${(p.notes||[]).length ? (p.notes||[]).map(n => `
-          <div style="font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);${n.author === 'K-2' ? 'border-left:3px solid var(--accent);padding-left:8px;' : ''}">
-            <div style="color:var(--text-dim);font-size:10px;margin-bottom:2px;">${n.author === 'K-2' ? '🤖' : '👤'} ${n.author} · ${n.date}</div>
-            <div style="line-height:1.5;">${n.text}</div>
-          </div>
-        `).join('') : '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:8px;">No comments yet</div>'}
+    ${(p.notes||[]).length ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Notes</div>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;max-height:100px;overflow-y:auto;">
+          ${(p.notes||[]).map(n => `
+            <div style="font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+              <div style="color:var(--text-dim);font-size:10px;margin-bottom:2px;">${n.date} · ${n.author}</div>
+              ${n.text}
+            </div>
+          `).join('')}
+        </div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="project-comment-input" placeholder="Add a comment..." style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;" onkeydown="if(event.key==='Enter')addProjectComment('${p.id}')">
-        <button onclick="addProjectComment('${p.id}')" style="padding:8px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Post</button>
-      </div>
-    </div>
+    ` : ''}
 
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
       <button onclick="archiveProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;">Archive</button>
@@ -2110,25 +2304,6 @@ async function changeProjectStatus(projectId, newStatus) {
   await saveData();
   renderProjects();
   closeProjectModal();
-}
-
-async function addProjectComment(projectId) {
-  const input = document.getElementById('project-comment-input');
-  const text = input.value.trim();
-  if (!text) return;
-  const project = DATA.projects.find(p => p.id === projectId);
-  if (!project) return;
-  if (!project.notes) project.notes = [];
-  const now = new Date();
-  const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
-  project.notes.push({ date: dateStr, author: 'Ryan', text: text });
-  input.value = '';
-  await saveData();
-  openProjectModal(projectId);
-  setTimeout(() => {
-    const list = document.getElementById('project-comments-list');
-    if (list) list.scrollTop = list.scrollHeight;
-  }, 50);
 }
 
 async function archiveProject(projectId) {
