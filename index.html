@@ -752,10 +752,7 @@
       <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
-      <div class="nav-item" data-page="ai-insights">
-        <span class="icon">💡</span> AI Insights
-        <span class="badge" id="ai-insights-badge">0</span>
-      </div>
+      <!-- Viking AI Insights accessible from Viking project, not top nav -->
     </div>
     <div class="nav-section">
       <div class="nav-item active" data-page="jots">
@@ -831,37 +828,37 @@
       </div>
     </div>
 
-    <!-- AI Insights Page -->
-    <div class="page" id="page-ai-insights">
+    <!-- Viking AI Insights Page -->
+    <div class="page" id="page-viking-insights">
       <div class="page-header">
-        <h2>AI Insights</h2>
+        <h2>Viking AI Insights</h2>
         <p>AI-powered opportunities and recommendations</p>
       </div>
 
-      <div class="stat-row" id="ai-insights-stats">
+      <div class="stat-row" id="viking-insights-stats">
         <!-- Populated by JS -->
       </div>
 
-      <div class="filter-bar" id="ai-insights-filters">
-        <button class="filter-btn active" data-filter="all" data-group="ai-insights">All</button>
+      <div class="filter-bar" id="viking-insights-filters">
+        <button class="filter-btn active" data-filter="all" data-group="viking-insights">All</button>
         <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-        <button class="filter-btn" data-filter="Website UX" data-group="ai-insights">Website UX</button>
-        <button class="filter-btn" data-filter="Marketing/SEO" data-group="ai-insights">Marketing/SEO</button>
-        <button class="filter-btn" data-filter="Ops Efficiency" data-group="ai-insights">Ops Efficiency</button>
-        <button class="filter-btn" data-filter="Industry" data-group="ai-insights">Industry</button>
+        <button class="filter-btn" data-filter="Website UX" data-group="viking-insights">Website UX</button>
+        <button class="filter-btn" data-filter="Marketing/SEO" data-group="viking-insights">Marketing/SEO</button>
+        <button class="filter-btn" data-filter="Ops Efficiency" data-group="viking-insights">Ops Efficiency</button>
+        <button class="filter-btn" data-filter="Industry" data-group="viking-insights">Industry</button>
         <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-        <button class="filter-btn" data-filter="High" data-group="ai-insights">High Impact</button>
-        <button class="filter-btn" data-filter="Medium" data-group="ai-insights">Med Impact</button>
-        <button class="filter-btn" data-filter="Low" data-group="ai-insights">Low Impact</button>
+        <button class="filter-btn" data-filter="High" data-group="viking-insights">High Impact</button>
+        <button class="filter-btn" data-filter="Medium" data-group="viking-insights">Med Impact</button>
+        <button class="filter-btn" data-filter="Low" data-group="viking-insights">Low Impact</button>
         <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-        <button class="filter-btn" data-filter="New" data-group="ai-insights">New</button>
-        <button class="filter-btn" data-filter="Reviewed" data-group="ai-insights">Reviewed</button>
-        <button class="filter-btn" data-filter="In Progress" data-group="ai-insights">In Progress</button>
-        <button class="filter-btn" data-filter="Done" data-group="ai-insights">Done</button>
-        <button class="filter-btn" data-filter="Dismissed" data-group="ai-insights">Dismissed</button>
+        <button class="filter-btn" data-filter="New" data-group="viking-insights">New</button>
+        <button class="filter-btn" data-filter="Reviewed" data-group="viking-insights">Reviewed</button>
+        <button class="filter-btn" data-filter="In Progress" data-group="viking-insights">In Progress</button>
+        <button class="filter-btn" data-filter="Done" data-group="viking-insights">Done</button>
+        <button class="filter-btn" data-filter="Dismissed" data-group="viking-insights">Dismissed</button>
       </div>
 
-      <div class="card-grid" id="ai-insights-grid">
+      <div class="card-grid" id="viking-insights-grid">
         <!-- Populated by JS -->
       </div>
     </div>
@@ -1001,9 +998,7 @@
     <div class="mobile-nav-item" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
       <span class="icon">📊</span>Home
     </div>
-    <div class="mobile-nav-item" data-page="ai-insights" onclick="navigateTo('ai-insights');setMobileActive(this)">
-      <span class="icon">💡</span>AI
-    </div>
+    <!-- Viking Insights removed from mobile nav -->
     <div class="mobile-nav-item active" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
       <span class="icon">✏️</span>Jots
     </div>
@@ -1029,7 +1024,7 @@ function setMobileActive(el) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [], aiInsights: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [], vikingInsights: [] };
 
 // ============================================================
 // APP LOGIC
@@ -1074,7 +1069,7 @@ async function loadData() {
     DATA.inbox = d.inbox || [];
     DATA.jots = d.jots || [];
     DATA.commands = d.commands || [];
-    DATA.aiInsights = d.aiInsights || [];
+    DATA.vikingInsights = d.vikingInsights || [];
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -1202,13 +1197,13 @@ function renderDashboard() {
   }
 }
 
-// AI Insights Rendering
+// Viking AI Insights Rendering
 function renderAIInsights() {
-  const insights = DATA.aiInsights || [];
+  const insights = DATA.vikingInsights || [];
   
   // Update badge count
   const newCount = insights.filter(i => i.status === 'New').length;
-  const badge = document.getElementById('ai-insights-badge');
+  const badge = document.getElementById('viking-insights-badge');
   if (badge) {
     badge.textContent = newCount;
     badge.style.display = newCount > 0 ? 'inline' : 'none';
@@ -1220,7 +1215,7 @@ function renderAIInsights() {
   const highImpact = insights.filter(i => i.impact === 'High').length;
   const inProgress = insights.filter(i => i.status === 'In Progress').length;
 
-  const statsContainer = document.getElementById('ai-insights-stats');
+  const statsContainer = document.getElementById('viking-insights-stats');
   if (statsContainer) {
     statsContainer.innerHTML = `
       <div class="stat-card">
@@ -1243,7 +1238,7 @@ function renderAIInsights() {
   }
 
   // Render insight cards
-  const gridContainer = document.getElementById('ai-insights-grid');
+  const gridContainer = document.getElementById('viking-insights-grid');
   if (gridContainer) {
     renderFilteredAIInsights();
   }
@@ -1253,11 +1248,11 @@ function renderAIInsights() {
 }
 
 function renderFilteredAIInsights() {
-  const insights = DATA.aiInsights || [];
-  const gridContainer = document.getElementById('ai-insights-grid');
+  const insights = DATA.vikingInsights || [];
+  const gridContainer = document.getElementById('viking-insights-grid');
   if (!gridContainer) return;
 
-  const activeFilters = Array.from(document.querySelectorAll('#ai-insights-filters .filter-btn.active'))
+  const activeFilters = Array.from(document.querySelectorAll('#viking-insights-filters .filter-btn.active'))
     .map(btn => btn.dataset.filter)
     .filter(f => f !== 'all');
 
@@ -1304,18 +1299,18 @@ function renderFilteredAIInsights() {
 }
 
 function setupAIInsightsFilters() {
-  document.querySelectorAll('#ai-insights-filters .filter-btn').forEach(btn => {
+  document.querySelectorAll('#viking-insights-filters .filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const group = btn.dataset.group;
       const filter = btn.dataset.filter;
       
       if (filter === 'all') {
         // Clear all filters in this group
-        document.querySelectorAll(`#ai-insights-filters .filter-btn[data-group="${group}"]`).forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`#viking-insights-filters .filter-btn[data-group="${group}"]`).forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       } else {
         // Remove 'all' filter if it's active
-        document.querySelector('#ai-insights-filters .filter-btn[data-filter="all"]')?.classList.remove('active');
+        document.querySelector('#viking-insights-filters .filter-btn[data-filter="all"]')?.classList.remove('active');
         btn.classList.toggle('active');
       }
       
@@ -1325,7 +1320,7 @@ function setupAIInsightsFilters() {
 }
 
 function openAIInsightModal(insightId) {
-  const insight = DATA.aiInsights.find(i => i.id === insightId);
+  const insight = DATA.vikingInsights.find(i => i.id === insightId);
   if (!insight) return;
 
   const modalContent = document.getElementById('ai-insight-modal-content');
@@ -1397,7 +1392,7 @@ function closeAIInsightModal() {
 }
 
 async function updateAIInsightStatus(insightId, newStatus) {
-  const insight = DATA.aiInsights.find(i => i.id === insightId);
+  const insight = DATA.vikingInsights.find(i => i.id === insightId);
   if (!insight) return;
 
   insight.status = newStatus;
