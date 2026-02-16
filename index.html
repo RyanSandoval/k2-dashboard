@@ -2461,6 +2461,10 @@ function openTaskModal(taskId) {
         `).join('')
       }
     </div>
+
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+      <button onclick="deleteTask(${JSON.stringify(task.id)})" style="width:100%;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete Task</button>
+    </div>
   `;
 
   document.getElementById('task-modal').style.display = 'block';
@@ -2471,6 +2475,15 @@ function openTaskModal(taskId) {
     const thread = document.getElementById('task-thread');
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, 50);
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Delete this task?')) return;
+  DATA.tasks = DATA.tasks.filter(t => t.id != taskId);
+  await saveData();
+  closeTaskModal();
+  renderTasks();
+  renderProjects();
 }
 
 function closeTaskModal() {
