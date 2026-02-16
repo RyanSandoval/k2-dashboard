@@ -1483,7 +1483,7 @@ let activeTaskId = null;
 
 function openTaskModal(taskId) {
   activeTaskId = taskId;
-  const task = DATA.tasks.find(t => t.id === taskId);
+  const task = DATA.tasks.find(t => t.id == taskId);
   if (!task) return;
   if (!task.messages) task.messages = [];
   
@@ -1492,9 +1492,9 @@ function openTaskModal(taskId) {
 
   document.getElementById('task-modal-content').innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
-      <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${task.id});openTaskModal(${task.id})" style="margin-top:2px;flex-shrink:0;"></div>
+      <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${JSON.stringify(task.id)});openTaskModal(${JSON.stringify(task.id)})" style="margin-top:2px;flex-shrink:0;"></div>
       <div>
-        <h3 style="font-size:16px;font-weight:700;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}">${task.text}</h3>
+        <h3 style="font-size:16px;font-weight:700;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}">${task.text || task.title || 'Untitled'}</h3>
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
           <span class="tag tag-blue">${projectName}</span>
           <span class="task-priority priority-${task.priority}">${task.priority}</span>
@@ -1747,20 +1747,22 @@ function renderTasks() {
   let filteredTasks = DATA.tasks;
 
   if (activeFilter === 'pending') {
-    filteredTasks = DATA.tasks.filter(t => !t.done);
+    filteredTasks = DATA.tasks.filter(t => !t.done && t.status !== 'done');
   } else if (activeFilter === 'done') {
-    filteredTasks = DATA.tasks.filter(t => t.done);
+    filteredTasks = DATA.tasks.filter(t => t.done || t.status === 'done');
   }
 
   taskContainer.innerHTML = filteredTasks.map(task => {
     const project = DATA.projects.find(p => p.id === task.project);
     const projectName = project ? project.name : 'General';
 
+    const taskText = task.text || task.title || 'Untitled';
+    const taskId = JSON.stringify(task.id);
     return `
-      <li class="task-item" onclick="openTaskModal(${task.id})">
-        <div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${task.id})"></div>
+      <li class="task-item" onclick="openTaskModal(${taskId})">
+        <div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${taskId})"></div>
         <div class="task-content ${task.done ? 'done' : ''}">
-          ${task.text}
+          ${taskText}
           <div class="task-meta">
             ${projectName} • ${task.created}${task.source === 'jot' ? ' • 📝 from jot' : ''}
           </div>
@@ -1812,7 +1814,7 @@ async function addTask() {
 }
 
 async function toggleTask(taskId) {
-  const task = DATA.tasks.find(t => t.id === taskId);
+  const task = DATA.tasks.find(t => t.id == taskId);
   if (!task) return;
 
   task.done = !task.done;
