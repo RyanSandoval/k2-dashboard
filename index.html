@@ -2505,6 +2505,9 @@ function toggleArchive() {
 // Task Detail Modal
 let activeTaskId = null;
 
+// Safe ID for use in onclick HTML attributes (handles string and number IDs)
+function safeId(id) { return typeof id === 'string' ? "'" + id.replace(/'/g,"\\'") + "'" : id; }
+
 function openTaskModal(taskId) {
   activeTaskId = taskId;
   const task = DATA.tasks.find(t => t.id == taskId);
@@ -2526,7 +2529,7 @@ function openTaskModal(taskId) {
   // Left element: checkbox for Ryan, status for K-2
   const leftElModal = isK2
     ? `<span style="font-size:20px;flex-shrink:0;margin-top:2px;" title="${statusInfo.label}">${statusInfo.icon}</span>`
-    : `<div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${JSON.stringify(task.id)});openTaskModal(${JSON.stringify(task.id)})" style="margin-top:2px;flex-shrink:0;"></div>`;
+    : `<div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${safeId(task.id)});openTaskModal(${safeId(task.id)})" style="margin-top:2px;flex-shrink:0;"></div>`;
 
   // Activity log
   const activity = task.activity || [];
@@ -2536,24 +2539,24 @@ function openTaskModal(taskId) {
     <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
       ${leftElModal}
       <div style="flex:1;">
-        <h3 style="font-size:16px;font-weight:700;cursor:pointer;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${JSON.stringify(task.id)},'text',this)" title="Click to edit">${task.text || task.title || 'Untitled'}</h3>
+        <h3 style="font-size:16px;font-weight:700;cursor:pointer;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${safeId(task.id)},'text',this)" title="Click to edit">${task.text || task.title || 'Untitled'}</h3>
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
-          <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${JSON.stringify(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
+          <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${safeId(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
           ${isK2 ? `<span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.icon} ${statusInfo.label}</span>` : ''}
           <span class="tag tag-blue">${projectName}</span>
-          <span class="task-priority priority-${task.priority}" style="cursor:pointer;" onclick="cycleTaskPriority(${JSON.stringify(task.id)})" title="Click to cycle priority">${task.priority}</span>
+          <span class="task-priority priority-${task.priority}" style="cursor:pointer;" onclick="cycleTaskPriority(${safeId(task.id)})" title="Click to cycle priority">${task.priority}</span>
           <span class="tag tag-purple">${task.created}</span>
         </div>
       </div>
     </div>
 
     ${task.context ? `
-    <div style="margin-bottom:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--accent2);cursor:pointer;" onclick="editTaskField(${JSON.stringify(task.id)},'context',this.querySelector('.ctx-text'))" title="Click to edit context">
+    <div style="margin-bottom:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--accent2);cursor:pointer;" onclick="editTaskField(${safeId(task.id)},'context',this.querySelector('.ctx-text'))" title="Click to edit context">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent2);font-weight:600;margin-bottom:4px;">Context</div>
       <div class="ctx-text" style="font-size:12px;color:var(--text-dim);line-height:1.5;">${task.context}</div>
     </div>
     ` : `
-    <div style="margin-bottom:12px;font-size:12px;color:var(--text-dim);cursor:pointer;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center;" onclick="editTaskField(${JSON.stringify(task.id)},'context',this)">+ Add context</div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--text-dim);cursor:pointer;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center;" onclick="editTaskField(${safeId(task.id)},'context',this)">+ Add context</div>
     `}
 
     ${projectGoal ? `
@@ -2565,14 +2568,14 @@ function openTaskModal(taskId) {
 
     ${isK2 && k2Status === 'pending' && !task.done ? `
     <div style="margin-bottom:12px;">
-      <button onclick="queueTaskForK2(${JSON.stringify(task.id)})" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">▶ Queue for K-2</button>
+      <button onclick="queueTaskForK2(${safeId(task.id)})" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">▶ Queue for K-2</button>
     </div>
     ` : ''}
 
     ${isK2 && k2Status === 'review' ? `
     <div style="margin-bottom:12px;display:flex;gap:8px;">
-      <button onclick="acceptK2Task(${JSON.stringify(task.id)})" style="flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">👍 Accept</button>
-      <button onclick="reworkK2Task(${JSON.stringify(task.id)})" style="flex:1;padding:10px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">👎 Rework</button>
+      <button onclick="acceptK2Task(${safeId(task.id)})" style="flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">👍 Accept</button>
+      <button onclick="reworkK2Task(${safeId(task.id)})" style="flex:1;padding:10px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">👎 Rework</button>
     </div>
     ` : ''}
 
@@ -2611,7 +2614,7 @@ function openTaskModal(taskId) {
     </div>
 
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
-      <button onclick="deleteTask(${JSON.stringify(task.id)})" style="width:100%;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete Task</button>
+      <button onclick="deleteTask(${safeId(task.id)})" style="width:100%;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete Task</button>
     </div>
   `;
 
@@ -2763,7 +2766,7 @@ function openProjectModal(projectId) {
         <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>!t.done).length}/${tasks.length})</div>
         <div style="max-height:120px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:8px;">
           ${tasks.map(t => `
-            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${JSON.stringify(t.id)})">
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${safeId(t.id)})">
               <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;"></div>
               <span style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${t.text}</span>
               <span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>
@@ -2904,7 +2907,7 @@ function renderTasks() {
     const projectName = project ? project.name : 'General';
 
     const taskText = task.text || task.title || 'Untitled';
-    const taskId = JSON.stringify(task.id);
+    const taskId = typeof task.id === 'string' ? "'" + task.id.replace(/'/g,"\\'") + "'" : task.id;
     const isK2 = task.owner === 'k2';
     const ownerBadge = isK2 ? '🤖' : '👤';
     const k2Status = task.k2Status || 'pending';
