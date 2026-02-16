@@ -2062,9 +2062,9 @@ function openProjectModal(projectId) {
         <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>!t.done).length}/${tasks.length})</div>
         <div style="max-height:120px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:8px;">
           ${tasks.map(t => `
-            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${t.id})">
-              <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;"></div>
-              <span style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${t.text}</span>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;">
+              <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;cursor:pointer;" onclick="event.stopPropagation();toggleTask(${t.id});openProjectModal('${p.id}')"></div>
+              <span style="flex:1;cursor:pointer;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}" onclick="closeProjectModal();openTaskModal(${t.id})">${t.text}</span>
               <span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>
             </div>
           `).join('')}
@@ -2072,19 +2072,21 @@ function openProjectModal(projectId) {
       </div>
     ` : ''}
 
-    ${(p.notes||[]).length ? `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Notes</div>
-        <div style="background:var(--surface2);border-radius:8px;padding:12px;max-height:100px;overflow-y:auto;">
-          ${(p.notes||[]).map(n => `
-            <div style="font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
-              <div style="color:var(--text-dim);font-size:10px;margin-bottom:2px;">${n.date} · ${n.author}</div>
-              ${n.text}
-            </div>
-          `).join('')}
-        </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Comments & Updates</div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;margin-bottom:8px;" id="project-comments-list">
+        ${(p.notes||[]).length ? (p.notes||[]).map(n => `
+          <div style="font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);${n.author === 'K-2' ? 'border-left:3px solid var(--accent);padding-left:8px;' : ''}">
+            <div style="color:var(--text-dim);font-size:10px;margin-bottom:2px;">${n.author === 'K-2' ? '🤖' : '👤'} ${n.author} · ${n.date}</div>
+            <div style="line-height:1.5;">${n.text}</div>
+          </div>
+        `).join('') : '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:8px;">No comments yet</div>'}
       </div>
-    ` : ''}
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="project-comment-input" placeholder="Add a comment..." style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;" onkeydown="if(event.key==='Enter')addProjectComment('${p.id}')">
+        <button onclick="addProjectComment('${p.id}')" style="padding:8px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">Post</button>
+      </div>
+    </div>
 
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
       <button onclick="archiveProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;">Archive</button>
@@ -2108,6 +2110,25 @@ async function changeProjectStatus(projectId, newStatus) {
   await saveData();
   renderProjects();
   closeProjectModal();
+}
+
+async function addProjectComment(projectId) {
+  const input = document.getElementById('project-comment-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const project = DATA.projects.find(p => p.id === projectId);
+  if (!project) return;
+  if (!project.notes) project.notes = [];
+  const now = new Date();
+  const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
+  project.notes.push({ date: dateStr, author: 'Ryan', text: text });
+  input.value = '';
+  await saveData();
+  openProjectModal(projectId);
+  setTimeout(() => {
+    const list = document.getElementById('project-comments-list');
+    if (list) list.scrollTop = list.scrollHeight;
+  }, 50);
 }
 
 async function archiveProject(projectId) {
