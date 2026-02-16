@@ -570,7 +570,7 @@
     background: rgba(74,158,255,0.05);
   }
 
-  /* Jots */
+  /* Daily Docs / Editor */
   .jots-date-header {
     font-size: 24px;
     font-weight: 700;
@@ -578,58 +578,6 @@
     letter-spacing: -0.5px;
   }
   .jots-date-header .dow { color: var(--accent); }
-  .jot-input-wrap {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    align-items: flex-end;
-    position: relative;
-  }
-  .jot-input-wrap textarea {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-size: 14px;
-    outline: none;
-    resize: none;
-    overflow: hidden;
-    min-height: 48px;
-    max-height: 200px;
-    font-family: inherit;
-    line-height: 1.5;
-  }
-  .jot-input-wrap textarea:focus { border-color: var(--accent); }
-  .jot-input-wrap textarea::placeholder { color: var(--text-dim); }
-  .jot-attach-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text-dim);
-    cursor: pointer;
-    padding: 12px;
-    font-size: 18px;
-    transition: all 0.15s;
-    flex-shrink: 0;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .jot-attach-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .jot-images-preview { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  .jot-images-preview .jot-img-thumb {
-    width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);
-    position: relative; cursor: pointer;
-  }
-  .jot-images-preview .jot-img-remove {
-    position: absolute; top: -6px; right: -6px; background: var(--red); color: #fff; border: none;
-    border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; display: flex;
-    align-items: center; justify-content: center; line-height: 1;
-  }
-  .jot-img-wrap { position: relative; display: inline-block; }
   /* Markdown rendering (universal) */
   .md-content h1 { font-size: 18px; font-weight: 700; margin: 8px 0 4px; }
   .md-content h2 { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
@@ -642,118 +590,128 @@
   .md-content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .md-content del { color: var(--text-dim); }
   .md-content mark { background: rgba(255,213,79,0.3); padding: 1px 3px; border-radius: 3px; }
-  .jot-text h2 { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
-  .jot-text h3 { font-size: 14px; font-weight: 600; margin: 3px 0 2px; }
-  .jot-text code {
+  /* ProseMirror / TipTap Editor */
+  .daily-doc-container { margin-bottom: 24px; }
+  .daily-doc-editor {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    min-height: 120px;
+    transition: border-color 0.2s;
+  }
+  .daily-doc-editor:focus-within { border-color: var(--accent); }
+  .daily-doc-editor.readonly { min-height: unset; opacity: 0.9; }
+  .daily-doc-editor.readonly:focus-within { border-color: var(--border); }
+  .ProseMirror { outline: none; color: var(--text); font-size: 14px; line-height: 1.6; }
+  .ProseMirror p { margin: 4px 0; }
+  .ProseMirror h1 { font-size: 20px; font-weight: 700; margin: 16px 0 6px; }
+  .ProseMirror h2 { font-size: 16px; font-weight: 700; margin: 12px 0 4px; }
+  .ProseMirror h3 { font-size: 14px; font-weight: 600; margin: 8px 0 3px; }
+  .ProseMirror code {
     background: rgba(74,158,255,0.12); padding: 1px 5px; border-radius: 4px;
     font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12.5px; color: var(--accent);
   }
-  .jot-text pre {
+  .ProseMirror pre {
     background: #1e1e2e; border: 1px solid var(--border); border-radius: 8px;
-    padding: 12px; margin: 6px 0; overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+    padding: 12px; margin: 8px 0; overflow-x: auto; font-size: 12.5px; line-height: 1.5;
   }
-  .jot-text pre code {
-    background: none; padding: 0; color: #abb2bf; font-size: 12.5px;
+  .ProseMirror pre code { background: none; padding: 0; color: #abb2bf; font-size: 12.5px; }
+  .ProseMirror blockquote {
+    border-left: 3px solid var(--accent); padding: 4px 12px; margin: 8px 0;
+    color: var(--text-dim); font-style: italic;
   }
-  .jot-text pre .kw { color: #c678dd; }
-  .jot-text pre .str { color: #98c379; }
-  .jot-text pre .num { color: #d19a66; }
-  .jot-text pre .cmt { color: #5c6370; font-style: italic; }
-  .jot-text pre .fn { color: #61afef; }
-  .jot-text pre .op { color: #56b6c2; }
-  .jot-text ul { margin: 4px 0 4px 18px; font-size: 14px; }
-  .jot-text li { margin: 2px 0; }
-  .jot-text a { color: var(--accent); text-decoration: underline; }
-  .jot-text .jot-img-full { max-width: 100%; border-radius: 8px; margin: 6px 0; max-height: 300px; }
-  /* Edit mode */
-  .jot-edit-wrap { flex: 1; }
-  .jot-edit-wrap textarea {
-    width: 100%; background: var(--surface2); border: 1px solid var(--accent); border-radius: 8px;
-    padding: 8px 10px; color: var(--text); font-size: 13px; font-family: inherit; resize: vertical;
-    min-height: 36px; outline: none; line-height: 1.5;
+  .ProseMirror hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .ProseMirror ul, .ProseMirror ol { margin: 4px 0 4px 18px; font-size: 14px; }
+  .ProseMirror li { margin: 2px 0; }
+  .ProseMirror li p { margin: 0; }
+  .ProseMirror a { color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .ProseMirror ul[data-type="taskList"] {
+    list-style: none; padding: 0; margin: 4px 0;
   }
-  /* edit actions removed — blur/enter to save */
-  .jot-text { cursor: pointer; }
-  .jot-text:hover { opacity: 0.85; }
-  .jot-entry {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    transition: background 0.1s, opacity 0.2s, transform 0.15s;
-    position: relative;
+  .ProseMirror ul[data-type="taskList"] li {
+    display: flex; align-items: flex-start; gap: 8px; margin: 3px 0;
   }
-  .jot-entry:hover { background: var(--surface2); }
-  .jot-entry.dragging { opacity: 0.3; }
-  .jot-entry.drag-over { border-top: 2px solid var(--accent); margin-top: -2px; }
-  .jot-drag-handle {
-    cursor: grab; opacity: 0; font-size: 14px; color: var(--text-dim);
-    flex-shrink: 0; margin-top: 2px; user-select: none; -webkit-user-select: none;
-    touch-action: none; padding: 2px 0; transition: opacity 0.15s;
+  .ProseMirror ul[data-type="taskList"] li > label {
+    flex-shrink: 0; margin-top: 3px;
   }
-  .jot-entry:hover .jot-drag-handle { opacity: 0.6; }
-  .jot-drag-handle:hover { opacity: 1 !important; color: var(--accent); }
-  .jot-link-badge {
-    display: inline-flex; align-items: center; gap: 3px;
-    font-size: 10px; padding: 1px 6px; border-radius: 6px;
-    cursor: pointer; font-weight: 600; margin-right: 4px; margin-top: 4px;
-    transition: opacity 0.15s; text-decoration: none;
+  .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none;
+    width: 18px; height: 18px; border: 2px solid var(--border);
+    border-radius: 4px; cursor: pointer; position: relative;
+    background: transparent; transition: all 0.15s;
   }
-  .jot-link-badge:hover { opacity: 0.8; }
-  .jot-autocomplete {
+  .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:hover {
+    border-color: var(--accent);
+  }
+  .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+    background: var(--green); border-color: var(--green);
+  }
+  .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+    content: "✓"; color: #000; font-size: 12px; font-weight: 700;
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  }
+  .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
+    text-decoration: line-through; color: var(--text-dim);
+  }
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left; color: var(--text-dim); pointer-events: none; height: 0;
+  }
+  /* Mention badges */
+  .mention-project {
+    display: inline; background: rgba(124,92,255,0.15); color: var(--accent2);
+    padding: 1px 6px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .mention-note {
+    display: inline; background: rgba(74,158,255,0.15); color: var(--accent);
+    padding: 1px 6px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .mention-project:hover, .mention-note:hover { opacity: 0.8; }
+  /* Inline timestamp */
+  .jot-time-inline { font-size: 11px; color: var(--text-dim); margin-right: 6px; }
+  /* Slash command menu */
+  .slash-menu {
     position: absolute; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 500;
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 600;
+    max-height: 280px; overflow-y: auto; min-width: 220px; padding: 4px;
+  }
+  .slash-menu-item {
+    padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: 6px;
+    display: flex; align-items: center; gap: 10px; transition: background 0.1s;
+  }
+  .slash-menu-item:hover, .slash-menu-item.active { background: var(--surface2); color: var(--accent); }
+  .slash-menu-item .sm-icon { font-size: 16px; flex-shrink: 0; width: 24px; text-align: center; }
+  .slash-menu-item .sm-label { font-weight: 500; }
+  .slash-menu-item .sm-desc { font-size: 11px; color: var(--text-dim); margin-left: auto; }
+  /* Suggestion dropdown (@ and #) */
+  .suggestion-dropdown {
+    position: absolute; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 600;
     max-height: 200px; overflow-y: auto; min-width: 200px; padding: 4px;
   }
-  .jot-autocomplete-item {
+  .suggestion-item {
     padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: 6px;
     display: flex; align-items: center; gap: 8px;
   }
-  .jot-autocomplete-item:hover, .jot-autocomplete-item.active {
-    background: var(--surface2); color: var(--accent);
+  .suggestion-item:hover, .suggestion-item.active { background: var(--surface2); color: var(--accent); }
+  /* Floating toolbar */
+  .editor-float-toolbar {
+    position: absolute; display: none; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 500; gap: 2px; align-items: center;
   }
-  .jot-autocomplete-item .ac-icon { font-size: 14px; flex-shrink: 0; }
-  .jot-autocomplete-item .ac-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .jot-link-badge.project { background: rgba(124,92,255,0.15); color: var(--accent2); }
-  .jot-link-badge.note { background: rgba(74,158,255,0.15); color: var(--accent); }
-  .jot-entry .jot-check {
-    width: 22px; height: 22px;
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-top: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-    -webkit-tap-highlight-color: transparent;
+  .editor-float-toolbar.visible { display: flex; }
+  .eft-btn {
+    background: none; border: none; color: var(--text); padding: 6px 8px;
+    border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;
+    transition: background 0.15s;
   }
-  .jot-entry .jot-check:hover { border-color: var(--accent); }
-  .jot-entry .jot-check.done { background: var(--green); border-color: var(--green); }
-  .jot-entry .jot-check.done::after { content: "✓"; color: #000; font-size: 13px; font-weight: 700; }
-  .jot-text { flex: 1; font-size: 14px; line-height: 1.5; }
-  .jot-text.done { text-decoration: line-through; color: var(--text-dim); }
-  .jot-text .jot-tag { color: var(--accent); font-weight: 500; }
-  .jot-time { font-size: 11px; color: var(--text-dim); flex-shrink: 0; margin-top: 3px; }
-  .jot-delete {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-size: 14px;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s;
-    padding: 4px 8px;
-    border-radius: 4px;
-  }
-  .jot-entry:hover .jot-delete { opacity: 1; }
-  .jot-delete:hover { color: var(--red); background: rgba(248,113,113,0.1); }
+  .eft-btn:hover { background: var(--surface2); }
+  .eft-btn.is-active { color: var(--accent); background: rgba(74,158,255,0.1); }
+  .eft-divider { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
 
   /* Selection toolbar */
   .selection-toolbar {
@@ -786,19 +744,6 @@
   .sel-btn.sel-task:hover { background: rgba(74,222,128,0.12); }
   .sel-divider { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
 
-  .jot-file-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 4px 10px; font-size: 12px; color: var(--text);
-  }
-  .jot-file-link {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 6px; padding: 4px 10px; font-size: 12px;
-    color: var(--accent); text-decoration: none; margin-top: 6px; margin-right: 6px;
-  }
-  .jot-file-link:hover { border-color: var(--accent); }
-  .jot-files { margin-top: 8px; }
   .jot-day-section { margin-top: 16px; }
   .jot-day-header {
     display: flex;
@@ -818,11 +763,8 @@
   .jot-day-header.open + .jot-day-entries { display: block !important; }
 
   @media (max-width: 768px) {
-    .jot-drag-handle { opacity: 0.4; }
-    .jot-delete { opacity: 0.6; }
-    .jot-entry .jot-check { width: 28px; height: 28px; }
-    .jot-entry .jot-check.done::after { font-size: 16px; }
-    .jot-entry { padding: 14px 12px; }
+    .daily-doc-editor { padding: 12px 14px; }
+    .ProseMirror { font-size: 15px; }
   }
 
   /* Mobile Nav */
@@ -1194,26 +1136,19 @@
       </div>
     </div>
 
-    <!-- Jots Page -->
+    <!-- Jots / Daily Docs Page -->
     <div class="page active" id="page-jots" style="max-width:900px;margin:0 auto;">
       <div class="page-header">
         <div class="jots-date-header" id="jots-today-date"></div>
-        <p>Quick capture — type and hit enter</p>
+        <p>Daily notes — just start typing. Use markdown shortcuts, / for commands</p>
       </div>
       <div style="margin-bottom:12px;">
-        <input type="text" id="jot-search" placeholder="🔍 Search jots... (text, #tags)" oninput="filterJots()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
       </div>
-      <div id="jot-images-preview" class="jot-images-preview"></div>
-      <div class="jot-input-wrap" id="jot-drop-zone">
-        <textarea id="jot-input" rows="1" placeholder="What's on your mind? @project, #note, [] checkbox, **bold**..." onkeydown="handleJotKeydown(event)" oninput="autoExpandTextarea(this);jotAutocompleteCheck(this)"></textarea>
-        <input type="file" id="jot-file-input" accept="*/*" multiple style="display:none" onchange="handleJotFileAttach(event)">
-        <button class="jot-attach-btn" onclick="document.getElementById('jot-file-input').click()" title="Attach file">📎</button>
-        <div id="jot-drop-overlay" style="display:none;position:absolute;inset:0;background:rgba(74,158,255,0.12);border:2px dashed var(--accent);border-radius:12px;z-index:10;pointer-events:none;align-items:center;justify-content:center;">
-          <span style="color:var(--accent);font-weight:600;font-size:14px;">Drop files here</span>
-        </div>
+      <div id="daily-doc-today" class="daily-doc-container">
+        <div id="daily-doc-today-editor" class="daily-doc-editor"></div>
       </div>
-      <div id="jots-today-entries"></div>
-      <div id="jots-previous-days"></div>
+      <div id="daily-doc-previous"></div>
     </div>
 
     <!-- Projects Page (Kanban) -->
@@ -1489,7 +1424,7 @@ function setMobileActive(el) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [], vikingInsights: [], trading: { books: [] }, growth: null };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null };
 
 // ============================================================
 // APP LOGIC
@@ -1533,6 +1468,7 @@ async function loadData() {
     DATA.timeline = d.timeline || [];
     DATA.inbox = d.inbox || [];
     DATA.jots = d.jots || [];
+    DATA.dailyDocs = d.dailyDocs || {};
     DATA.commands = d.commands || [];
     DATA.vikingInsights = d.vikingInsights || [];
     DATA.trading = d.trading || { books: [] };
@@ -1580,7 +1516,8 @@ function renderAll() {
   renderDiscussions();
   renderDecisions();
   renderNotes();
-  renderJots();
+  migrateJotsToDailyDocs();
+  renderDailyDocs();
   renderAIInsights();
   renderTrading();
   renderGrowth();
@@ -1599,9 +1536,9 @@ function navigateTo(page) {
   });
   // Scroll to top
   document.querySelector('.main').scrollTop = 0;
-  // Auto-focus jots input
+  // Auto-focus daily doc editor
   if (page === 'jots') {
-    setTimeout(() => document.getElementById('jot-input')?.focus(), 100);
+    setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 200);
   }
 }
 
@@ -3385,209 +3322,231 @@ async function requestK2TakeFromEditor() {
 }
 
 // Jots functionality
-let jotSearchQuery = '';
+let dailyDocSearchQuery = '';
 
-function filterJots() {
-  jotSearchQuery = (document.getElementById('jot-search')?.value || '').trim().toLowerCase();
-  renderJots();
+function filterDailyDocs() {
+  dailyDocSearchQuery = (document.getElementById('jot-search')?.value || '').trim().toLowerCase();
+  renderDailyDocs();
 }
 
-function jotMatchesSearch(jot) {
-  if (!jotSearchQuery) return true;
-  const text = (jot.text || '').toLowerCase();
-  const tags = (jot.tags || []).map(t => t.toLowerCase());
-  
-  // Support multiple search terms (space-separated)
-  const terms = jotSearchQuery.split(/\s+/);
-  return terms.every(term => {
-    if (term.startsWith('#')) {
-      // Tag search
-      const tagTerm = term.slice(1);
-      return tags.some(t => t.includes(tagTerm));
+// ═══ Daily Docs System (TipTap Editor) ═══
+window._todayEditor = null;
+window._previousEditors = {};
+window._openDocDays = new Set();
+window._dailyDocSaveTimer = null;
+
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getDayName(dateStr) {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return days[new Date(dateStr + 'T00:00:00').getDay()];
+}
+
+// Migration: convert old jots to dailyDocs
+function migrateJotsToDailyDocs() {
+  if (!DATA.jots || DATA.jots.length === 0) return;
+  if (!DATA.dailyDocs) DATA.dailyDocs = {};
+
+  // Group jots by date
+  const byDate = {};
+  (DATA.jots || []).forEach(j => {
+    if (!byDate[j.date]) byDate[j.date] = [];
+    byDate[j.date].push(j);
+  });
+
+  for (const [date, jots] of Object.entries(byDate)) {
+    if (DATA.dailyDocs[date]) continue; // already migrated
+    const sorted = jots.sort((a,b) => (a.order||0) - (b.order||0));
+    let html = '';
+    for (const jot of sorted) {
+      const time = (jot.time || '').slice(-5);
+      const timeSpan = time ? `<span class="jot-time-inline">${time}</span>` : '';
+      
+      // Build mention badges
+      let mentions = '';
+      if (jot.projectId) {
+        const proj = (DATA.projects||[]).find(p => p.id === jot.projectId);
+        if (proj) mentions += ` <span class="mention-project" data-id="${proj.id}">@${proj.name}</span>`;
+      }
+      if (jot.noteId) {
+        const note = (DATA.notes||[]).find(n => (n.id||'') == jot.noteId);
+        if (note) mentions += ` <span class="mention-note" data-id="${note.id}">#${(note.title || note.created || 'note').slice(0,20)}</span>`;
+      }
+      
+      const text = (jot.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      if (jot.done !== undefined && (text.match(/\[\s*\]/) || text.match(/\[x\]/i))) {
+        // Task item
+        const cleanText = text.replace(/\[\s*\]/g, '').replace(/\[x\]/gi, '').trim();
+        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" ${jot.done ? 'checked' : ''}></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
+      } else {
+        html += `<p>${timeSpan}${text}${mentions}</p>`;
+      }
     }
-    return text.includes(term) || tags.some(t => t.includes(term));
+    
+    const linkedProjects = [...new Set(sorted.filter(j => j.projectId).map(j => j.projectId))];
+    const linkedNotes = [...new Set(sorted.filter(j => j.noteId).map(j => j.noteId))];
+    
+    DATA.dailyDocs[date] = {
+      content: html || '<p></p>',
+      updatedAt: new Date().toISOString(),
+      linkedProjects,
+      linkedNotes
+    };
+  }
+}
+
+function renderJots() { renderDailyDocs(); }
+
+function renderDailyDocs() {
+  const today = getTodayStr();
+  const dow = getDayName(today);
+  
+  const header = document.getElementById('jots-today-date');
+  if (header) header.innerHTML = `${today} <span class="dow">${dow}</span>`;
+
+  // Ensure today's doc exists
+  if (!DATA.dailyDocs) DATA.dailyDocs = {};
+  if (!DATA.dailyDocs[today]) {
+    DATA.dailyDocs[today] = { content: '<p></p>', updatedAt: new Date().toISOString(), linkedProjects: [], linkedNotes: [] };
+  }
+
+  // Initialize today's editor (only once)
+  if (!window._todayEditor) {
+    initTodayEditor(today);
+  } else {
+    // Update content if loaded from server
+    const doc = DATA.dailyDocs[today];
+    if (doc && window._todayEditorDate !== today) {
+      window._todayEditor.commands.setContent(doc.content || '<p></p>');
+      window._todayEditorDate = today;
+    }
+  }
+
+  // Render previous days
+  renderPreviousDays(today);
+}
+
+function initTodayEditor(today) {
+  // Will be initialized by the module script after TipTap loads
+  window._todayEditorDate = today;
+  window._pendingTodayInit = today;
+  if (window._tiptapLoaded) {
+    window._createTodayEditor(today);
+  }
+}
+
+function renderPreviousDays(today) {
+  const container = document.getElementById('daily-doc-previous');
+  if (!container) return;
+
+  const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
+  
+  // Filter by search
+  const filteredDates = dailyDocSearchQuery
+    ? allDates.filter(d => {
+        const doc = DATA.dailyDocs[d];
+        return doc && (doc.content || '').toLowerCase().includes(dailyDocSearchQuery);
+      })
+    : allDates;
+
+  if (dailyDocSearchQuery && filteredDates.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:13px;">No notes matching "' + dailyDocSearchQuery + '"</div>';
+    return;
+  }
+
+  container.innerHTML = filteredDates.map(date => {
+    const dow = getDayName(date);
+    const doc = DATA.dailyDocs[date];
+    const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
+    // Get preview text (strip HTML)
+    const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
+    
+    return `
+      <div class="jot-day-section">
+        <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
+          <span class="jot-day-toggle">${isOpen ? '▼' : '▶'}</span>
+          <span>${date} ${dow}</span>
+          ${!isOpen ? `<span style="color:var(--text-dim);font-size:11px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${previewText}</span>` : ''}
+        </div>
+        <div class="jot-day-entries" id="doc-day-${date}" style="${isOpen ? '' : 'display:none;'}">
+          <div class="daily-doc-editor readonly" id="doc-editor-${date}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Initialize read-only editors for open days
+  filteredDates.forEach(date => {
+    if (dailyDocSearchQuery || window._openDocDays.has(date)) {
+      initPreviousDayEditor(date);
+    }
   });
 }
 
-function renderJots() {
-  const today = new Date();
-  const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dow = dayNames[today.getDay()];
-  
-  const header = document.getElementById('jots-today-date');
-  if (header) {
-    header.innerHTML = `${dateStr} <span class="dow">${dow}</span>`;
-  }
-
-  const allJots = DATA.jots.filter(jotMatchesSearch);
-  const isSearching = !!jotSearchQuery;
-
-  const todayJots = allJots.filter(j => j.date === dateStr).sort((a,b) => (a.order||0) - (b.order||0));
-  const todayContainer = document.getElementById('jots-today-entries');
-  if (todayContainer) {
-    if (isSearching && todayJots.length === 0) {
-      todayContainer.innerHTML = '';
-    } else {
-      todayContainer.innerHTML = todayJots.map(jot => renderJotEntry(jot)).join('');
-    }
-  }
-
-  // Render previous days (auto-expand when searching)
-  const otherDates = [...new Set(allJots.map(j => j.date))].filter(d => d !== dateStr).sort().reverse();
-  const previousContainer = document.getElementById('jots-previous-days');
-  if (previousContainer) {
-    if (isSearching && allJots.length === 0) {
-      previousContainer.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:13px;">No jots matching "' + jotSearchQuery + '"</div>';
-    } else {
-      previousContainer.innerHTML = otherDates.map(date => {
-        const dateJots = allJots.filter(j => j.date === date).sort((a,b) => (a.order||0) - (b.order||0));
-        const dayName = dayNames[new Date(date + 'T00:00:00').getDay()];
-        
-        const isOpen = isSearching || window._openJotDays.has(date);
-        return `
-          <div class="jot-day-section">
-            <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleJotDay(this)">
-              <span class="jot-day-toggle">${isOpen ? '▼' : '▶'}</span>
-              <span>${date} ${dayName} (${dateJots.length})</span>
-            </div>
-            <div class="jot-day-entries" style="${isOpen ? '' : 'display:none;'}">
-              ${dateJots.map(jot => renderJotEntry(jot)).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-  }
-}
-
-function renderJotEntry(jot) {
-  const timeStr = jot.time.slice(-5); // last 5 chars (HH:MM)
-  let renderedText = jot.text;
-
-  // Handle checkboxes (before markdown rendering)
-  let hasCheckbox = false;
-  if (renderedText.match(/\[\s*\]/)) {
-    hasCheckbox = true;
-    renderedText = renderedText.replace(/\[\s*\]/g, '');
-  } else if (renderedText.match(/\[x\]/i)) {
-    hasCheckbox = true;
-    renderedText = renderedText.replace(/\[x\]/gi, '');
-  }
-
-  // Full markdown rendering
-  renderedText = renderMarkdown(renderedText);
-
-  const isChecked = jot.done || false;
-
-  // Link badges
-  let badges = '';
-  if (jot.projectId) {
-    const proj = (DATA.projects||[]).find(p => p.id === jot.projectId);
-    if (proj) badges += `<a class="jot-link-badge project" onclick="event.stopPropagation();navigateTo('projects');setTimeout(()=>showProjectDetail&&showProjectDetail('${proj.id}'),100)">📁 ${proj.name}</a>`;
-  }
-  if (jot.noteId) {
-    const note = (DATA.notes||[]).find(n => (n.id||'') == jot.noteId);
-    if (note) badges += `<a class="jot-link-badge note" onclick="event.stopPropagation();navigateTo('notes')">📝 ${(note.created||'Note').slice(0,10)}</a>`;
-  }
-  const badgeRow = badges ? `<div style="display:flex;flex-wrap:wrap;gap:2px;">${badges}</div>` : '';
-
-  return `
-    <div class="jot-entry" data-jot-id="${jot.id}" draggable="true" ondragstart="jotDragStart(event,${jot.id})" ondragover="jotDragOver(event)" ondragleave="jotDragLeave(event)" ondrop="jotDrop(event,${jot.id})">
-      <div class="jot-drag-handle" title="Drag to reorder">⠿</div>
-      ${hasCheckbox ? `<div class="jot-check ${isChecked ? 'done' : ''}" onclick="toggleJot(${jot.id})"></div>` : ''}
-      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" onclick="if(!window.getSelection().toString().trim())editJot(${jot.id})">
-        ${renderedText}
-        ${badgeRow}
-      </div>
-      <div class="jot-time">${timeStr}</div>
-      <button class="jot-delete" onclick="deleteJot(${jot.id})" title="Delete">✕</button>
-    </div>
-  `;
-}
-
-if (!window._openJotDays) window._openJotDays = new Set();
-function toggleJotDay(element) {
+function toggleDocDay(element) {
   const date = element.dataset.date;
-  if (window._openJotDays.has(date)) {
-    window._openJotDays.delete(date);
+  if (window._openDocDays.has(date)) {
+    window._openDocDays.delete(date);
     element.classList.remove('open');
-  } else {
-    window._openJotDays.add(date);
-    element.classList.add('open');
-  }
-}
-
-async function handleJotKeydown(event) {
-  jotAutocompleteKeydown(event);
-  if (window._acActive) return;
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    await addJot();
-  }
-}
-
-function autoExpandTextarea(textarea) {
-  textarea.style.height = 'auto';
-  textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
-}
-
-async function addJot() {
-  const input = document.getElementById('jot-input');
-  const text = input.value.trim();
-  if (!text) return;
-
-  const now = new Date();
-  const dateStr = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
-  const timeStr = now.toTimeString().slice(0, 5);
-
-  const maxOrder = (DATA.jots||[]).filter(j => j.date === dateStr).reduce((m, j) => Math.max(m, j.order||0), -1);
-  const newJot = {
-    id: Date.now(),
-    text: text,
-    date: dateStr,
-    time: timeStr,
-    done: false,
-    order: maxOrder + 1
-  };
-
-  // Apply pending links from autocomplete
-  if (window._pendingJotProjectId) { newJot.projectId = window._pendingJotProjectId; window._pendingJotProjectId = null; }
-  if (window._pendingJotNoteId) { newJot.noteId = window._pendingJotNoteId; window._pendingJotNoteId = null; }
-
-  DATA.jots.push(newJot);
-
-  // If jot has checkbox syntax, also create a linked task
-  if (text.match(/\[\s*\]|\[x\]/i)) {
-    const taskText = text.replace(/\[\s*\]/g, '').replace(/\[x\]/gi, '').replace(/(#\w+)/g, '').trim();
-    if (taskText) {
-      const newTask = {
-        id: Date.now() + 1,
-        text: taskText,
-        priority: 'medium',
-        project: '',
-        done: false,
-        created: dateStr,
-        source: 'jot',
-        linkedJotId: newJot.id,
-        messages: []
-      };
-      DATA.tasks.push(newTask);
-      newJot.linkedTaskId = newTask.id;
+    // Destroy editor
+    if (window._previousEditors[date]) {
+      window._previousEditors[date].destroy();
+      delete window._previousEditors[date];
     }
+  } else {
+    window._openDocDays.add(date);
+    element.classList.add('open');
+    // Re-render to create editor container, then init
+    setTimeout(() => initPreviousDayEditor(date), 50);
   }
+}
 
-  input.value = '';
-  input.style.height = 'auto';
+function initPreviousDayEditor(date) {
+  if (window._previousEditors[date]) return;
+  if (!window._tiptapLoaded) return;
+  const el = document.getElementById('doc-editor-' + date);
+  if (!el) return;
+  window._createReadonlyEditor(date, el);
+}
 
-  await saveData();
-  renderJots();
-  renderTasks();
+function debouncedSaveDailyDoc() {
+  if (window._dailyDocSaveTimer) clearTimeout(window._dailyDocSaveTimer);
+  window._dailyDocSaveTimer = setTimeout(async () => {
+    if (!window._todayEditor) return;
+    const today = getTodayStr();
+    const html = window._todayEditor.getHTML();
+    
+    if (!DATA.dailyDocs) DATA.dailyDocs = {};
+    if (!DATA.dailyDocs[today]) DATA.dailyDocs[today] = {};
+    DATA.dailyDocs[today].content = html;
+    DATA.dailyDocs[today].updatedAt = new Date().toISOString();
+    
+    // Extract linked projects/notes from mentions
+    const doc = window._todayEditor.getJSON();
+    const projects = new Set();
+    const notes = new Set();
+    function walkNodes(nodes) {
+      if (!nodes) return;
+      for (const node of nodes) {
+        if (node.type === 'projectMention' && node.attrs?.id) projects.add(node.attrs.id);
+        if (node.type === 'noteMention' && node.attrs?.id) notes.add(node.attrs.id);
+        if (node.content) walkNodes(node.content);
+      }
+    }
+    walkNodes(doc.content);
+    DATA.dailyDocs[today].linkedProjects = [...projects];
+    DATA.dailyDocs[today].linkedNotes = [...notes];
+    
+    await saveData();
+  }, 1500);
 }
 
 // ═══ Universal Rich Text System ═══
-// @ → link project, # → link note, [] → create task
-// Works on any textarea/input via initRichInput(el, opts)
+// Used by notes and other textarea-based inputs
 window._acActive = false;
 window._acItems = [];
 window._acIdx = 0;
@@ -3597,10 +3556,8 @@ function richInputCheck(textarea) {
   const val = textarea.value;
   const pos = textarea.selectionStart;
   const before = val.slice(0, pos);
-
   const atMatch = before.match(/@([^\s@#]*)$/);
   const hashMatch = before.match(/#([^\s@#]*)$/);
-
   if (atMatch) {
     const query = atMatch[1].toLowerCase();
     const items = (DATA.projects||[]).map(p => ({id: p.id, label: p.name, icon: '📁', type: 'project'}))
@@ -3610,114 +3567,47 @@ function richInputCheck(textarea) {
     const query = hashMatch[1].toLowerCase();
     const items = (DATA.notes||[]).map(n => ({id: n.id, label: n.title || (n.text||'').slice(0,40) || n.created, icon: '📝', type: 'note'}))
       .filter(i => i.label.toLowerCase().includes(query));
-    if (items.length > 0) {
-      showRichAutocomplete(textarea, items, 'note', pos - hashMatch[0].length);
-    } else {
-      hideRichAutocomplete();
-    }
-  } else {
-    hideRichAutocomplete();
-  }
+    if (items.length > 0) showRichAutocomplete(textarea, items, 'note', pos - hashMatch[0].length);
+    else hideRichAutocomplete();
+  } else { hideRichAutocomplete(); }
 }
 
 function showRichAutocomplete(textarea, items, type, triggerPos) {
   if (items.length === 0) { hideRichAutocomplete(); return; }
-  window._acActive = true;
-  window._acItems = items;
-  window._acIdx = 0;
+  window._acActive = true; window._acItems = items; window._acIdx = 0;
   window._acTrigger = { type, startPos: triggerPos, textarea };
-
   let dropdown = document.getElementById('rich-autocomplete');
-  if (!dropdown) {
-    dropdown = document.createElement('div');
-    dropdown.id = 'rich-autocomplete';
-    dropdown.className = 'jot-autocomplete';
-    document.body.appendChild(dropdown);
-  }
-
+  if (!dropdown) { dropdown = document.createElement('div'); dropdown.id = 'rich-autocomplete'; dropdown.className = 'suggestion-dropdown'; document.body.appendChild(dropdown); }
   dropdown.innerHTML = items.map((item, i) =>
-    `<div class="jot-autocomplete-item ${i === 0 ? 'active' : ''}" onmousedown="selectRichAutocomplete(${i})" onmouseenter="window._acIdx=${i};renderAcHighlight()">
-      <span class="ac-icon">${item.icon}</span>
-      <span class="ac-label">${item.label}</span>
+    `<div class="suggestion-item ${i === 0 ? 'active' : ''}" onmousedown="selectRichAutocomplete(${i})" onmouseenter="window._acIdx=${i};renderAcHighlight()">
+      <span>${item.icon}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.label}</span>
     </div>`
   ).join('');
-
   const rect = textarea.getBoundingClientRect();
-  dropdown.style.left = rect.left + 'px';
-  dropdown.style.top = (rect.bottom + 4) + 'px';
-  dropdown.style.display = 'block';
+  dropdown.style.left = rect.left + 'px'; dropdown.style.top = (rect.bottom + 4) + 'px'; dropdown.style.display = 'block';
 }
-
-function renderAcHighlight() {
-  const items = document.querySelectorAll('#rich-autocomplete .jot-autocomplete-item');
-  items.forEach((el, i) => el.classList.toggle('active', i === window._acIdx));
-}
-
-function hideRichAutocomplete() {
-  window._acActive = false;
-  const dropdown = document.getElementById('rich-autocomplete');
-  if (dropdown) dropdown.style.display = 'none';
-}
-
+function renderAcHighlight() { document.querySelectorAll('#rich-autocomplete .suggestion-item').forEach((el, i) => el.classList.toggle('active', i === window._acIdx)); }
+function hideRichAutocomplete() { window._acActive = false; const d = document.getElementById('rich-autocomplete'); if (d) d.style.display = 'none'; }
 function selectRichAutocomplete(idx) {
-  const item = window._acItems[idx];
-  const trigger = window._acTrigger;
+  const item = window._acItems[idx]; const trigger = window._acTrigger;
   if (!item || !trigger) { hideRichAutocomplete(); return; }
-
-  const textarea = trigger.textarea;
-  const val = textarea.value;
-  const pos = textarea.selectionStart;
-  const beforeTrigger = val.slice(0, trigger.startPos);
-  const afterCursor = val.slice(pos);
+  const textarea = trigger.textarea; const val = textarea.value; const pos = textarea.selectionStart;
+  const beforeTrigger = val.slice(0, trigger.startPos); const afterCursor = val.slice(pos);
   const insertText = (item.type === 'project' ? '@' : '#') + item.label + ' ';
-
   textarea.value = beforeTrigger + insertText + afterCursor;
   const newPos = beforeTrigger.length + insertText.length;
-  textarea.setSelectionRange(newPos, newPos);
-  textarea.focus();
-
-  // Fire input event so auto-save picks it up
+  textarea.setSelectionRange(newPos, newPos); textarea.focus();
   textarea.dispatchEvent(new Event('input', {bubbles: true}));
-
-  // Apply link via callback if set
   if (textarea._richOnLink) textarea._richOnLink(item);
-
-  // Fallback: jot linking
-  const jotId = textarea.closest('[data-jot-id]')?.dataset.jotId || null;
-  if (jotId) {
-    const jot = DATA.jots.find(j => j.id == jotId);
-    if (jot) {
-      if (item.type === 'project') jot.projectId = item.id;
-      if (item.type === 'note') jot.noteId = item.id;
-    }
-  }
-  if (textarea.id === 'jot-input') {
-    if (item.type === 'project') window._pendingJotProjectId = item.id;
-    if (item.type === 'note') window._pendingJotNoteId = item.id;
-  }
-
   hideRichAutocomplete();
 }
-
 function richInputKeydown(event) {
   if (!window._acActive) return;
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    window._acIdx = Math.min(window._acIdx + 1, window._acItems.length - 1);
-    renderAcHighlight();
-  } else if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    window._acIdx = Math.max(window._acIdx - 1, 0);
-    renderAcHighlight();
-  } else if (event.key === 'Enter' || event.key === 'Tab') {
-    event.preventDefault();
-    selectRichAutocomplete(window._acIdx);
-  } else if (event.key === 'Escape') {
-    hideRichAutocomplete();
-  }
+  if (event.key === 'ArrowDown') { event.preventDefault(); window._acIdx = Math.min(window._acIdx + 1, window._acItems.length - 1); renderAcHighlight(); }
+  else if (event.key === 'ArrowUp') { event.preventDefault(); window._acIdx = Math.max(window._acIdx - 1, 0); renderAcHighlight(); }
+  else if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectRichAutocomplete(window._acIdx); }
+  else if (event.key === 'Escape') { hideRichAutocomplete(); }
 }
-
-// Extract [] tasks from text and create them
 function extractAndCreateTasks(text, projectId) {
   const taskMatches = text.match(/\[\s*\][^\n]*/g) || [];
   taskMatches.forEach(match => {
@@ -3725,88 +3615,44 @@ function extractAndCreateTasks(text, projectId) {
     if (!taskText) return;
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-    const newTask = {
-      id: Date.now() + Math.floor(Math.random()*1000),
-      text: taskText,
-      priority: 'medium',
-      project: projectId || '',
-      owner: 'ryan',
-      created: dateStr,
-      done: false
-    };
-    DATA.tasks.push(newTask);
+    DATA.tasks.push({ id: Date.now() + Math.floor(Math.random()*1000), text: taskText, priority: 'medium', project: projectId || '', owner: 'ryan', created: dateStr, done: false });
   });
   return taskMatches.length;
 }
-
-// Backward-compatible aliases
 function jotAutocompleteCheck(textarea) { richInputCheck(textarea); }
 function jotAutocompleteKeydown(event) { richInputKeydown(event); }
+function autoExpandTextarea(textarea) { textarea.style.height = 'auto'; textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'; }
 
 // ═══ Markdown Renderer ═══
 function renderMarkdown(text) {
   if (!text) return '';
   let html = text;
-
-  // Escape HTML first
   html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // Code blocks (``` ... ```)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
-    return '<pre><code class="lang-' + lang + '">' + code.trim() + '</code></pre>';
-  });
-
-  // Inline code
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => '<pre><code class="lang-' + lang + '">' + code.trim() + '</code></pre>');
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Images ![alt](url)
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:6px 0;">');
-
-  // Links [text](url)
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">$1</a>');
-
-  // Auto-linkify URLs (not already in href or src)
   html = html.replace(/(?<!href="|src=")(https?:\/\/[^\s<"]+)/g, (url) => {
     let display = url;
     try { const u = new URL(url); display = u.hostname + (u.pathname.length > 20 ? u.pathname.slice(0,20) + '…' : u.pathname); } catch(e) { if (url.length > 50) display = url.slice(0,50) + '…'; }
     return '<a href="' + url + '" target="_blank" rel="noopener" title="' + url.replace(/"/g,'&amp;quot;') + '" style="color:var(--accent);text-decoration:underline;word-break:break-all;">' + display + '</a>';
   });
-
-  // Headers (must be at line start)
   html = html.replace(/^#### (.+)$/gm, '<h4 style="font-size:13px;font-weight:600;margin:6px 0 2px;">$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:18px;font-weight:700;margin:8px 0 4px;">$1</h1>');
-
-  // Horizontal rule
   html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">');
-
-  // Blockquotes
   html = html.replace(/^&gt; (.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding:4px 12px;margin:6px 0;color:var(--text-dim);font-style:italic;">$1</blockquote>');
-
-  // Bold + italic
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // Strikethrough
   html = html.replace(/~~(.+?)~~/g, '<del style="color:var(--text-dim);">$1</del>');
-
-  // Highlight
   html = html.replace(/==(.+?)==/g, '<mark style="background:rgba(255,213,79,0.3);padding:1px 3px;border-radius:3px;">$1</mark>');
-
-  // Tables
   html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)+)/gm, (match, headerRow, sepRow, bodyRows) => {
     const headers = headerRow.split('|').filter(c => c.trim());
     const rows = bodyRows.trim().split('\n').map(r => r.split('|').filter(c => c.trim()));
-    return '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:12px;"><thead><tr>' +
-      headers.map(h => '<th style="padding:6px 8px;border:1px solid var(--border);background:var(--surface2);text-align:left;">' + h.trim() + '</th>').join('') +
-      '</tr></thead><tbody>' +
-      rows.map(r => '<tr>' + r.map(c => '<td style="padding:6px 8px;border:1px solid var(--border);">' + c.trim() + '</td>').join('') + '</tr>').join('') +
-      '</tbody></table>';
+    return '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:12px;"><thead><tr>' + headers.map(h => '<th style="padding:6px 8px;border:1px solid var(--border);background:var(--surface2);text-align:left;">' + h.trim() + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map(c => '<td style="padding:6px 8px;border:1px solid var(--border);">' + c.trim() + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
   });
-
-  // Unordered lists (-, *, +)
   html = html.replace(/^((?:[ ]*[-*+] .+\n?)+)/gm, (block) => {
     const items = block.trim().split('\n').map(line => {
       const indent = line.match(/^(\s*)/)[1].length;
@@ -3815,8 +3661,6 @@ function renderMarkdown(text) {
     });
     return '<ul style="margin:4px 0 4px 18px;font-size:inherit;">' + items.join('') + '</ul>';
   });
-
-  // Ordered lists
   html = html.replace(/^((?:[ ]*\d+\. .+\n?)+)/gm, (block) => {
     const items = block.trim().split('\n').map(line => {
       const text = line.replace(/^\s*\d+\. /, '');
@@ -3824,88 +3668,15 @@ function renderMarkdown(text) {
     });
     return '<ol style="margin:4px 0 4px 18px;font-size:inherit;">' + items.join('') + '</ol>';
   });
-
-  // Hashtags (but not inside links/code)
   html = html.replace(/(?<![&\w])(#\w+)/g, '<span class="jot-tag">$1</span>');
-
-  // Line breaks (double newline = paragraph, single = br)
   html = html.replace(/\n\n+/g, '</p><p style="margin:8px 0;">');
   html = html.replace(/\n/g, '<br>');
   html = '<p style="margin:0;">' + html + '</p>';
-
-  // Clean up empty paragraphs
   html = html.replace(/<p style="margin:0;"><\/p>/g, '');
   html = html.replace(/<p style="margin:8px 0;"><\/p>/g, '');
-
   return html;
 }
 
-async function editJot(jotId) {
-  const jot = DATA.jots.find(j => j.id == jotId); // == for loose comparison (string vs number)
-  if (!jot) return;
-
-  // Try multiple selectors for robustness
-  let jotElement = document.querySelector(`[data-jot-id="${jotId}"] .jot-text`);
-  if (!jotElement) jotElement = document.querySelector(`.jot-entry[data-jot-id="${jotId}"] .jot-text`);
-  if (!jotElement) return;
-
-  const currentText = jot.text;
-  jotElement.innerHTML = `
-    <div class="jot-edit-wrap">
-      <textarea onblur="setTimeout(()=>saveJotEdit(${jotId}, this.value),150)" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!window._acActive){event.preventDefault();this.blur();}jotAutocompleteKeydown(event)" oninput="jotAutocompleteCheck(this)">${currentText}</textarea>
-      <div style="display:flex;gap:6px;margin-top:4px;">
-        <button onclick="event.stopPropagation();editJotLinks(${jotId})" style="font-size:11px;padding:2px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);cursor:pointer;">🔗 Link</button>
-      </div>
-    </div>
-  `;
-
-  const textarea = jotElement.querySelector('textarea');
-  textarea.focus();
-  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-}
-
-async function saveJotEdit(jotId, newText) {
-  const jot = DATA.jots.find(j => j.id == jotId);
-  if (!jot) return;
-
-  jot.text = newText.trim();
-  await saveData();
-  renderJots();
-}
-
-async function toggleJot(jotId) {
-  const jot = DATA.jots.find(j => j.id == jotId);
-  if (!jot) return;
-
-  jot.done = !jot.done;
-
-  // Sync linked task
-  if (jot.linkedTaskId) {
-    const task = DATA.tasks.find(t => t.id === jot.linkedTaskId);
-    if (task) task.done = jot.done;
-  }
-
-  await saveData();
-  renderJots();
-  renderTasks();
-}
-
-async function deleteJot(jotId) {
-  if (!confirm('Delete this jot?')) return;
-  
-  DATA.jots = DATA.jots.filter(j => j.id !== jotId);
-  await saveData();
-  renderJots();
-}
-
-// File attachment handling
-let pendingFiles = [];
-
-function handleJotFileAttach(event) {
-  const files = Array.from(event.target.files);
-  if (files.length) processDroppedFiles(files);
-  event.target.value = ''; // Reset so same file can be re-selected
-}
 
 // ═══════════════════════════════════════
 // PROJECT NEXT STEPS ACTIONS
@@ -4349,7 +4120,7 @@ function performSearch(q) {
   const typeConfig = [
     { type: 'Projects', icon: '🚀', items: DATA.projects || [], fields: ['name', 'description', 'goal'], navigate: (item) => ({ page: 'projects', action: () => openProjectModal(item.id) }) },
     { type: 'Notes', icon: '📝', items: DATA.notes || [], fields: ['title', 'content'], navigate: (item) => ({ page: 'notes' }) },
-    { type: 'Jots', icon: '✏️', items: DATA.jots || [], fields: ['text'], navigate: (item) => ({ page: 'jots' }) },
+    { type: 'Daily Notes', icon: '✏️', items: Object.entries(DATA.dailyDocs || {}).map(([date, doc]) => ({ date, text: (doc.content||'').replace(/<[^>]+>/g, '') })), fields: ['text', 'date'], navigate: (item) => ({ page: 'jots' }) },
     { type: 'Tasks', icon: '✅', items: DATA.tasks || [], fields: ['text'], navigate: (item) => ({ page: 'tasks' }) },
     { type: 'Discussions', icon: '💬', items: DATA.discussions || [], fields: ['title'], navigate: (item) => ({ page: 'discussions' }) },
     { type: 'Decisions', icon: '⚖️', items: DATA.decisions || [], fields: ['text', 'context'], navigate: (item) => ({ page: 'decisions' }) },
@@ -4460,245 +4231,21 @@ function showToast(msg) {
 // ═══════════════════════════════════════
 // JOT DRAG-REORDER
 // ═══════════════════════════════════════
-let draggedJotId = null;
+// Legacy jot drag functions (no-ops for backward compat)
+function jotDragStart() {}
+function jotDragOver() {}
+function jotDragLeave() {}
+async function jotDrop() {}
+function initJotDragDrop() {}
+function handleJotFileAttach() {}
+function processDroppedFiles() {}
+function removePendingFile() {}
+async function editJotLinks() {}
+async function saveJotLinks() {}
 
-function jotDragStart(e, jotId) {
-  draggedJotId = jotId;
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', jotId);
-  setTimeout(() => {
-    const el = document.querySelector(`[data-jot-id="${jotId}"]`);
-    if (el) el.classList.add('dragging');
-  }, 0);
-}
-
-function jotDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  const entry = e.target.closest('.jot-entry');
-  if (entry && !entry.classList.contains('dragging')) {
-    document.querySelectorAll('.jot-entry.drag-over').forEach(el => el.classList.remove('drag-over'));
-    entry.classList.add('drag-over');
-  }
-}
-
-function jotDragLeave(e) {
-  const entry = e.target.closest('.jot-entry');
-  if (entry) entry.classList.remove('drag-over');
-}
-
-async function jotDrop(e, targetJotId) {
-  e.preventDefault();
-  document.querySelectorAll('.jot-entry.dragging,.jot-entry.drag-over').forEach(el => {
-    el.classList.remove('dragging', 'drag-over');
-  });
-  if (!draggedJotId || draggedJotId === targetJotId) { draggedJotId = null; return; }
-
-  const dragged = (DATA.jots||[]).find(j => j.id == draggedJotId);
-  const target = (DATA.jots||[]).find(j => j.id == targetJotId);
-  if (!dragged || !target || dragged.date !== target.date) { draggedJotId = null; return; }
-
-  // Get jots for this date, sorted by order
-  const dateJots = (DATA.jots||[]).filter(j => j.date === dragged.date);
-  dateJots.forEach((j, i) => { if (j.order == null) j.order = i; });
-  dateJots.sort((a, b) => (a.order||0) - (b.order||0));
-
-  const fromIdx = dateJots.findIndex(j => j.id == draggedJotId);
-  const toIdx = dateJots.findIndex(j => j.id == targetJotId);
-  if (fromIdx < 0 || toIdx < 0) { draggedJotId = null; return; }
-
-  dateJots.splice(fromIdx, 1);
-  dateJots.splice(toIdx, 0, dragged);
-  dateJots.forEach((j, i) => { j.order = i; });
-
-  draggedJotId = null;
-  await saveData();
-  renderJots();
-}
-
-// Touch drag support for mobile
-let touchDragJotId = null;
-let touchDragEl = null;
-let touchClone = null;
-
-document.addEventListener('touchstart', (e) => {
-  const handle = e.target.closest('.jot-drag-handle');
-  if (!handle) return;
-  const entry = handle.closest('.jot-entry');
-  if (!entry) return;
-  e.preventDefault();
-  touchDragJotId = parseInt(entry.dataset.jotId);
-  touchDragEl = entry;
-  entry.classList.add('dragging');
-  touchClone = entry.cloneNode(true);
-  touchClone.style.cssText = 'position:fixed;pointer-events:none;z-index:999;opacity:0.8;width:' + entry.offsetWidth + 'px;';
-  document.body.appendChild(touchClone);
-  const touch = e.touches[0];
-  touchClone.style.left = touch.clientX - 20 + 'px';
-  touchClone.style.top = touch.clientY - 20 + 'px';
-}, { passive: false });
-
-document.addEventListener('touchmove', (e) => {
-  if (!touchDragJotId) return;
-  e.preventDefault();
-  const touch = e.touches[0];
-  if (touchClone) {
-    touchClone.style.left = touch.clientX - 20 + 'px';
-    touchClone.style.top = touch.clientY - 20 + 'px';
-  }
-  document.querySelectorAll('.jot-entry.drag-over').forEach(el => el.classList.remove('drag-over'));
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  if (el) {
-    const entry = el.closest('.jot-entry');
-    if (entry && entry !== touchDragEl) entry.classList.add('drag-over');
-  }
-}, { passive: false });
-
-document.addEventListener('touchend', async (e) => {
-  if (!touchDragJotId) return;
-  if (touchClone) { touchClone.remove(); touchClone = null; }
-  document.querySelectorAll('.jot-entry.dragging').forEach(el => el.classList.remove('dragging'));
-
-  const touch = e.changedTouches[0];
-  const el = document.elementFromPoint(touch.clientX, touch.clientY);
-  const targetEntry = el ? el.closest('.jot-entry') : null;
-  if (targetEntry && targetEntry.dataset.jotId) {
-    const targetId = parseInt(targetEntry.dataset.jotId);
-    if (targetId !== touchDragJotId) {
-      // Reuse drop logic
-      draggedJotId = touchDragJotId;
-      await jotDrop(new Event('drop'), targetId);
-    }
-  }
-  document.querySelectorAll('.jot-entry.drag-over').forEach(el => el.classList.remove('drag-over'));
-  touchDragJotId = null;
-  touchDragEl = null;
-});
-
-// ═══════════════════════════════════════
-// JOT LINKING (Projects & Notes)
-// ═══════════════════════════════════════
-async function editJotLinks(jotId) {
-  const jot = (DATA.jots||[]).find(j => j.id == jotId);
-  if (!jot) return;
-
-  const projectOptions = (DATA.projects||[]).map(p =>
-    `<option value="${p.id}" ${jot.projectId === p.id ? 'selected' : ''}>${p.name}</option>`
-  ).join('');
-  const noteOptions = (DATA.notes||[]).map((n, i) => {
-    const nId = n.id || i;
-    return `<option value="${nId}" ${(jot.noteId||'') == nId ? 'selected' : ''}>${(n.created||'Note').slice(0,10)} - ${(n.text||'').slice(0,30)}</option>`;
-  }).join('');
-
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:400px;width:90%;">
-      <h3 style="font-size:15px;margin-bottom:16px;">Link Jot</h3>
-      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Project</label>
-      <select id="jot-link-project" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:12px;">
-        <option value="">None</option>${projectOptions}
-      </select>
-      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Note</label>
-      <select id="jot-link-note" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:16px;">
-        <option value="">None</option>${noteOptions}
-      </select>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:13px;">Cancel</button>
-        <button onclick="saveJotLinks(${jotId})" style="padding:8px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-}
-
-async function saveJotLinks(jotId) {
-  const jot = (DATA.jots||[]).find(j => j.id == jotId);
-  if (!jot) return;
-  const projVal = document.getElementById('jot-link-project').value;
-  const noteVal = document.getElementById('jot-link-note').value;
-  jot.projectId = projVal || undefined;
-  jot.noteId = noteVal || undefined;
-  // Clean up undefined fields
-  if (!jot.projectId) delete jot.projectId;
-  if (!jot.noteId) delete jot.noteId;
-  document.querySelector('div[style*="fixed"][style*="z-index:300"]').remove();
-  await saveData();
-  renderJots();
-  showToast('Jot links updated');
-}
-
-// Drag and drop for jot attachments
-function initJotDragDrop() {
-  const dropZone = document.getElementById('jot-drop-zone');
-  const overlay = document.getElementById('jot-drop-overlay');
-  if (!dropZone || !overlay) return;
-
-  let dragCounter = 0;
-
-  dropZone.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    dragCounter++;
-    overlay.style.display = 'flex';
-  });
-
-  dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dragCounter--;
-    if (dragCounter === 0) overlay.style.display = 'none';
-  });
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dragCounter = 0;
-    overlay.style.display = 'none';
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length) processDroppedFiles(files);
-  });
-}
-
-function processDroppedFiles(files) {
-  const preview = document.getElementById('jot-images-preview');
-  if (!preview) return;
-
-  files.forEach(file => {
-    // Store in pendingFiles for saving
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      pendingFiles.push({ name: file.name, type: file.type, data: e.target.result });
-
-      const chip = document.createElement('div');
-      chip.className = 'jot-file-chip';
-      const idx = pendingFiles.length - 1;
-
-      // Show image preview for image files
-      if (file.type.startsWith('image/')) {
-        chip.innerHTML = `
-          <img src="${e.target.result}" style="max-height:40px;border-radius:4px;margin-right:6px;">
-          ${file.name}
-          <button onclick="removePendingFile(${idx}, this)" style="background:none;border:none;color:var(--red);margin-left:4px;cursor:pointer;">✕</button>
-        `;
-      } else {
-        chip.innerHTML = `
-          📎 ${file.name}
-          <button onclick="removePendingFile(${idx}, this)" style="background:none;border:none;color:var(--red);margin-left:4px;cursor:pointer;">✕</button>
-        `;
-      }
-      preview.appendChild(chip);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function removePendingFile(idx, btn) {
-  pendingFiles[idx] = null;
-  btn.parentElement.remove();
-}
+/* Removed legacy jot drag/drop/file code — replaced by TipTap editor */
+void function legacyJotStub() {
+}();
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
@@ -4707,7 +4254,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
     loadData();
-    initJotDragDrop();
     initSelectionToolbar();
     initKeyboardShortcuts();
   }
@@ -4723,5 +4269,487 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="sel-divider"></div>
   <button class="sel-btn" onclick="selectionHighlight()">🔖 Pin</button>
 </div>
+<!-- TipTap Editor Module -->
+<script type="module">
+import { Editor } from 'https://esm.sh/@tiptap/core@2.11.5';
+import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2.11.5';
+import TaskList from 'https://esm.sh/@tiptap/extension-task-list@2.11.5';
+import TaskItem from 'https://esm.sh/@tiptap/extension-task-item@2.11.5';
+import Link from 'https://esm.sh/@tiptap/extension-link@2.11.5';
+import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.11.5';
+import Typography from 'https://esm.sh/@tiptap/extension-typography@2.11.5';
+import { Node, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.11.5';
+import { PluginKey, Plugin } from 'https://esm.sh/@tiptap/pm@2.11.5/state';
+
+// Custom Mention Nodes
+const ProjectMention = Node.create({
+  name: 'projectMention',
+  group: 'inline',
+  inline: true,
+  selectable: false,
+  atom: true,
+  addAttributes() {
+    return {
+      id: { default: null },
+      label: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'span.mention-project' }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['span', mergeAttributes(HTMLAttributes, {
+      class: 'mention-project',
+      'data-id': node.attrs.id,
+    }), `@${node.attrs.label}`];
+  },
+});
+
+const NoteMention = Node.create({
+  name: 'noteMention',
+  group: 'inline',
+  inline: true,
+  selectable: false,
+  atom: true,
+  addAttributes() {
+    return {
+      id: { default: null },
+      label: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'span.mention-note' }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['span', mergeAttributes(HTMLAttributes, {
+      class: 'mention-note',
+      'data-id': node.attrs.id,
+    }), `#${node.attrs.label}`];
+  },
+});
+
+// Slash command menu
+const slashCommands = [
+  { label: 'Heading 1', icon: 'H1', desc: 'Big heading', action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+  { label: 'Heading 2', icon: 'H2', desc: 'Medium heading', action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+  { label: 'Heading 3', icon: 'H3', desc: 'Small heading', action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+  { label: 'Bullet List', icon: '•', desc: 'Unordered list', action: (editor) => editor.chain().focus().toggleBulletList().run() },
+  { label: 'Numbered List', icon: '1.', desc: 'Ordered list', action: (editor) => editor.chain().focus().toggleOrderedList().run() },
+  { label: 'Task List', icon: '☑', desc: 'Checkboxes', action: (editor) => editor.chain().focus().toggleTaskList().run() },
+  { label: 'Code Block', icon: '<>', desc: 'Code snippet', action: (editor) => editor.chain().focus().toggleCodeBlock().run() },
+  { label: 'Blockquote', icon: '❝', desc: 'Quote text', action: (editor) => editor.chain().focus().toggleBlockquote().run() },
+  { label: 'Divider', icon: '—', desc: 'Horizontal rule', action: (editor) => editor.chain().focus().setHorizontalRule().run() },
+];
+
+let slashMenuEl = null;
+let slashMenuIdx = 0;
+let slashMenuOpen = false;
+let slashMenuEditor = null;
+let slashMenuPos = 0;
+let slashFilterText = '';
+
+function showSlashMenu(editor, coords, filterText) {
+  slashMenuEditor = editor;
+  slashFilterText = filterText;
+  const filtered = slashCommands.filter(c => c.label.toLowerCase().includes(filterText.toLowerCase()));
+  if (filtered.length === 0) { hideSlashMenu(); return; }
+  
+  if (!slashMenuEl) {
+    slashMenuEl = document.createElement('div');
+    slashMenuEl.className = 'slash-menu';
+    document.body.appendChild(slashMenuEl);
+  }
+  
+  slashMenuIdx = 0;
+  slashMenuOpen = true;
+  slashMenuEl.innerHTML = filtered.map((cmd, i) =>
+    `<div class="slash-menu-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
+      <span class="sm-icon">${cmd.icon}</span>
+      <span class="sm-label">${cmd.label}</span>
+      <span class="sm-desc">${cmd.desc}</span>
+    </div>`
+  ).join('');
+  
+  slashMenuEl.style.left = coords.left + 'px';
+  slashMenuEl.style.top = (coords.bottom + 4) + 'px';
+  slashMenuEl.style.display = 'block';
+  
+  slashMenuEl.querySelectorAll('.slash-menu-item').forEach(item => {
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const idx = parseInt(item.dataset.idx);
+      selectSlashCommand(filtered[idx]);
+    });
+  });
+}
+
+function hideSlashMenu() {
+  slashMenuOpen = false;
+  if (slashMenuEl) slashMenuEl.style.display = 'none';
+}
+
+function selectSlashCommand(cmd) {
+  if (!cmd || !slashMenuEditor) return;
+  // Delete the slash and filter text
+  const { from } = slashMenuEditor.state.selection;
+  const textBefore = slashMenuEditor.state.doc.textBetween(Math.max(0, from - 20), from);
+  const slashIdx = textBefore.lastIndexOf('/');
+  if (slashIdx >= 0) {
+    const deleteFrom = from - (textBefore.length - slashIdx);
+    slashMenuEditor.chain().focus().deleteRange({ from: deleteFrom, to: from }).run();
+  }
+  cmd.action(slashMenuEditor);
+  hideSlashMenu();
+}
+
+// Suggestion dropdown for @ and #
+let suggestionEl = null;
+let suggestionOpen = false;
+let suggestionItems = [];
+let suggestionIdx = 0;
+let suggestionType = null; // 'project' or 'note'
+let suggestionEditor = null;
+let suggestionTriggerPos = 0;
+
+function showSuggestion(editor, type, coords, items, triggerPos) {
+  if (items.length === 0) { hideSuggestion(); return; }
+  suggestionEditor = editor;
+  suggestionType = type;
+  suggestionItems = items;
+  suggestionIdx = 0;
+  suggestionOpen = true;
+  suggestionTriggerPos = triggerPos;
+  
+  if (!suggestionEl) {
+    suggestionEl = document.createElement('div');
+    suggestionEl.className = 'suggestion-dropdown';
+    document.body.appendChild(suggestionEl);
+  }
+  
+  suggestionEl.innerHTML = items.map((item, i) =>
+    `<div class="suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
+      <span>${type === 'project' ? '📁' : '📝'}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.label}</span>
+    </div>`
+  ).join('');
+  
+  suggestionEl.style.left = coords.left + 'px';
+  suggestionEl.style.top = (coords.bottom + 4) + 'px';
+  suggestionEl.style.display = 'block';
+  
+  suggestionEl.querySelectorAll('.suggestion-item').forEach(item => {
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectSuggestion(parseInt(item.dataset.idx));
+    });
+  });
+}
+
+function hideSuggestion() {
+  suggestionOpen = false;
+  if (suggestionEl) suggestionEl.style.display = 'none';
+}
+
+function selectSuggestion(idx) {
+  const item = suggestionItems[idx];
+  if (!item || !suggestionEditor) { hideSuggestion(); return; }
+  
+  const { from } = suggestionEditor.state.selection;
+  const deleteFrom = suggestionTriggerPos;
+  
+  const nodeType = suggestionType === 'project' ? 'projectMention' : 'noteMention';
+  
+  suggestionEditor.chain()
+    .focus()
+    .deleteRange({ from: deleteFrom, to: from })
+    .insertContent([
+      { type: nodeType, attrs: { id: item.id, label: item.label } },
+      { type: 'text', text: ' ' },
+    ])
+    .run();
+  
+  hideSuggestion();
+}
+
+// Floating toolbar
+let floatToolbarEl = null;
+
+function createFloatingToolbar() {
+  if (floatToolbarEl) return floatToolbarEl;
+  floatToolbarEl = document.createElement('div');
+  floatToolbarEl.className = 'editor-float-toolbar';
+  floatToolbarEl.innerHTML = `
+    <button class="eft-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+    <button class="eft-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+    <button class="eft-btn" data-cmd="strike" title="Strikethrough"><s>S</s></button>
+    <button class="eft-btn" data-cmd="code" title="Code">&lt;/&gt;</button>
+    <div class="eft-divider"></div>
+    <button class="eft-btn" data-cmd="h2" title="Heading">H2</button>
+    <button class="eft-btn" data-cmd="link" title="Link">🔗</button>
+  `;
+  document.body.appendChild(floatToolbarEl);
+  
+  floatToolbarEl.querySelectorAll('.eft-btn').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const cmd = btn.dataset.cmd;
+      const editor = window._todayEditor;
+      if (!editor) return;
+      switch(cmd) {
+        case 'bold': editor.chain().focus().toggleBold().run(); break;
+        case 'italic': editor.chain().focus().toggleItalic().run(); break;
+        case 'strike': editor.chain().focus().toggleStrike().run(); break;
+        case 'code': editor.chain().focus().toggleCode().run(); break;
+        case 'h2': editor.chain().focus().toggleHeading({ level: 2 }).run(); break;
+        case 'link':
+          const url = prompt('URL:');
+          if (url) editor.chain().focus().setLink({ href: url }).run();
+          break;
+      }
+      updateFloatingToolbar(editor);
+    });
+  });
+  
+  return floatToolbarEl;
+}
+
+function updateFloatingToolbar(editor) {
+  if (!floatToolbarEl) return;
+  floatToolbarEl.querySelectorAll('.eft-btn').forEach(btn => {
+    const cmd = btn.dataset.cmd;
+    let active = false;
+    switch(cmd) {
+      case 'bold': active = editor.isActive('bold'); break;
+      case 'italic': active = editor.isActive('italic'); break;
+      case 'strike': active = editor.isActive('strike'); break;
+      case 'code': active = editor.isActive('code'); break;
+      case 'h2': active = editor.isActive('heading', { level: 2 }); break;
+      case 'link': active = editor.isActive('link'); break;
+    }
+    btn.classList.toggle('is-active', active);
+  });
+}
+
+function showFloatingToolbar(editor) {
+  const toolbar = createFloatingToolbar();
+  const { from, to } = editor.state.selection;
+  if (from === to) { hideFloatingToolbar(); return; }
+  
+  const coords = editor.view.coordsAtPos(from);
+  toolbar.style.left = coords.left + 'px';
+  toolbar.style.top = (coords.top - 44) + 'px';
+  toolbar.classList.add('visible');
+  updateFloatingToolbar(editor);
+}
+
+function hideFloatingToolbar() {
+  if (floatToolbarEl) floatToolbarEl.classList.remove('visible');
+}
+
+// Slash/mention plugin for TipTap
+function createInputPlugin() {
+  return new Plugin({
+    key: new PluginKey('slashMention'),
+    props: {
+      handleKeyDown(view, event) {
+        if (slashMenuOpen) {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            const filtered = slashCommands.filter(c => c.label.toLowerCase().includes(slashFilterText.toLowerCase()));
+            slashMenuIdx = Math.min(slashMenuIdx + 1, filtered.length - 1);
+            slashMenuEl?.querySelectorAll('.slash-menu-item').forEach((el, i) => el.classList.toggle('active', i === slashMenuIdx));
+            return true;
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            slashMenuIdx = Math.max(slashMenuIdx - 1, 0);
+            slashMenuEl?.querySelectorAll('.slash-menu-item').forEach((el, i) => el.classList.toggle('active', i === slashMenuIdx));
+            return true;
+          }
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            const filtered = slashCommands.filter(c => c.label.toLowerCase().includes(slashFilterText.toLowerCase()));
+            selectSlashCommand(filtered[slashMenuIdx]);
+            return true;
+          }
+          if (event.key === 'Escape') {
+            hideSlashMenu();
+            return true;
+          }
+        }
+        if (suggestionOpen) {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            suggestionIdx = Math.min(suggestionIdx + 1, suggestionItems.length - 1);
+            suggestionEl?.querySelectorAll('.suggestion-item').forEach((el, i) => el.classList.toggle('active', i === suggestionIdx));
+            return true;
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            suggestionIdx = Math.max(suggestionIdx - 1, 0);
+            suggestionEl?.querySelectorAll('.suggestion-item').forEach((el, i) => el.classList.toggle('active', i === suggestionIdx));
+            return true;
+          }
+          if (event.key === 'Enter' || event.key === 'Tab') {
+            event.preventDefault();
+            selectSuggestion(suggestionIdx);
+            return true;
+          }
+          if (event.key === 'Escape') {
+            hideSuggestion();
+            return true;
+          }
+        }
+        return false;
+      },
+    },
+  });
+}
+
+// Get cursor coordinates
+function getCursorCoords(editor) {
+  const { from } = editor.state.selection;
+  try {
+    return editor.view.coordsAtPos(from);
+  } catch {
+    return { left: 100, top: 100, bottom: 120 };
+  }
+}
+
+// Check for slash commands and mentions on update
+function handleEditorUpdate(editor) {
+  const { from } = editor.state.selection;
+  const textBefore = editor.state.doc.textBetween(Math.max(0, from - 30), from, '\n');
+  
+  // Slash commands: only at start of line or after whitespace
+  const slashMatch = textBefore.match(/(?:^|\n)\/?([a-zA-Z]*)$/);
+  if (textBefore.match(/(?:^|\n)\/([a-zA-Z]*)$/)) {
+    const filter = slashMatch ? slashMatch[1] : '';
+    const coords = getCursorCoords(editor);
+    showSlashMenu(editor, coords, filter);
+    return;
+  } else {
+    hideSlashMenu();
+  }
+  
+  // @ mentions
+  const atMatch = textBefore.match(/@([^\s@#]*)$/);
+  if (atMatch) {
+    const query = atMatch[1].toLowerCase();
+    const items = (window.DATA?.projects || [])
+      .map(p => ({ id: p.id, label: p.name }))
+      .filter(i => i.label.toLowerCase().includes(query));
+    const triggerPos = from - atMatch[0].length;
+    const coords = getCursorCoords(editor);
+    showSuggestion(editor, 'project', coords, items, triggerPos);
+    return;
+  }
+  
+  // # mentions
+  const hashMatch = textBefore.match(/#([^\s@#]*)$/);
+  if (hashMatch) {
+    const query = hashMatch[1].toLowerCase();
+    const items = (window.DATA?.notes || [])
+      .map(n => ({ id: n.id || '', label: n.title || (n.text || '').slice(0, 40) || n.created || 'note' }))
+      .filter(i => i.label.toLowerCase().includes(query));
+    const triggerPos = from - hashMatch[0].length;
+    const coords = getCursorCoords(editor);
+    showSuggestion(editor, 'note', coords, items, triggerPos);
+    return;
+  }
+  
+  hideSuggestion();
+}
+
+// Create editor instance
+function createEditor(element, content, options = {}) {
+  const extensions = [
+    StarterKit.configure({
+      heading: { levels: [1, 2, 3] },
+    }),
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    Link.configure({ openOnClick: true, HTMLAttributes: { class: '' } }),
+    Placeholder.configure({ placeholder: options.placeholder || 'Start typing...' }),
+    Typography,
+    ProjectMention,
+    NoteMention,
+  ];
+  
+  const editor = new Editor({
+    element,
+    extensions,
+    content: content || '<p></p>',
+    editable: options.editable !== false,
+    editorProps: {
+      attributes: { class: 'ProseMirror' },
+    },
+    onCreate({ editor }) {
+      if (options.editable !== false) {
+        // Register the plugin
+        const { state } = editor;
+        const newState = state.reconfigure({
+          plugins: [...state.plugins, createInputPlugin()],
+        });
+        editor.view.updateState(newState);
+      }
+    },
+    onUpdate({ editor }) {
+      if (options.editable === false) return;
+      handleEditorUpdate(editor);
+      if (options.onUpdate) options.onUpdate(editor);
+    },
+    onSelectionUpdate({ editor }) {
+      if (options.editable === false) return;
+      const { from, to } = editor.state.selection;
+      if (from !== to) {
+        showFloatingToolbar(editor);
+      } else {
+        hideFloatingToolbar();
+      }
+    },
+    onBlur() {
+      // Delay hiding to allow toolbar clicks
+      setTimeout(() => hideFloatingToolbar(), 200);
+    },
+  });
+  
+  return editor;
+}
+
+// Initialize today's editor
+window._createTodayEditor = function(today) {
+  const el = document.getElementById('daily-doc-today-editor');
+  if (!el || window._todayEditor) return;
+  
+  const doc = window.DATA?.dailyDocs?.[today];
+  const content = doc?.content || '<p></p>';
+  
+  window._todayEditor = createEditor(el, content, {
+    placeholder: "What's on your mind? Type / for commands, @ for projects, # for notes...",
+    onUpdate: () => window.debouncedSaveDailyDoc(),
+  });
+  
+  // Focus
+  setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 100);
+};
+
+// Initialize read-only editor for previous day
+window._createReadonlyEditor = function(date, el) {
+  if (window._previousEditors[date]) return;
+  const doc = window.DATA?.dailyDocs?.[date];
+  if (!doc) return;
+  
+  window._previousEditors[date] = createEditor(el, doc.content || '<p></p>', {
+    editable: false,
+  });
+};
+
+// Mark TipTap as loaded and init pending editor
+window._tiptapLoaded = true;
+if (window._pendingTodayInit) {
+  window._createTodayEditor(window._pendingTodayInit);
+}
+</script>
 </body>
 </html>
