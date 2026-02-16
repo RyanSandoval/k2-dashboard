@@ -887,6 +887,123 @@
     border-color: #3b82f6;
     color: #fff;
   }
+
+  /* Sitewide Search */
+  .search-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 12px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .search-trigger:hover { border-color: var(--accent); color: var(--text); }
+  .search-trigger .search-kbd {
+    margin-left: auto;
+    font-size: 10px;
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-family: monospace;
+  }
+  .search-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 9999;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+  }
+  .search-overlay.active { display: flex; }
+  .search-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 560px;
+    max-width: 90vw;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .search-modal-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-modal-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+  }
+  .search-modal-input .icon { font-size: 18px; color: var(--text-dim); }
+  .search-results {
+    overflow-y: auto;
+    padding: 8px;
+    flex: 1;
+  }
+  .search-results:empty::after {
+    content: 'Type to search across everything...';
+    display: block;
+    text-align: center;
+    padding: 24px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .search-group-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding: 8px 12px 4px;
+  }
+  .search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: background 0.1s;
+  }
+  .search-result-item:hover, .search-result-item.selected { background: var(--surface2); }
+  .search-result-item .sr-icon { width: 20px; text-align: center; flex-shrink: 0; }
+  .search-result-item .sr-body { flex: 1; min-width: 0; }
+  .search-result-item .sr-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-result-item .sr-snippet { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .search-result-item mark { background: var(--accent); color: #fff; border-radius: 2px; padding: 0 2px; }
+  .search-modal-footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 12px;
+  }
+  .search-modal-footer kbd {
+    font-family: monospace;
+    background: var(--bg);
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    font-size: 10px;
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -953,11 +1070,31 @@
 </script>
 
 <div class="app" id="app-main" style="display:none;">
+
+  <!-- Sitewide Search Modal -->
+  <div class="search-overlay" id="search-overlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-modal">
+      <div class="search-modal-input">
+        <span class="icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search projects, notes, jots, tasks, discussions, decisions..." autocomplete="off" oninput="onSearchInput()">
+      </div>
+      <div class="search-results" id="search-results"></div>
+      <div class="search-modal-footer">
+        <span><kbd>↑↓</kbd> Navigate</span>
+        <span><kbd>↵</kbd> Open</span>
+        <span><kbd>Esc</kbd> Close</span>
+      </div>
+    </div>
+  </div>
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
       <h1>🤖 <span>K-2</span> HQ</h1>
       <p>Command Center</p>
+    </div>
+    <div class="search-trigger" onclick="openSearch()">
+      <span>🔍</span> Search...
+      <span class="search-kbd">⌘K</span>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Overview</div>
@@ -3826,6 +3963,14 @@ async function editNextStep(projectId, stepIdx, el) {
 // ═══════════════════════════════════════
 
 function initKeyboardShortcuts() {
+  // Cmd+K: Open search (works from anywhere)
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+
   document.addEventListener('keydown', (e) => {
     // Don't fire when typing in inputs/textareas
     const tag = document.activeElement?.tagName;
@@ -4016,6 +4161,190 @@ async function selectionHighlight() {
   renderJots();
   document.getElementById('selection-toolbar').classList.remove('visible');
   showToast(jot.pinned ? '🔖 Jot pinned' : '📌 Jot unpinned');
+}
+
+// ═══════════════════════════════════════
+// SITEWIDE SEARCH
+// ═══════════════════════════════════════
+
+let _searchDebounce = null;
+let _searchSelectedIdx = -1;
+let _searchResults = [];
+
+function openSearch() {
+  const overlay = document.getElementById('search-overlay');
+  overlay.classList.add('active');
+  const input = document.getElementById('search-input');
+  input.value = '';
+  document.getElementById('search-results').innerHTML = '';
+  _searchSelectedIdx = -1;
+  _searchResults = [];
+  setTimeout(() => input.focus(), 50);
+  input.addEventListener('keydown', handleSearchKeydown);
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').classList.remove('active');
+  document.getElementById('search-input').removeEventListener('keydown', handleSearchKeydown);
+}
+
+function handleSearchKeydown(e) {
+  if (e.key === 'Escape') { e.preventDefault(); closeSearch(); return; }
+  const items = document.querySelectorAll('.search-result-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _searchSelectedIdx = Math.min(_searchSelectedIdx + 1, items.length - 1);
+    updateSearchSelection(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _searchSelectedIdx = Math.max(_searchSelectedIdx - 1, 0);
+    updateSearchSelection(items);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_searchSelectedIdx >= 0 && _searchSelectedIdx < _searchResults.length) {
+      activateSearchResult(_searchResults[_searchSelectedIdx]);
+    }
+  }
+}
+
+function updateSearchSelection(items) {
+  items.forEach((el, i) => el.classList.toggle('selected', i === _searchSelectedIdx));
+  items[_searchSelectedIdx]?.scrollIntoView({ block: 'nearest' });
+}
+
+function onSearchInput() {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(() => {
+    const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+    if (!q) {
+      document.getElementById('search-results').innerHTML = '';
+      _searchResults = [];
+      _searchSelectedIdx = -1;
+      return;
+    }
+    performSearch(q);
+  }, 150);
+}
+
+function highlightMatch(text, query) {
+  if (!text) return '';
+  const idx = text.toLowerCase().indexOf(query);
+  if (idx === -1) return escapeHtml(text.length > 80 ? text.slice(0, 80) + '…' : text);
+  const start = Math.max(0, idx - 30);
+  const end = Math.min(text.length, idx + query.length + 50);
+  let snippet = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+  return snippet.replace(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>');
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function performSearch(q) {
+  const results = [];
+  const typeConfig = [
+    { type: 'Projects', icon: '🚀', items: DATA.projects || [], fields: ['name', 'description', 'goal'], navigate: (item) => ({ page: 'projects', action: () => openProjectModal(item.id) }) },
+    { type: 'Notes', icon: '📝', items: DATA.notes || [], fields: ['title', 'content'], navigate: (item) => ({ page: 'notes' }) },
+    { type: 'Jots', icon: '✏️', items: DATA.jots || [], fields: ['text'], navigate: (item) => ({ page: 'jots' }) },
+    { type: 'Tasks', icon: '✅', items: DATA.tasks || [], fields: ['text'], navigate: (item) => ({ page: 'tasks' }) },
+    { type: 'Discussions', icon: '💬', items: DATA.discussions || [], fields: ['title'], navigate: (item) => ({ page: 'discussions' }) },
+    { type: 'Decisions', icon: '⚖️', items: DATA.decisions || [], fields: ['text', 'context'], navigate: (item) => ({ page: 'decisions' }) },
+  ];
+
+  // Also search project nextSteps and notes
+  for (const p of (DATA.projects || [])) {
+    for (const step of (p.nextSteps || [])) {
+      const stepText = typeof step === 'string' ? step : (step.text || '');
+      if (stepText.toLowerCase().includes(q)) {
+        results.push({ type: 'Tasks', icon: '✅', title: stepText, snippet: `Project: ${p.name}`, nav: { page: 'projects', action: () => openProjectModal(p.id) } });
+      }
+    }
+    for (const note of (p.notes || [])) {
+      const noteText = typeof note === 'string' ? note : (note.text || note.content || '');
+      if (noteText.toLowerCase().includes(q)) {
+        results.push({ type: 'Notes', icon: '📝', title: noteText.slice(0, 80), snippet: `Project: ${p.name}`, nav: { page: 'projects', action: () => openProjectModal(p.id) } });
+      }
+    }
+  }
+
+  // Search discussion topics
+  for (const d of (DATA.discussions || [])) {
+    for (const topic of (d.topics || [])) {
+      const topicText = topic.text || topic.title || (typeof topic === 'string' ? topic : '');
+      if (topicText.toLowerCase().includes(q)) {
+        results.push({ type: 'Discussions', icon: '💬', title: topicText.slice(0, 80), snippet: `Discussion: ${d.title || ''}`, nav: { page: 'discussions' } });
+      }
+    }
+  }
+
+  for (const cfg of typeConfig) {
+    for (const item of cfg.items) {
+      for (const field of cfg.fields) {
+        const val = item[field];
+        if (val && typeof val === 'string' && val.toLowerCase().includes(q)) {
+          const nav = cfg.navigate(item);
+          results.push({ type: cfg.type, icon: cfg.icon, title: item.name || item.title || (val.slice(0, 60)), snippet: highlightMatch(val, q), nav, field });
+          break; // one match per item
+        }
+      }
+    }
+  }
+
+  // Deduplicate by title
+  const seen = new Set();
+  _searchResults = results.filter(r => {
+    const key = r.type + ':' + r.title;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  _searchSelectedIdx = _searchResults.length > 0 ? 0 : -1;
+  renderSearchResults(q);
+}
+
+function renderSearchResults(q) {
+  const container = document.getElementById('search-results');
+  if (_searchResults.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-dim);font-size:13px;">No results found</div>';
+    return;
+  }
+
+  // Group by type
+  const groups = {};
+  for (const r of _searchResults) {
+    if (!groups[r.type]) groups[r.type] = [];
+    groups[r.type].push(r);
+  }
+
+  let html = '';
+  let idx = 0;
+  for (const [type, items] of Object.entries(groups)) {
+    html += `<div class="search-group-label">${items[0].icon} ${type}</div>`;
+    for (const r of items) {
+      const selected = idx === _searchSelectedIdx ? ' selected' : '';
+      const title = escapeHtml(r.title || '');
+      html += `<div class="search-result-item${selected}" data-idx="${idx}" onclick="activateSearchResult(_searchResults[${idx}])">
+        <span class="sr-icon">${r.icon}</span>
+        <div class="sr-body">
+          <div class="sr-title">${title}</div>
+          ${r.snippet ? `<div class="sr-snippet">${r.snippet}</div>` : ''}
+        </div>
+      </div>`;
+      idx++;
+    }
+  }
+  container.innerHTML = html;
+}
+
+function activateSearchResult(result) {
+  closeSearch();
+  if (result.nav) {
+    navigateTo(result.nav.page);
+    if (result.nav.action) setTimeout(result.nav.action, 100);
+  }
 }
 
 function showToast(msg) {
