@@ -803,6 +803,9 @@
       <div class="nav-item" data-page="discussions">
         <span class="icon">💬</span> Discussions
       </div>
+      <div class="nav-item" data-page="trading">
+        <span class="icon">📈</span> Trading
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Reference</div>
@@ -955,6 +958,16 @@
       </div>
     </div>
 
+    <!-- Trading Page -->
+    <div class="page" id="page-trading">
+      <div class="page-header">
+        <h2>Trading</h2>
+        <p>Books, positions & P&L across all strategies</p>
+      </div>
+      <div class="stat-row" id="trading-stats-row"></div>
+      <div class="card-grid" id="trading-books-grid"></div>
+    </div>
+
     <!-- Notes Page -->
     <div class="page" id="page-notes">
       <div class="page-header">
@@ -1047,6 +1060,9 @@
     <div class="mobile-nav-item" data-page="tasks" onclick="navigateTo('tasks');setMobileActive(this)">
       <span class="icon">✅</span>Tasks
     </div>
+    <div class="mobile-nav-item" data-page="trading" onclick="navigateTo('trading');setMobileActive(this)">
+      <span class="icon">📈</span>Trading
+    </div>
     <div class="mobile-nav-item" data-page="discussions" onclick="navigateTo('discussions');setMobileActive(this)">
       <span class="icon">💬</span>Chats
     </div>
@@ -1063,7 +1079,7 @@ function setMobileActive(el) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [], vikingInsights: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [], vikingInsights: [], trading: { books: [] } };
 
 // ============================================================
 // APP LOGIC
@@ -1109,6 +1125,7 @@ async function loadData() {
     DATA.jots = d.jots || [];
     DATA.commands = d.commands || [];
     DATA.vikingInsights = d.vikingInsights || [];
+    DATA.trading = d.trading || { books: [] };
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -1154,6 +1171,7 @@ function renderAll() {
   renderNotes();
   renderJots();
   renderAIInsights();
+  renderTrading();
 }
 
 // Navigation
@@ -1422,6 +1440,89 @@ async function updateAIInsightStatus(insightId, newStatus) {
   
   // Re-open modal to show updated status
   setTimeout(() => openAIInsightModal(insightId), 100);
+}
+
+// Trading
+function renderTrading() {
+  const books = (DATA.trading || {}).books || [];
+  const totalBankroll = books.reduce((s, b) => s + (b.bankroll || 0), 0);
+  const totalPnL = books.reduce((s, b) => s + (b.realizedPnL || 0), 0);
+  const totalWins = books.reduce((s, b) => s + (b.wins || 0), 0);
+  const totalLosses = books.reduce((s, b) => s + (b.losses || 0), 0);
+  const totalOpen = books.reduce((s, b) => s + (b.open || 0), 0);
+  const winRate = (totalWins + totalLosses) > 0 ? Math.round(totalWins / (totalWins + totalLosses) * 100) : 0;
+  const pnlColor = totalPnL >= 0 ? 'var(--green)' : 'var(--red)';
+  const pnlSign = totalPnL >= 0 ? '+' : '';
+
+  const statsRow = document.getElementById('trading-stats-row');
+  if (statsRow) {
+    statsRow.innerHTML = `
+      <div class="stat-card"><div class="label">Total Bankroll</div><div class="value" style="color:var(--accent)">$${totalBankroll.toFixed(0)}</div></div>
+      <div class="stat-card"><div class="label">Realized P&L</div><div class="value" style="color:${pnlColor}">${pnlSign}$${totalPnL.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="label">Win Rate</div><div class="value" style="color:var(--green)">${winRate}%</div><div class="sub">${totalWins}W / ${totalLosses}L</div></div>
+      <div class="stat-card"><div class="label">Open Positions</div><div class="value" style="color:var(--yellow)">${totalOpen}</div></div>
+    `;
+  }
+
+  const grid = document.getElementById('trading-books-grid');
+  if (grid) {
+    grid.innerHTML = books.map(book => {
+      const bPnlColor = (book.realizedPnL || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const bPnlSign = (book.realizedPnL || 0) >= 0 ? '+' : '';
+      const trades = (book.trades || []);
+      const bookId = book.id;
+
+      return `
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">${book.name}</span>
+            <span style="font-size:13px;font-weight:700;color:${bPnlColor}">${bPnlSign}$${(book.realizedPnL||0).toFixed(2)}</span>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;gap:16px;margin-bottom:8px;font-size:13px;">
+              <span>Balance: <strong>$${(book.balance||0).toFixed(2)}</strong> / $${(book.bankroll||0).toFixed(2)}</span>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <span class="tag tag-green">${book.wins||0}W</span>
+              <span class="tag tag-red">${book.losses||0}L</span>
+              <span class="tag tag-yellow">${book.open||0} open</span>
+            </div>
+          </div>
+          ${trades.length > 0 ? `
+          <div class="card-footer" style="display:block;padding-top:12px;">
+            <div style="cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.nextElementSibling.style.display==='none'?'▶ Show ${trades.length} trades':'▼ Hide trades'">▶ Show ${trades.length} trades</div>
+            <div style="display:none;">
+              <table style="width:100%;font-size:12px;border-collapse:collapse;">
+                <thead><tr style="color:var(--text-dim);text-align:left;">
+                  <th style="padding:4px 6px;">Market</th>
+                  <th style="padding:4px 6px;">Position</th>
+                  <th style="padding:4px 6px;">Stake</th>
+                  <th style="padding:4px 6px;">Status</th>
+                  <th style="padding:4px 6px;">P&L</th>
+                </tr></thead>
+                <tbody>
+                  ${trades.map(t => {
+                    const sColor = t.status === 'won' ? 'var(--green)' : t.status === 'lost' ? 'var(--red)' : 'var(--yellow)';
+                    const sBg = t.status === 'won' ? 'rgba(74,222,128,0.15)' : t.status === 'lost' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.15)';
+                    const tPnl = t.pnl != null ? (t.pnl >= 0 ? '+' : '') + '$' + t.pnl.toFixed(2) : '—';
+                    const tPnlColor = t.pnl != null ? (t.pnl >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--text-dim)';
+                    return `<tr title="${(t.reasoning||'').replace(/"/g,'&quot;')}" style="border-top:1px solid var(--border);">
+                      <td style="padding:6px;">${t.market}</td>
+                      <td style="padding:6px;">${t.position}</td>
+                      <td style="padding:6px;">$${(t.stake||0).toFixed(2)}</td>
+                      <td style="padding:6px;"><span style="padding:2px 6px;border-radius:4px;font-weight:600;font-size:11px;background:${sBg};color:${sColor};">${t.status}</span></td>
+                      <td style="padding:6px;color:${tPnlColor};font-weight:600;">${tPnl}</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
 }
 
 // Kanban columns config
