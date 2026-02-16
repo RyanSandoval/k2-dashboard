@@ -3038,13 +3038,14 @@ function renderJots() {
         const dateJots = allJots.filter(j => j.date === date).sort((a,b) => (a.order||0) - (b.order||0));
         const dayName = dayNames[new Date(date + 'T00:00:00').getDay()];
         
+        const isOpen = isSearching || window._openJotDays.has(date);
         return `
           <div class="jot-day-section">
-            <div class="jot-day-header" onclick="toggleJotDay(this)">
-              <span class="jot-day-toggle">${isSearching ? '▼' : '▶'}</span>
+            <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleJotDay(this)">
+              <span class="jot-day-toggle">${isOpen ? '▼' : '▶'}</span>
               <span>${date} ${dayName} (${dateJots.length})</span>
             </div>
-            <div class="jot-day-entries" style="${isSearching ? '' : 'display:none;'}">
+            <div class="jot-day-entries" style="${isOpen ? '' : 'display:none;'}">
               ${dateJots.map(jot => renderJotEntry(jot)).join('')}
             </div>
           </div>
@@ -3103,8 +3104,16 @@ function renderJotEntry(jot) {
   `;
 }
 
+if (!window._openJotDays) window._openJotDays = new Set();
 function toggleJotDay(element) {
-  element.classList.toggle('open');
+  const date = element.dataset.date;
+  if (window._openJotDays.has(date)) {
+    window._openJotDays.delete(date);
+    element.classList.remove('open');
+  } else {
+    window._openJotDays.add(date);
+    element.classList.add('open');
+  }
 }
 
 async function handleJotKeydown(event) {
