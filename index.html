@@ -3123,10 +3123,31 @@ function openNoteEditor(noteId) {
   };
 
   titleInput.oninput = autoSave;
-  bodyInput.oninput = autoSave;
+  bodyInput.oninput = (e) => { autoSave(); richInputCheck(bodyInput); };
 
-  // Cmd+S to force save
-  bodyInput.onkeydown = titleInput.onkeydown = (e) => {
+  // Link callback for notes — links project to the note
+  bodyInput._richOnLink = (item) => {
+    if (item.type === 'project') {
+      note.projectId = item.id;
+      document.getElementById('note-project-link').value = item.id;
+    }
+  };
+
+  // Cmd+S to force save, also extract tasks from [] syntax
+  bodyInput.onkeydown = (e) => {
+    richInputKeydown(e);
+    if (window._acActive) return;
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      clearTimeout(noteAutoSaveTimer);
+      note.title = titleInput.value.trim();
+      note.text = bodyInput.value.trim();
+      const count = extractAndCreateTasks(note.text, note.projectId);
+      if (count > 0) showToast(count + ' task' + (count>1?'s':'') + ' created');
+      saveData().then(() => { statusEl.textContent = 'Saved ✓'; });
+    }
+  };
+  titleInput.onkeydown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault();
       clearTimeout(noteAutoSaveTimer);
@@ -3409,18 +3430,19 @@ async function addJot() {
   renderTasks();
 }
 
-// Inline autocomplete for @ (projects) and # (notes)
+// ═══ Universal Rich Text System ═══
+// @ → link project, # → link note, [] → create task
+// Works on any textarea/input via initRichInput(el, opts)
 window._acActive = false;
 window._acItems = [];
 window._acIdx = 0;
-window._acTrigger = null; // {type, startPos, textarea}
+window._acTrigger = null;
 
-function jotAutocompleteCheck(textarea) {
+function richInputCheck(textarea) {
   const val = textarea.value;
   const pos = textarea.selectionStart;
   const before = val.slice(0, pos);
 
-  // Check for @ (projects) or # (notes) trigger
   const atMatch = before.match(/@([^\s@#]*)$/);
   const hashMatch = before.match(/#([^\s@#]*)$/);
 
@@ -3428,44 +3450,43 @@ function jotAutocompleteCheck(textarea) {
     const query = atMatch[1].toLowerCase();
     const items = (DATA.projects||[]).map(p => ({id: p.id, label: p.name, icon: '📁', type: 'project'}))
       .filter(i => i.label.toLowerCase().includes(query));
-    showJotAutocomplete(textarea, items, 'project', pos - atMatch[0].length);
+    showRichAutocomplete(textarea, items, 'project', pos - atMatch[0].length);
   } else if (hashMatch) {
     const query = hashMatch[1].toLowerCase();
-    const items = (DATA.notes||[]).map(n => ({id: n.id, label: n.title || n.text.slice(0,40) || n.created, icon: '📝', type: 'note'}))
+    const items = (DATA.notes||[]).map(n => ({id: n.id, label: n.title || (n.text||'').slice(0,40) || n.created, icon: '📝', type: 'note'}))
       .filter(i => i.label.toLowerCase().includes(query));
     if (items.length > 0) {
-      showJotAutocomplete(textarea, items, 'note', pos - hashMatch[0].length);
+      showRichAutocomplete(textarea, items, 'note', pos - hashMatch[0].length);
     } else {
-      hideJotAutocomplete(); // No notes match — treat as regular tag
+      hideRichAutocomplete();
     }
   } else {
-    hideJotAutocomplete();
+    hideRichAutocomplete();
   }
 }
 
-function showJotAutocomplete(textarea, items, type, triggerPos) {
-  if (items.length === 0) { hideJotAutocomplete(); return; }
+function showRichAutocomplete(textarea, items, type, triggerPos) {
+  if (items.length === 0) { hideRichAutocomplete(); return; }
   window._acActive = true;
   window._acItems = items;
   window._acIdx = 0;
   window._acTrigger = { type, startPos: triggerPos, textarea };
 
-  let dropdown = document.getElementById('jot-autocomplete');
+  let dropdown = document.getElementById('rich-autocomplete');
   if (!dropdown) {
     dropdown = document.createElement('div');
-    dropdown.id = 'jot-autocomplete';
+    dropdown.id = 'rich-autocomplete';
     dropdown.className = 'jot-autocomplete';
     document.body.appendChild(dropdown);
   }
 
   dropdown.innerHTML = items.map((item, i) =>
-    `<div class="jot-autocomplete-item ${i === 0 ? 'active' : ''}" onmousedown="selectJotAutocomplete(${i})" onmouseenter="window._acIdx=${i};renderAcHighlight()">
+    `<div class="jot-autocomplete-item ${i === 0 ? 'active' : ''}" onmousedown="selectRichAutocomplete(${i})" onmouseenter="window._acIdx=${i};renderAcHighlight()">
       <span class="ac-icon">${item.icon}</span>
       <span class="ac-label">${item.label}</span>
     </div>`
   ).join('');
 
-  // Position near textarea
   const rect = textarea.getBoundingClientRect();
   dropdown.style.left = rect.left + 'px';
   dropdown.style.top = (rect.bottom + 4) + 'px';
@@ -3473,26 +3494,24 @@ function showJotAutocomplete(textarea, items, type, triggerPos) {
 }
 
 function renderAcHighlight() {
-  const items = document.querySelectorAll('#jot-autocomplete .jot-autocomplete-item');
+  const items = document.querySelectorAll('#rich-autocomplete .jot-autocomplete-item');
   items.forEach((el, i) => el.classList.toggle('active', i === window._acIdx));
 }
 
-function hideJotAutocomplete() {
+function hideRichAutocomplete() {
   window._acActive = false;
-  const dropdown = document.getElementById('jot-autocomplete');
+  const dropdown = document.getElementById('rich-autocomplete');
   if (dropdown) dropdown.style.display = 'none';
 }
 
-function selectJotAutocomplete(idx) {
+function selectRichAutocomplete(idx) {
   const item = window._acItems[idx];
   const trigger = window._acTrigger;
-  if (!item || !trigger) { hideJotAutocomplete(); return; }
+  if (!item || !trigger) { hideRichAutocomplete(); return; }
 
   const textarea = trigger.textarea;
   const val = textarea.value;
   const pos = textarea.selectionStart;
-
-  // Replace trigger text with display name
   const beforeTrigger = val.slice(0, trigger.startPos);
   const afterCursor = val.slice(pos);
   const insertText = (item.type === 'project' ? '@' : '#') + item.label + ' ';
@@ -3502,7 +3521,13 @@ function selectJotAutocomplete(idx) {
   textarea.setSelectionRange(newPos, newPos);
   textarea.focus();
 
-  // Store the link on the jot being edited
+  // Fire input event so auto-save picks it up
+  textarea.dispatchEvent(new Event('input', {bubbles: true}));
+
+  // Apply link via callback if set
+  if (textarea._richOnLink) textarea._richOnLink(item);
+
+  // Fallback: jot linking
   const jotId = textarea.closest('[data-jot-id]')?.dataset.jotId || null;
   if (jotId) {
     const jot = DATA.jots.find(j => j.id == jotId);
@@ -3511,16 +3536,15 @@ function selectJotAutocomplete(idx) {
       if (item.type === 'note') jot.noteId = item.id;
     }
   }
-  // For the main input, store pending link
   if (textarea.id === 'jot-input') {
     if (item.type === 'project') window._pendingJotProjectId = item.id;
     if (item.type === 'note') window._pendingJotNoteId = item.id;
   }
 
-  hideJotAutocomplete();
+  hideRichAutocomplete();
 }
 
-function jotAutocompleteKeydown(event) {
+function richInputKeydown(event) {
   if (!window._acActive) return;
   if (event.key === 'ArrowDown') {
     event.preventDefault();
@@ -3532,11 +3556,37 @@ function jotAutocompleteKeydown(event) {
     renderAcHighlight();
   } else if (event.key === 'Enter' || event.key === 'Tab') {
     event.preventDefault();
-    selectJotAutocomplete(window._acIdx);
+    selectRichAutocomplete(window._acIdx);
   } else if (event.key === 'Escape') {
-    hideJotAutocomplete();
+    hideRichAutocomplete();
   }
 }
+
+// Extract [] tasks from text and create them
+function extractAndCreateTasks(text, projectId) {
+  const taskMatches = text.match(/\[\s*\][^\n]*/g) || [];
+  taskMatches.forEach(match => {
+    const taskText = match.replace(/\[\s*\]/g, '').replace(/(#\w+)/g, '').replace(/@[^\s]+/g, '').trim();
+    if (!taskText) return;
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    const newTask = {
+      id: Date.now() + Math.floor(Math.random()*1000),
+      text: taskText,
+      priority: 'medium',
+      project: projectId || '',
+      owner: 'ryan',
+      created: dateStr,
+      done: false
+    };
+    DATA.tasks.push(newTask);
+  });
+  return taskMatches.length;
+}
+
+// Backward-compatible aliases
+function jotAutocompleteCheck(textarea) { richInputCheck(textarea); }
+function jotAutocompleteKeydown(event) { richInputKeydown(event); }
 
 async function editJot(jotId) {
   const jot = DATA.jots.find(j => j.id == jotId); // == for loose comparison (string vs number)
