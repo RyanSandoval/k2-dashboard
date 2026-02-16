@@ -2,12 +2,6 @@
 <html lang="en">
 <head>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="K-2 HQ">
-<meta name="theme-color" content="#0a0a0f">
-<link rel="apple-touch-icon" href="icon-192.png">
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -898,12 +892,13 @@
       <div class="kanban" id="kanban-board">
         <!-- Populated by JS -->
       </div>
-      <div id="archived-projects" style="margin-top:24px;display:none;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;" onclick="document.getElementById('archived-list').style.display=document.getElementById('archived-list').style.display==='none'?'block':'none'">
-          <span style="font-size:14px;font-weight:600;color:var(--text-dim);">📦 Archived</span>
-          <span id="archived-count" style="font-size:11px;color:var(--text-dim);"></span>
+      <div id="archived-projects" style="display:none;margin-top:24px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;" onclick="toggleArchive()">
+          <span id="archive-toggle-icon" style="color:var(--text-dim);font-size:12px;">▶</span>
+          <span style="font-size:14px;font-weight:600;color:var(--text-dim);">Archived</span>
+          <span id="archive-count" style="font-size:11px;background:var(--surface2);color:var(--text-dim);padding:2px 8px;border-radius:99px;"></span>
         </div>
-        <div id="archived-list" style="display:none;" class="card-grid"></div>
+        <div id="archive-list" style="display:none;"></div>
       </div>
     </div>
 
@@ -1439,7 +1434,7 @@ const KANBAN_COLUMNS = [
 ];
 
 function renderProjects() {
-  // Update sidebar badge (exclude archived)
+  // Update sidebar badge
   const activeCount = DATA.projects.filter(p => p.status !== 'done' && p.status !== 'archived').length;
   const projBadge = document.getElementById('project-count');
   if (projBadge) {
@@ -1496,33 +1491,39 @@ function renderProjects() {
 
   // Render archived projects
   const archived = DATA.projects.filter(p => p.status === 'archived');
-  const archivedSection = document.getElementById('archived-projects');
-  const archivedList = document.getElementById('archived-list');
-  const archivedCount = document.getElementById('archived-count');
-  if (archivedSection && archivedList) {
-    archivedSection.style.display = archived.length > 0 ? 'block' : 'none';
-    if (archivedCount) archivedCount.textContent = `(${archived.length})`;
-    archivedList.innerHTML = archived.map(p => `
-      <div class="card" style="opacity:0.7;cursor:pointer;" onclick="openProjectModal('${p.id}')">
-        <div class="card-header">
-          <span class="card-title">📦 ${p.name}</span>
-          <button onclick="event.stopPropagation();unarchiveProject('${p.id}')" style="background:var(--accent);border:none;border-radius:6px;color:#fff;padding:3px 8px;cursor:pointer;font-size:11px;">Restore</button>
+  const archiveSection = document.getElementById('archived-projects');
+  const archiveCount = document.getElementById('archive-count');
+  const archiveList = document.getElementById('archive-list');
+  if (archived.length > 0) {
+    archiveSection.style.display = 'block';
+    archiveCount.textContent = archived.length;
+    archiveList.innerHTML = archived.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:8px;margin-bottom:6px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-dim);">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-dim);">${p.description || ''} · Archived ${p.archivedAt ? new Date(p.archivedAt).toLocaleDateString() : ''}</div>
         </div>
-        <div class="card-body" style="font-size:12px;">${p.description}</div>
-        ${p.archivedAt ? `<div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Archived ${p.archivedAt}</div>` : ''}
+        <div style="display:flex;gap:6px;">
+          <button onclick="restoreProject('${p.id}')" style="padding:6px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Restore</button>
+          <button onclick="deleteProject('${p.id}')" style="padding:6px 12px;background:var(--red);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Delete</button>
+        </div>
       </div>
     `).join('');
+  } else {
+    archiveSection.style.display = 'none';
   }
 }
 
-async function unarchiveProject(projectId) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  p.status = 'active';
-  delete p.archivedAt;
-  await saveData();
-  renderProjects();
-  showToast('📂 Project restored: ' + p.name);
+function toggleArchive() {
+  const list = document.getElementById('archive-list');
+  const icon = document.getElementById('archive-toggle-icon');
+  if (list.style.display === 'none') {
+    list.style.display = 'block';
+    icon.textContent = '▼';
+  } else {
+    list.style.display = 'none';
+    icon.textContent = '▶';
+  }
 }
 
 // Task Detail Modal
@@ -1811,6 +1812,39 @@ async function changeProjectStatus(projectId, newStatus) {
   await saveData();
   renderProjects();
   closeProjectModal();
+}
+
+async function archiveProject(projectId) {
+  const project = DATA.projects.find(p => p.id === projectId);
+  if (!project) return;
+  if (!confirm(`Archive "${project.name}"? You can restore it later from the archive.`)) return;
+  project.status = 'archived';
+  project.archivedAt = new Date().toISOString();
+  await saveData();
+  renderProjects();
+  closeProjectModal();
+}
+
+async function deleteProject(projectId) {
+  const project = DATA.projects.find(p => p.id === projectId);
+  if (!project) return;
+  if (!confirm(`Permanently delete "${project.name}"? This cannot be undone.`)) return;
+  DATA.projects = DATA.projects.filter(p => p.id !== projectId);
+  // Also remove associated tasks
+  DATA.tasks = (DATA.tasks || []).filter(t => t.project !== projectId);
+  await saveData();
+  renderProjects();
+  renderTasks();
+  closeProjectModal();
+}
+
+async function restoreProject(projectId) {
+  const project = DATA.projects.find(p => p.id === projectId);
+  if (!project) return;
+  project.status = 'active';
+  delete project.archivedAt;
+  await saveData();
+  renderProjects();
 }
 
 // Drag and drop for Kanban
@@ -2595,31 +2629,6 @@ async function rejectStep(projectId, stepIdx) {
   openProjectModal(projectId);
 }
 
-async function archiveProject(projectId) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  p.status = 'archived';
-  p.archivedAt = new Date().toISOString().slice(0, 10);
-  await saveData();
-  renderProjects();
-  renderDashboard();
-  // Close modal
-  document.querySelectorAll('[id$="-modal"]').forEach(m => m.style.display = 'none');
-  document.body.style.overflow = '';
-  showToast('📦 Project archived: ' + p.name);
-}
-
-async function deleteProject(projectId) {
-  if (!confirm('Permanently delete this project? This cannot be undone.')) return;
-  DATA.projects = DATA.projects.filter(p => p.id !== projectId);
-  await saveData();
-  renderProjects();
-  renderDashboard();
-  document.querySelectorAll('[id$="-modal"]').forEach(m => m.style.display = 'none');
-  document.body.style.overflow = '';
-  showToast('🗑️ Project deleted');
-}
-
 async function deleteStep(projectId, stepIdx) {
   const p = DATA.projects.find(pr => pr.id === projectId);
   if (!p || !p.nextSteps) return;
@@ -2968,10 +2977,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initJotDragDrop();
     initSelectionToolbar();
     initKeyboardShortcuts();
-    // Register service worker for PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
   }
 });
 </script>
