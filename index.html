@@ -2065,6 +2065,148 @@ function handleJotFileAttach(event) {
   event.target.value = ''; // Reset so same file can be re-selected
 }
 
+// ═══════════════════════════════════════
+// PROJECT NEXT STEPS ACTIONS
+// ═══════════════════════════════════════
+
+async function queueStep(projectId, stepIdx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.nextSteps || !p.nextSteps[stepIdx]) return;
+
+  const step = p.nextSteps[stepIdx];
+  const text = typeof step === 'string' ? step : step.text;
+
+  // Add command to queue
+  const cmd = {
+    id: 'cmd-' + Date.now(),
+    type: 'execute-step',
+    projectId: projectId,
+    stepIndex: stepIdx,
+    stepText: text,
+    status: 'pending',
+    created: new Date().toISOString()
+  };
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push(cmd);
+
+  // Update step status to queued
+  if (typeof step === 'string') {
+    p.nextSteps[stepIdx] = { text: step, status: 'queued' };
+  } else {
+    step.status = 'queued';
+  }
+
+  await saveData();
+  openProjectModal(projectId);
+}
+
+async function acceptStep(projectId, stepIdx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.nextSteps || !p.nextSteps[stepIdx]) return;
+
+  const step = p.nextSteps[stepIdx];
+  if (typeof step === 'object') step.status = 'done';
+  else p.nextSteps[stepIdx] = { text: step, status: 'done' };
+
+  await saveData();
+  openProjectModal(projectId);
+}
+
+async function rejectStep(projectId, stepIdx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.nextSteps || !p.nextSteps[stepIdx]) return;
+
+  const reason = prompt('What needs to change?');
+  if (reason === null) return;
+
+  const step = p.nextSteps[stepIdx];
+  if (typeof step === 'object') {
+    step.status = '';
+    step.reworkReason = reason;
+  } else {
+    p.nextSteps[stepIdx] = { text: step, status: '', reworkReason: reason };
+  }
+
+  // Queue rework command
+  const cmd = {
+    id: 'cmd-' + Date.now(),
+    type: 'rework',
+    projectId: projectId,
+    stepIndex: stepIdx,
+    stepText: typeof step === 'string' ? step : step.text,
+    reason: reason,
+    status: 'pending',
+    created: new Date().toISOString()
+  };
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push(cmd);
+
+  await saveData();
+  openProjectModal(projectId);
+}
+
+async function deleteStep(projectId, stepIdx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.nextSteps) return;
+
+  p.nextSteps.splice(stepIdx, 1);
+  await saveData();
+  openProjectModal(projectId);
+}
+
+async function cycleStepPriority(projectId, stepIdx) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.nextSteps || !p.nextSteps[stepIdx]) return;
+
+  const step = p.nextSteps[stepIdx];
+  const cycle = { high: 'medium', medium: 'low', low: 'high', '': 'high' };
+
+  if (typeof step === 'string') {
+    p.nextSteps[stepIdx] = { text: step, priority: 'high' };
+  } else {
+    step.priority = cycle[step.priority || ''] || 'high';
+  }
+
+  await saveData();
+  openProjectModal(projectId);
+}
+
+async function editNextStep(projectId, stepIdx, el) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p || !p.nextSteps || !p.nextSteps[stepIdx]) return;
+
+  const step = p.nextSteps[stepIdx];
+  const currentText = typeof step === 'string' ? step : step.text;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentText;
+  input.style.cssText = 'width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:4px;color:var(--text);padding:4px 8px;font-size:12px;';
+
+  const save = async () => {
+    const newText = input.value.trim();
+    if (newText && newText !== currentText) {
+      if (typeof step === 'string') {
+        p.nextSteps[stepIdx] = newText;
+      } else {
+        step.text = newText;
+      }
+      await saveData();
+    }
+    openProjectModal(projectId);
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') openProjectModal(projectId);
+  });
+  input.addEventListener('blur', save);
+
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
 // Drag and drop for jot attachments
 function initJotDragDrop() {
   const dropZone = document.getElementById('jot-drop-zone');
