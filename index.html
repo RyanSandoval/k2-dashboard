@@ -690,6 +690,20 @@
     transition: opacity 0.15s; text-decoration: none;
   }
   .jot-link-badge:hover { opacity: 0.8; }
+  .jot-autocomplete {
+    position: absolute; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 500;
+    max-height: 200px; overflow-y: auto; min-width: 200px; padding: 4px;
+  }
+  .jot-autocomplete-item {
+    padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .jot-autocomplete-item:hover, .jot-autocomplete-item.active {
+    background: var(--surface2); color: var(--accent);
+  }
+  .jot-autocomplete-item .ac-icon { font-size: 14px; flex-shrink: 0; }
+  .jot-autocomplete-item .ac-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .jot-link-badge.project { background: rgba(124,92,255,0.15); color: var(--accent2); }
   .jot-link-badge.note { background: rgba(74,158,255,0.15); color: var(--accent); }
   .jot-entry .jot-check {
@@ -1043,7 +1057,7 @@
       </div>
       <div id="jot-images-preview" class="jot-images-preview"></div>
       <div class="jot-input-wrap" id="jot-drop-zone">
-        <textarea id="jot-input" rows="1" placeholder="What's on your mind? Use #tags, [] for checkboxes, **bold**, *italic*..." onkeydown="handleJotKeydown(event)" oninput="autoExpandTextarea(this)"></textarea>
+        <textarea id="jot-input" rows="1" placeholder="What's on your mind? @project, #note, [] checkbox, **bold**..." onkeydown="handleJotKeydown(event)" oninput="autoExpandTextarea(this);jotAutocompleteCheck(this)"></textarea>
         <input type="file" id="jot-file-input" accept="*/*" multiple style="display:none" onchange="handleJotFileAttach(event)">
         <button class="jot-attach-btn" onclick="document.getElementById('jot-file-input').click()" title="Attach file">📎</button>
         <div id="jot-drop-overlay" style="display:none;position:absolute;inset:0;background:rgba(74,158,255,0.12);border:2px dashed var(--accent);border-radius:12px;z-index:10;pointer-events:none;align-items:center;justify-content:center;">
@@ -3329,6 +3343,8 @@ function toggleJotDay(element) {
 }
 
 async function handleJotKeydown(event) {
+  jotAutocompleteKeydown(event);
+  if (window._acActive) return;
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
     await addJot();
@@ -3358,6 +3374,10 @@ async function addJot() {
     done: false,
     order: maxOrder + 1
   };
+
+  // Apply pending links from autocomplete
+  if (window._pendingJotProjectId) { newJot.projectId = window._pendingJotProjectId; window._pendingJotProjectId = null; }
+  if (window._pendingJotNoteId) { newJot.noteId = window._pendingJotNoteId; window._pendingJotNoteId = null; }
 
   DATA.jots.push(newJot);
 
@@ -3389,6 +3409,135 @@ async function addJot() {
   renderTasks();
 }
 
+// Inline autocomplete for @ (projects) and # (notes)
+window._acActive = false;
+window._acItems = [];
+window._acIdx = 0;
+window._acTrigger = null; // {type, startPos, textarea}
+
+function jotAutocompleteCheck(textarea) {
+  const val = textarea.value;
+  const pos = textarea.selectionStart;
+  const before = val.slice(0, pos);
+
+  // Check for @ (projects) or # (notes) trigger
+  const atMatch = before.match(/@([^\s@#]*)$/);
+  const hashMatch = before.match(/#([^\s@#]*)$/);
+
+  if (atMatch) {
+    const query = atMatch[1].toLowerCase();
+    const items = (DATA.projects||[]).map(p => ({id: p.id, label: p.name, icon: '📁', type: 'project'}))
+      .filter(i => i.label.toLowerCase().includes(query));
+    showJotAutocomplete(textarea, items, 'project', pos - atMatch[0].length);
+  } else if (hashMatch) {
+    const query = hashMatch[1].toLowerCase();
+    const items = (DATA.notes||[]).map(n => ({id: n.id, label: n.title || n.text.slice(0,40) || n.created, icon: '📝', type: 'note'}))
+      .filter(i => i.label.toLowerCase().includes(query));
+    if (items.length > 0) {
+      showJotAutocomplete(textarea, items, 'note', pos - hashMatch[0].length);
+    } else {
+      hideJotAutocomplete(); // No notes match — treat as regular tag
+    }
+  } else {
+    hideJotAutocomplete();
+  }
+}
+
+function showJotAutocomplete(textarea, items, type, triggerPos) {
+  if (items.length === 0) { hideJotAutocomplete(); return; }
+  window._acActive = true;
+  window._acItems = items;
+  window._acIdx = 0;
+  window._acTrigger = { type, startPos: triggerPos, textarea };
+
+  let dropdown = document.getElementById('jot-autocomplete');
+  if (!dropdown) {
+    dropdown = document.createElement('div');
+    dropdown.id = 'jot-autocomplete';
+    dropdown.className = 'jot-autocomplete';
+    document.body.appendChild(dropdown);
+  }
+
+  dropdown.innerHTML = items.map((item, i) =>
+    `<div class="jot-autocomplete-item ${i === 0 ? 'active' : ''}" onmousedown="selectJotAutocomplete(${i})" onmouseenter="window._acIdx=${i};renderAcHighlight()">
+      <span class="ac-icon">${item.icon}</span>
+      <span class="ac-label">${item.label}</span>
+    </div>`
+  ).join('');
+
+  // Position near textarea
+  const rect = textarea.getBoundingClientRect();
+  dropdown.style.left = rect.left + 'px';
+  dropdown.style.top = (rect.bottom + 4) + 'px';
+  dropdown.style.display = 'block';
+}
+
+function renderAcHighlight() {
+  const items = document.querySelectorAll('#jot-autocomplete .jot-autocomplete-item');
+  items.forEach((el, i) => el.classList.toggle('active', i === window._acIdx));
+}
+
+function hideJotAutocomplete() {
+  window._acActive = false;
+  const dropdown = document.getElementById('jot-autocomplete');
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectJotAutocomplete(idx) {
+  const item = window._acItems[idx];
+  const trigger = window._acTrigger;
+  if (!item || !trigger) { hideJotAutocomplete(); return; }
+
+  const textarea = trigger.textarea;
+  const val = textarea.value;
+  const pos = textarea.selectionStart;
+
+  // Replace trigger text with display name
+  const beforeTrigger = val.slice(0, trigger.startPos);
+  const afterCursor = val.slice(pos);
+  const insertText = (item.type === 'project' ? '@' : '#') + item.label + ' ';
+
+  textarea.value = beforeTrigger + insertText + afterCursor;
+  const newPos = beforeTrigger.length + insertText.length;
+  textarea.setSelectionRange(newPos, newPos);
+  textarea.focus();
+
+  // Store the link on the jot being edited
+  const jotId = textarea.closest('[data-jot-id]')?.dataset.jotId || null;
+  if (jotId) {
+    const jot = DATA.jots.find(j => j.id == jotId);
+    if (jot) {
+      if (item.type === 'project') jot.projectId = item.id;
+      if (item.type === 'note') jot.noteId = item.id;
+    }
+  }
+  // For the main input, store pending link
+  if (textarea.id === 'jot-input') {
+    if (item.type === 'project') window._pendingJotProjectId = item.id;
+    if (item.type === 'note') window._pendingJotNoteId = item.id;
+  }
+
+  hideJotAutocomplete();
+}
+
+function jotAutocompleteKeydown(event) {
+  if (!window._acActive) return;
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    window._acIdx = Math.min(window._acIdx + 1, window._acItems.length - 1);
+    renderAcHighlight();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    window._acIdx = Math.max(window._acIdx - 1, 0);
+    renderAcHighlight();
+  } else if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault();
+    selectJotAutocomplete(window._acIdx);
+  } else if (event.key === 'Escape') {
+    hideJotAutocomplete();
+  }
+}
+
 async function editJot(jotId) {
   const jot = DATA.jots.find(j => j.id == jotId); // == for loose comparison (string vs number)
   if (!jot) return;
@@ -3401,7 +3550,7 @@ async function editJot(jotId) {
   const currentText = jot.text;
   jotElement.innerHTML = `
     <div class="jot-edit-wrap">
-      <textarea onblur="saveJotEdit(${jotId}, this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur();}">${currentText}</textarea>
+      <textarea onblur="setTimeout(()=>saveJotEdit(${jotId}, this.value),150)" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!window._acActive){event.preventDefault();this.blur();}jotAutocompleteKeydown(event)" oninput="jotAutocompleteCheck(this)">${currentText}</textarea>
       <div style="display:flex;gap:6px;margin-top:4px;">
         <button onclick="event.stopPropagation();editJotLinks(${jotId})" style="font-size:11px;padding:2px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);cursor:pointer;">🔗 Link</button>
       </div>
