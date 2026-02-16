@@ -1934,7 +1934,7 @@ function renderJots() {
 function renderJotEntry(date, e) {
   return `
     <div class="jot-entry" id="jot-${date}-${e.id}">
-      <div class="jot-check ${e.done ? 'done' : ''}" onclick="toggleJotDone('${date}',${e.id})"></div>
+      ${e.isTask ? `<div class="jot-check ${e.done ? 'done' : ''}" onclick="toggleJotDone('${date}',${e.id})"></div>` : ''}
       <span class="jot-time">${e.time}</span>
       <div class="jot-text ${e.done ? 'done' : ''}" onclick="startEditJot('${date}',${e.id})">${formatJotText(e.text, e.images, e.files)}</div>
       <button class="jot-delete" onclick="deleteJot('${date}',${e.id})" title="Delete">✕</button>
@@ -2083,10 +2083,11 @@ function addJot() {
   const tags = [];
   text.replace(/#([\w-]+)/g, (_, tag) => { tags.push(tag); });
 
-  // Check for checkbox prefix
+  // Check for checkbox prefix — only these become tasks
   let done = false;
-  text = text.replace(/^\s*(-\s*)?\[\s*[xX]\s*\]\s*/, () => { done = true; return ''; });
-  text = text.replace(/^\s*(-\s*)?\[\s*\]\s*/, '');
+  let isTask = false;
+  text = text.replace(/^\s*(-\s*)?\[\s*[xX]\s*\]\s*/, () => { done = true; isTask = true; return ''; });
+  text = text.replace(/^\s*(-\s*)?\[\s*\]\s*/, () => { isTask = true; return ''; });
 
   let dayJot = getJotDay(today);
   if (!dayJot) {
@@ -2094,7 +2095,7 @@ function addJot() {
     DATA.jots.push(dayJot);
   }
   const id = dayJot.entries.length ? Math.max(...dayJot.entries.map(e => e.id)) + 1 : 1;
-  const entry = { id, text: text || '(attachment)', time, tags, done };
+  const entry = { id, text: text || '(attachment)', time, tags, done, isTask };
   if (pendingJotImages.length) entry.images = [...pendingJotImages];
   if (pendingJotFiles.length) entry.files = [...pendingJotFiles];
   dayJot.entries.push(entry);
