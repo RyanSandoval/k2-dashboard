@@ -469,6 +469,7 @@
     gap: 8px;
     margin-bottom: 20px;
     align-items: flex-end;
+    position: relative;
   }
   .jot-input-wrap textarea {
     flex: 1;
@@ -835,10 +836,13 @@
         <p>Quick capture — type and hit enter</p>
       </div>
       <div id="jot-images-preview" class="jot-images-preview"></div>
-      <div class="jot-input-wrap">
+      <div class="jot-input-wrap" id="jot-drop-zone">
         <textarea id="jot-input" rows="1" placeholder="What's on your mind? Use #tags, [] for checkboxes, **bold**, *italic*..." onkeydown="handleJotKeydown(event)" oninput="autoExpandTextarea(this)"></textarea>
         <input type="file" id="jot-file-input" accept="*/*" multiple style="display:none" onchange="handleJotFileAttach(event)">
-        <button class="jot-attach-btn" onclick="document.getElementById('jot-file-input').click()" title="Attach image">📎</button>
+        <button class="jot-attach-btn" onclick="document.getElementById('jot-file-input').click()" title="Attach file">📎</button>
+        <div id="jot-drop-overlay" style="display:none;position:absolute;inset:0;background:rgba(74,158,255,0.12);border:2px dashed var(--accent);border-radius:12px;z-index:10;pointer-events:none;align-items:center;justify-content:center;">
+          <span style="color:var(--accent);font-weight:600;font-size:14px;">Drop files here</span>
+        </div>
       </div>
       <div id="jots-today-entries"></div>
       <div id="jots-previous-days"></div>
@@ -2057,18 +2061,79 @@ let pendingFiles = [];
 
 function handleJotFileAttach(event) {
   const files = Array.from(event.target.files);
-  // For now, just show filenames - full implementation would need file storage
-  const preview = document.getElementById('jot-images-preview');
-  
-  files.forEach(file => {
-    const chip = document.createElement('div');
-    chip.className = 'jot-file-chip';
-    chip.innerHTML = `
-      📎 ${file.name}
-      <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);margin-left:4px;">✕</button>
-    `;
-    preview.appendChild(chip);
+  if (files.length) processDroppedFiles(files);
+  event.target.value = ''; // Reset so same file can be re-selected
+}
+
+// Drag and drop for jot attachments
+function initJotDragDrop() {
+  const dropZone = document.getElementById('jot-drop-zone');
+  const overlay = document.getElementById('jot-drop-overlay');
+  if (!dropZone || !overlay) return;
+
+  let dragCounter = 0;
+
+  dropZone.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragCounter++;
+    overlay.style.display = 'flex';
   });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) overlay.style.display = 'none';
+  });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    overlay.style.display = 'none';
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) processDroppedFiles(files);
+  });
+}
+
+function processDroppedFiles(files) {
+  const preview = document.getElementById('jot-images-preview');
+  if (!preview) return;
+
+  files.forEach(file => {
+    // Store in pendingFiles for saving
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      pendingFiles.push({ name: file.name, type: file.type, data: e.target.result });
+
+      const chip = document.createElement('div');
+      chip.className = 'jot-file-chip';
+      const idx = pendingFiles.length - 1;
+
+      // Show image preview for image files
+      if (file.type.startsWith('image/')) {
+        chip.innerHTML = `
+          <img src="${e.target.result}" style="max-height:40px;border-radius:4px;margin-right:6px;">
+          ${file.name}
+          <button onclick="removePendingFile(${idx}, this)" style="background:none;border:none;color:var(--red);margin-left:4px;cursor:pointer;">✕</button>
+        `;
+      } else {
+        chip.innerHTML = `
+          📎 ${file.name}
+          <button onclick="removePendingFile(${idx}, this)" style="background:none;border:none;color:var(--red);margin-left:4px;cursor:pointer;">✕</button>
+        `;
+      }
+      preview.appendChild(chip);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removePendingFile(idx, btn) {
+  pendingFiles[idx] = null;
+  btn.parentElement.remove();
 }
 
 // Initialize on load
@@ -2078,6 +2143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
     loadData();
+    initJotDragDrop();
   }
 });
 </script>
