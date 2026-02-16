@@ -708,8 +708,11 @@
     .quick-add { flex-wrap: wrap; }
     .quick-add input { min-width: 100%; }
     .quick-add select { flex: 1; }
+    .charts-bottom-grid { grid-template-columns: 1fr !important; }
+    .chart-container-pnl, .chart-container-wr, .chart-container-bal { height: 200px !important; }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <!-- Login Screen -->
@@ -965,6 +968,34 @@
         <p>Books, positions & P&L across all strategies</p>
       </div>
       <div class="stat-row" id="trading-stats-row"></div>
+
+      <!-- Trading Charts -->
+      <div id="trading-charts-section" style="display:none;margin-bottom:24px;">
+        <div class="card" style="margin-bottom:16px;padding:20px;">
+          <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Cumulative P&L Over Time</div>
+          <div style="position:relative;height:300px;" class="chart-container-pnl">
+            <canvas id="chart-pnl"></canvas>
+          </div>
+          <div id="chart-pnl-empty" style="display:none;text-align:center;color:var(--text-dim);padding:40px;font-size:13px;">No resolved trades yet</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="charts-bottom-grid">
+          <div class="card" style="padding:20px;">
+            <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Win Rate by Book</div>
+            <div style="position:relative;height:300px;" class="chart-container-wr">
+              <canvas id="chart-winrate"></canvas>
+            </div>
+            <div id="chart-wr-empty" style="display:none;text-align:center;color:var(--text-dim);padding:40px;font-size:13px;">No resolved trades yet</div>
+          </div>
+          <div class="card" style="padding:20px;">
+            <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Balance Over Time</div>
+            <div style="position:relative;height:300px;" class="chart-container-bal">
+              <canvas id="chart-balance"></canvas>
+            </div>
+            <div id="chart-bal-empty" style="display:none;text-align:center;color:var(--text-dim);padding:40px;font-size:13px;">No trade history yet</div>
+          </div>
+        </div>
+      </div>
+
       <div class="card-grid" id="trading-books-grid"></div>
     </div>
 
@@ -1464,6 +1495,9 @@ function renderTrading() {
     `;
   }
 
+  // === Charts ===
+  renderTradingCharts(books);
+
   const grid = document.getElementById('trading-books-grid');
   if (grid) {
     grid.innerHTML = books.map(book => {
@@ -1522,6 +1556,167 @@ function renderTrading() {
         </div>
       `;
     }).join('');
+  }
+}
+
+// Trading Charts
+let chartPnl = null, chartWinrate = null, chartBalance = null;
+const BOOK_COLORS = {
+  'Tennis': '#10b981',
+  'Polymarket': '#8b5cf6',
+  'Crypto 15m': '#f59e0b',
+  'Polymarket 5m': '#3b82f6'
+};
+function getBookColor(name) {
+  return BOOK_COLORS[name] || '#' + ((Math.abs(name.split('').reduce((a,c)=>a+c.charCodeAt(0),0))*2654435761)>>>0).toString(16).slice(0,6).padStart(6,'a');
+}
+
+function renderTradingCharts(books) {
+  const section = document.getElementById('trading-charts-section');
+  if (!section) return;
+
+  // Collect all resolved trades with book info
+  const allResolved = [];
+  const bookMap = {};
+  books.forEach(book => {
+    const resolved = (book.trades || []).filter(t => t.status === 'won' || t.status === 'lost');
+    if (resolved.length === 0) return;
+    bookMap[book.name] = { color: getBookColor(book.name), resolved };
+    resolved.forEach(t => {
+      allResolved.push({ ...t, bookName: book.name, sortDate: t.closedAt || t.enteredAt || '' });
+    });
+  });
+
+  const hasData = allResolved.length > 0;
+  section.style.display = 'block';
+
+  // Destroy old charts
+  if (chartPnl) { chartPnl.destroy(); chartPnl = null; }
+  if (chartWinrate) { chartWinrate.destroy(); chartWinrate = null; }
+  if (chartBalance) { chartBalance.destroy(); chartBalance = null; }
+
+  const darkGrid = 'rgba(255,255,255,0.08)';
+  const defaultOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#e0e0e8', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#8888a0', font: { size: 10 } }, grid: { color: darkGrid } },
+      y: { ticks: { color: '#8888a0', font: { size: 10 } }, grid: { color: darkGrid } }
+    }
+  };
+
+  // --- Chart 1: Cumulative P&L ---
+  const pnlCanvas = document.getElementById('chart-pnl');
+  const pnlEmpty = document.getElementById('chart-pnl-empty');
+  if (!hasData) {
+    pnlCanvas.style.display = 'none'; pnlEmpty.style.display = 'block';
+  } else {
+    pnlCanvas.style.display = 'block'; pnlEmpty.style.display = 'none';
+    // Sort all resolved by date
+    allResolved.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+    const dates = [...new Set(allResolved.map(t => (t.sortDate || '').slice(0, 10)))].sort();
+
+    const datasets = [];
+    const bookNames = Object.keys(bookMap);
+    // Per-book cumulative
+    bookNames.forEach(name => {
+      const info = bookMap[name];
+      const sorted = [...info.resolved].sort((a, b) => (a.closedAt || a.enteredAt || '').localeCompare(b.closedAt || b.enteredAt || ''));
+      let cum = 0;
+      const cumByDate = {};
+      sorted.forEach(t => {
+        const d = (t.closedAt || t.enteredAt || '').slice(0, 10);
+        cum += (t.pnl || 0);
+        cumByDate[d] = cum;
+      });
+      // Fill forward
+      let last = 0;
+      const data = dates.map(d => { if (cumByDate[d] !== undefined) last = cumByDate[d]; return last; });
+      datasets.push({
+        label: name, data, borderColor: info.color, backgroundColor: 'transparent',
+        borderWidth: 2, pointRadius: 2, tension: 0.3
+      });
+    });
+    // Total line
+    const totalData = dates.map((_, i) => datasets.reduce((s, ds) => s + ds.data[i], 0));
+    datasets.push({
+      label: 'Total', data: totalData, borderColor: '#ffffff', backgroundColor: 'transparent',
+      borderWidth: 3, pointRadius: 2, tension: 0.3
+    });
+
+    chartPnl = new Chart(pnlCanvas, {
+      type: 'line',
+      data: { labels: dates, datasets },
+      options: { ...defaultOpts, plugins: { ...defaultOpts.plugins, tooltip: { mode: 'index', intersect: false } } }
+    });
+  }
+
+  // --- Chart 2: Win Rate (horizontal bar) ---
+  const wrCanvas = document.getElementById('chart-winrate');
+  const wrEmpty = document.getElementById('chart-wr-empty');
+  if (!hasData) {
+    wrCanvas.style.display = 'none'; wrEmpty.style.display = 'block';
+  } else {
+    wrCanvas.style.display = 'block'; wrEmpty.style.display = 'none';
+    const labels = [], data = [], colors = [];
+    Object.keys(bookMap).forEach(name => {
+      const trades = bookMap[name].resolved;
+      const wins = trades.filter(t => t.status === 'won').length;
+      const wr = Math.round(wins / trades.length * 100);
+      labels.push(name); data.push(wr); colors.push(bookMap[name].color);
+    });
+    chartWinrate = new Chart(wrCanvas, {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, barThickness: 28 }] },
+      options: {
+        ...defaultOpts, indexAxis: 'y',
+        plugins: { ...defaultOpts.plugins, legend: { display: false } },
+        scales: {
+          x: { ...defaultOpts.scales.x, max: 100, ticks: { ...defaultOpts.scales.x.ticks, callback: v => v + '%' } },
+          y: { ...defaultOpts.scales.y }
+        }
+      }
+    });
+  }
+
+  // --- Chart 3: Balance Over Time (area) ---
+  const balCanvas = document.getElementById('chart-balance');
+  const balEmpty = document.getElementById('chart-bal-empty');
+  if (!hasData) {
+    balCanvas.style.display = 'none'; balEmpty.style.display = 'block';
+  } else {
+    balCanvas.style.display = 'block'; balEmpty.style.display = 'none';
+    // Use resolved trades to reconstruct balance changes over time
+    const sorted = [...allResolved].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+    const initialBalance = books.reduce((s, b) => s + (b.bankroll || 0), 0);
+    const totalCurrentPnL = books.reduce((s, b) => s + (b.realizedPnL || 0), 0);
+    // Work backwards: current balance = initial + totalPnL, so starting = current - totalPnL
+    const currentBalance = books.reduce((s, b) => s + (b.balance || 0), 0);
+    const startBalance = currentBalance - totalCurrentPnL;
+
+    const dates = [...new Set(sorted.map(t => t.sortDate.slice(0, 10)))].sort();
+    let cum = 0;
+    const pnlByDate = {};
+    sorted.forEach(t => {
+      const d = t.sortDate.slice(0, 10);
+      cum += (t.pnl || 0);
+      pnlByDate[d] = cum;
+    });
+    let last = 0;
+    const balData = dates.map(d => { if (pnlByDate[d] !== undefined) last = pnlByDate[d]; return startBalance + last; });
+
+    chartBalance = new Chart(balCanvas, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Balance', data: balData,
+          borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.15)',
+          fill: true, borderWidth: 2, pointRadius: 2, tension: 0.3
+        }]
+      },
+      options: { ...defaultOpts, plugins: { ...defaultOpts.plugins, legend: { display: false } } }
+    });
   }
 }
 
