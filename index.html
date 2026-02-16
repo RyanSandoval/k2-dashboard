@@ -825,6 +825,32 @@
     .charts-bottom-grid { grid-template-columns: 1fr !important; }
     .chart-container-pnl, .chart-container-wr, .chart-container-bal { height: 200px !important; }
   }
+
+  /* Time horizon toggle pills */
+  .time-toggle {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+  .time-toggle-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+  }
+  .time-toggle-btn:hover { border-color: #3b82f6; color: var(--text); }
+  .time-toggle-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -1086,7 +1112,15 @@
       <!-- Trading Charts -->
       <div id="trading-charts-section" style="display:none;margin-bottom:24px;">
         <div class="card" style="margin-bottom:16px;padding:20px;">
-          <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Cumulative P&L Over Time</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:15px;font-weight:600;">Cumulative P&L Over Time</div>
+            <div class="time-toggle" style="margin-bottom:0;" id="toggle-pnl">
+              <button class="time-toggle-btn" data-range="1D" onclick="setChartRange('pnl','1D')">1D</button>
+              <button class="time-toggle-btn" data-range="1W" onclick="setChartRange('pnl','1W')">1W</button>
+              <button class="time-toggle-btn" data-range="1M" onclick="setChartRange('pnl','1M')">1M</button>
+              <button class="time-toggle-btn active" data-range="ALL" onclick="setChartRange('pnl','ALL')">ALL</button>
+            </div>
+          </div>
           <div style="position:relative;height:300px;" class="chart-container-pnl">
             <canvas id="chart-pnl"></canvas>
           </div>
@@ -1101,7 +1135,15 @@
             <div id="chart-wr-empty" style="display:none;text-align:center;color:var(--text-dim);padding:40px;font-size:13px;">No resolved trades yet</div>
           </div>
           <div class="card" style="padding:20px;">
-            <div style="font-size:15px;font-weight:600;margin-bottom:12px;">Balance Over Time</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div style="font-size:15px;font-weight:600;">Balance Over Time</div>
+              <div class="time-toggle" style="margin-bottom:0;" id="toggle-balance">
+                <button class="time-toggle-btn" data-range="1D" onclick="setChartRange('balance','1D')">1D</button>
+                <button class="time-toggle-btn" data-range="1W" onclick="setChartRange('balance','1W')">1W</button>
+                <button class="time-toggle-btn" data-range="1M" onclick="setChartRange('balance','1M')">1M</button>
+                <button class="time-toggle-btn active" data-range="ALL" onclick="setChartRange('balance','ALL')">ALL</button>
+              </div>
+            </div>
             <div style="position:relative;height:300px;" class="chart-container-bal">
               <canvas id="chart-balance"></canvas>
             </div>
@@ -1757,6 +1799,9 @@ function renderTrading() {
 
 // Trading Charts
 let chartPnl = null, chartWinrate = null, chartBalance = null;
+let chartRangePnl = 'ALL', chartRangeBalance = 'ALL';
+let _tradingBooks = []; // cached for re-render on range change
+
 const BOOK_COLORS = {
   'Tennis': '#10b981',
   'Polymarket': '#8b5cf6',
@@ -1767,11 +1812,41 @@ function getBookColor(name) {
   return BOOK_COLORS[name] || '#' + ((Math.abs(name.split('').reduce((a,c)=>a+c.charCodeAt(0),0))*2654435761)>>>0).toString(16).slice(0,6).padStart(6,'a');
 }
 
-function renderTradingCharts(books) {
-  const section = document.getElementById('trading-charts-section');
-  if (!section) return;
+function getRangeCutoff(range) {
+  if (range === 'ALL') return null;
+  const now = new Date();
+  if (range === '1D') return new Date(now - 24*60*60*1000);
+  if (range === '1W') return new Date(now - 7*24*60*60*1000);
+  if (range === '1M') return new Date(now - 30*24*60*60*1000);
+  return null;
+}
 
-  // Collect all resolved trades with book info
+function formatLabel(dateStr, range) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  if (range === '1D') return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (range === '1W') return d.toLocaleDateString('en-US', { weekday: 'short' });
+  if (range === '1M') return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // ALL — dates
+  return dateStr.slice(0, 10);
+}
+
+function getDateKey(dateStr, range) {
+  if (range === '1D') return dateStr; // keep full timestamp for hour grouping
+  return (dateStr || '').slice(0, 10);
+}
+
+function setChartRange(chart, range) {
+  // Update toggle buttons
+  const container = document.getElementById('toggle-' + (chart === 'pnl' ? 'pnl' : 'balance'));
+  if (container) {
+    container.querySelectorAll('.time-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.range === range));
+  }
+  if (chart === 'pnl') { chartRangePnl = range; updatePnlChart(); }
+  else { chartRangeBalance = range; updateBalanceChart(); }
+}
+
+function collectResolvedTrades(books) {
   const allResolved = [];
   const bookMap = {};
   books.forEach(book => {
@@ -1782,72 +1857,169 @@ function renderTradingCharts(books) {
       allResolved.push({ ...t, bookName: book.name, sortDate: t.closedAt || t.enteredAt || '' });
     });
   });
+  return { allResolved, bookMap };
+}
 
+function filterByRange(trades, range) {
+  const cutoff = getRangeCutoff(range);
+  if (!cutoff) return trades;
+  return trades.filter(t => {
+    const d = new Date(t.sortDate || t.closedAt || t.enteredAt || 0);
+    return d >= cutoff;
+  });
+}
+
+const darkGrid = 'rgba(255,255,255,0.08)';
+const defaultOpts = {
+  responsive: true, maintainAspectRatio: false,
+  animation: { duration: 400 },
+  plugins: { legend: { labels: { color: '#e0e0e8', font: { size: 11 } } } },
+  scales: {
+    x: { ticks: { color: '#8888a0', font: { size: 10 } }, grid: { color: darkGrid } },
+    y: { ticks: { color: '#8888a0', font: { size: 10 } }, grid: { color: darkGrid } }
+  }
+};
+
+function updatePnlChart() {
+  const books = _tradingBooks;
+  const { allResolved, bookMap } = collectResolvedTrades(books);
+  const filtered = filterByRange(allResolved, chartRangePnl);
+  const range = chartRangePnl;
+
+  const pnlCanvas = document.getElementById('chart-pnl');
+  const pnlEmpty = document.getElementById('chart-pnl-empty');
+
+  if (filtered.length === 0) {
+    pnlCanvas.style.display = 'none'; pnlEmpty.style.display = 'block';
+    if (chartPnl) { chartPnl.data.labels = []; chartPnl.data.datasets = []; chartPnl.update(); }
+    return;
+  }
+  pnlCanvas.style.display = 'block'; pnlEmpty.style.display = 'none';
+
+  filtered.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+  const dateKeys = [...new Set(filtered.map(t => getDateKey(t.sortDate, range)))].sort();
+  const labels = dateKeys.map(d => formatLabel(d, range));
+
+  const datasets = [];
+  Object.keys(bookMap).forEach(name => {
+    const info = bookMap[name];
+    const bookFiltered = filterByRange(info.resolved.map(t => ({ ...t, sortDate: t.closedAt || t.enteredAt || '' })), range);
+    bookFiltered.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+    let cum = 0;
+    const cumByDate = {};
+    bookFiltered.forEach(t => {
+      const d = getDateKey(t.sortDate, range);
+      cum += (t.pnl || 0);
+      cumByDate[d] = cum;
+    });
+    let last = 0;
+    const data = dateKeys.map(d => { if (cumByDate[d] !== undefined) last = cumByDate[d]; return last; });
+    datasets.push({
+      label: name, data, borderColor: info.color, backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 2, tension: 0.3
+    });
+  });
+  const totalData = dateKeys.map((_, i) => datasets.reduce((s, ds) => s + ds.data[i], 0));
+  datasets.push({
+    label: 'Total', data: totalData, borderColor: '#ffffff', backgroundColor: 'transparent',
+    borderWidth: 3, pointRadius: 2, tension: 0.3
+  });
+
+  if (chartPnl) {
+    chartPnl.data.labels = labels;
+    chartPnl.data.datasets = datasets;
+    chartPnl.update();
+  } else {
+    chartPnl = new Chart(pnlCanvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: { ...defaultOpts, plugins: { ...defaultOpts.plugins, tooltip: { mode: 'index', intersect: false } } }
+    });
+  }
+}
+
+function updateBalanceChart() {
+  const books = _tradingBooks;
+  const { allResolved } = collectResolvedTrades(books);
+  const filtered = filterByRange(allResolved, chartRangeBalance);
+  const range = chartRangeBalance;
+
+  const balCanvas = document.getElementById('chart-balance');
+  const balEmpty = document.getElementById('chart-bal-empty');
+
+  if (filtered.length === 0) {
+    balCanvas.style.display = 'none'; balEmpty.style.display = 'block';
+    if (chartBalance) { chartBalance.data.labels = []; chartBalance.data.datasets = []; chartBalance.update(); }
+    return;
+  }
+  balCanvas.style.display = 'block'; balEmpty.style.display = 'none';
+
+  filtered.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+  const currentBalance = books.reduce((s, b) => s + (b.balance || 0), 0);
+  const totalCurrentPnL = books.reduce((s, b) => s + (b.realizedPnL || 0), 0);
+  const startBalance = currentBalance - totalCurrentPnL;
+
+  // For filtered view, compute starting balance as startBalance + sum of PnL before cutoff
+  const cutoff = getRangeCutoff(range);
+  let preFilterPnL = 0;
+  if (cutoff) {
+    allResolved.forEach(t => {
+      const d = new Date(t.sortDate || 0);
+      if (d < cutoff) preFilterPnL += (t.pnl || 0);
+    });
+  }
+  const filteredStart = startBalance + preFilterPnL;
+
+  const dateKeys = [...new Set(filtered.map(t => getDateKey(t.sortDate, range)))].sort();
+  const labels = dateKeys.map(d => formatLabel(d, range));
+  let cum = 0;
+  const pnlByDate = {};
+  filtered.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+  filtered.forEach(t => {
+    const d = getDateKey(t.sortDate, range);
+    cum += (t.pnl || 0);
+    pnlByDate[d] = cum;
+  });
+  let last = 0;
+  const balData = dateKeys.map(d => { if (pnlByDate[d] !== undefined) last = pnlByDate[d]; return filteredStart + last; });
+
+  const dataset = {
+    label: 'Balance', data: balData,
+    borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.15)',
+    fill: true, borderWidth: 2, pointRadius: 2, tension: 0.3
+  };
+
+  if (chartBalance) {
+    chartBalance.data.labels = labels;
+    chartBalance.data.datasets = [dataset];
+    chartBalance.update();
+  } else {
+    chartBalance = new Chart(balCanvas, {
+      type: 'line',
+      data: { labels, datasets: [dataset] },
+      options: { ...defaultOpts, plugins: { ...defaultOpts.plugins, legend: { display: false } } }
+    });
+  }
+}
+
+function renderTradingCharts(books) {
+  const section = document.getElementById('trading-charts-section');
+  if (!section) return;
+  _tradingBooks = books;
+
+  const { allResolved, bookMap } = collectResolvedTrades(books);
   const hasData = allResolved.length > 0;
   section.style.display = 'block';
 
-  // Destroy old charts
+  // Destroy old charts on full re-render
   if (chartPnl) { chartPnl.destroy(); chartPnl = null; }
   if (chartWinrate) { chartWinrate.destroy(); chartWinrate = null; }
   if (chartBalance) { chartBalance.destroy(); chartBalance = null; }
 
-  const darkGrid = 'rgba(255,255,255,0.08)';
-  const defaultOpts = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#e0e0e8', font: { size: 11 } } } },
-    scales: {
-      x: { ticks: { color: '#8888a0', font: { size: 10 } }, grid: { color: darkGrid } },
-      y: { ticks: { color: '#8888a0', font: { size: 10 } }, grid: { color: darkGrid } }
-    }
-  };
+  // --- P&L chart ---
+  updatePnlChart();
 
-  // --- Chart 1: Cumulative P&L ---
-  const pnlCanvas = document.getElementById('chart-pnl');
-  const pnlEmpty = document.getElementById('chart-pnl-empty');
-  if (!hasData) {
-    pnlCanvas.style.display = 'none'; pnlEmpty.style.display = 'block';
-  } else {
-    pnlCanvas.style.display = 'block'; pnlEmpty.style.display = 'none';
-    // Sort all resolved by date
-    allResolved.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
-    const dates = [...new Set(allResolved.map(t => (t.sortDate || '').slice(0, 10)))].sort();
-
-    const datasets = [];
-    const bookNames = Object.keys(bookMap);
-    // Per-book cumulative
-    bookNames.forEach(name => {
-      const info = bookMap[name];
-      const sorted = [...info.resolved].sort((a, b) => (a.closedAt || a.enteredAt || '').localeCompare(b.closedAt || b.enteredAt || ''));
-      let cum = 0;
-      const cumByDate = {};
-      sorted.forEach(t => {
-        const d = (t.closedAt || t.enteredAt || '').slice(0, 10);
-        cum += (t.pnl || 0);
-        cumByDate[d] = cum;
-      });
-      // Fill forward
-      let last = 0;
-      const data = dates.map(d => { if (cumByDate[d] !== undefined) last = cumByDate[d]; return last; });
-      datasets.push({
-        label: name, data, borderColor: info.color, backgroundColor: 'transparent',
-        borderWidth: 2, pointRadius: 2, tension: 0.3
-      });
-    });
-    // Total line
-    const totalData = dates.map((_, i) => datasets.reduce((s, ds) => s + ds.data[i], 0));
-    datasets.push({
-      label: 'Total', data: totalData, borderColor: '#ffffff', backgroundColor: 'transparent',
-      borderWidth: 3, pointRadius: 2, tension: 0.3
-    });
-
-    chartPnl = new Chart(pnlCanvas, {
-      type: 'line',
-      data: { labels: dates, datasets },
-      options: { ...defaultOpts, plugins: { ...defaultOpts.plugins, tooltip: { mode: 'index', intersect: false } } }
-    });
-  }
-
-  // --- Chart 2: Win Rate (horizontal bar) ---
+  // --- Win Rate (horizontal bar) — always all-time ---
   const wrCanvas = document.getElementById('chart-winrate');
   const wrEmpty = document.getElementById('chart-wr-empty');
   if (!hasData) {
@@ -1875,45 +2047,8 @@ function renderTradingCharts(books) {
     });
   }
 
-  // --- Chart 3: Balance Over Time (area) ---
-  const balCanvas = document.getElementById('chart-balance');
-  const balEmpty = document.getElementById('chart-bal-empty');
-  if (!hasData) {
-    balCanvas.style.display = 'none'; balEmpty.style.display = 'block';
-  } else {
-    balCanvas.style.display = 'block'; balEmpty.style.display = 'none';
-    // Use resolved trades to reconstruct balance changes over time
-    const sorted = [...allResolved].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
-    const initialBalance = books.reduce((s, b) => s + (b.bankroll || 0), 0);
-    const totalCurrentPnL = books.reduce((s, b) => s + (b.realizedPnL || 0), 0);
-    // Work backwards: current balance = initial + totalPnL, so starting = current - totalPnL
-    const currentBalance = books.reduce((s, b) => s + (b.balance || 0), 0);
-    const startBalance = currentBalance - totalCurrentPnL;
-
-    const dates = [...new Set(sorted.map(t => t.sortDate.slice(0, 10)))].sort();
-    let cum = 0;
-    const pnlByDate = {};
-    sorted.forEach(t => {
-      const d = t.sortDate.slice(0, 10);
-      cum += (t.pnl || 0);
-      pnlByDate[d] = cum;
-    });
-    let last = 0;
-    const balData = dates.map(d => { if (pnlByDate[d] !== undefined) last = pnlByDate[d]; return startBalance + last; });
-
-    chartBalance = new Chart(balCanvas, {
-      type: 'line',
-      data: {
-        labels: dates,
-        datasets: [{
-          label: 'Balance', data: balData,
-          borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.15)',
-          fill: true, borderWidth: 2, pointRadius: 2, tension: 0.3
-        }]
-      },
-      options: { ...defaultOpts, plugins: { ...defaultOpts.plugins, legend: { display: false } } }
-    });
-  }
+  // --- Balance chart ---
+  updateBalanceChart();
 }
 
 // Kanban columns config
