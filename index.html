@@ -1050,7 +1050,7 @@ async function loadData() {
     if (!res.ok) throw new Error(`GitHub API ${res.status}`);
     const file = await res.json();
     GH_SHA = file.sha;
-    const d = JSON.parse(atob(file.content));
+    const d = JSON.parse(atob(file.content.replace(/\n/g, '')));
     DATA.projects = d.projects || [];
     DATA.discussions = d.discussions || [];
     DATA.tasks = d.tasks || [];
