@@ -1110,6 +1110,8 @@ async function loadData() {
 
 async function saveData() {
   if (!GH_TOKEN) return;
+  const syncEl = document.getElementById('last-sync');
+  if (syncEl) syncEl.innerHTML = '<span style="color:var(--yellow);">⏳ Saving...</span>';
   try {
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
     const body = {
@@ -1128,9 +1130,10 @@ async function saveData() {
     }
     const result = await res.json();
     GH_SHA = result.content.sha;
-    document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+    if (syncEl) syncEl.innerHTML = `<span style="color:var(--green);">✓</span> ${new Date().toLocaleTimeString()}`;
   } catch(e) {
     console.error('Failed to save data:', e);
+    if (syncEl) syncEl.innerHTML = '<span style="color:var(--red);">✕ Save failed</span>';
   }
 }
 
