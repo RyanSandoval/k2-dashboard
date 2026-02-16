@@ -2403,6 +2403,96 @@ async function editNextStep(projectId, stepIdx, el) {
 }
 
 // ═══════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════
+
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Don't fire when typing in inputs/textareas
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable) return;
+
+    // Don't fire with modifier keys (except shift for ?)
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    switch (e.key) {
+      case 'n': // New jot
+        e.preventDefault();
+        navigateTo('jots');
+        setTimeout(() => document.getElementById('jot-input')?.focus(), 100);
+        break;
+      case '/': // Search jots
+        e.preventDefault();
+        navigateTo('jots');
+        setTimeout(() => document.getElementById('jot-search')?.focus(), 100);
+        break;
+      case 't': // New task
+        e.preventDefault();
+        navigateTo('tasks');
+        setTimeout(() => document.getElementById('new-task-input')?.focus(), 100);
+        break;
+      case 'd': // Dashboard
+        e.preventDefault();
+        navigateTo('dashboard');
+        break;
+      case 'j': // Jots
+        e.preventDefault();
+        navigateTo('jots');
+        break;
+      case 'p': // Projects
+        e.preventDefault();
+        navigateTo('projects');
+        break;
+      case '?': // Show shortcuts help
+        e.preventDefault();
+        toggleShortcutsHelp();
+        break;
+      case 'Escape': // Close modals
+        closeAllModals();
+        break;
+    }
+  });
+}
+
+function toggleShortcutsHelp() {
+  let help = document.getElementById('shortcuts-help');
+  if (help) {
+    help.remove();
+    return;
+  }
+  help = document.createElement('div');
+  help.id = 'shortcuts-help';
+  help.onclick = () => help.remove();
+  help.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;';
+  help.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:90%;" onclick="event.stopPropagation()">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">⌨️ Keyboard Shortcuts</h3>
+      <div style="display:grid;grid-template-columns:40px 1fr;gap:8px 12px;font-size:13px;">
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">n</kbd><span>New jot</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">/</kbd><span>Search jots</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">t</kbd><span>New task</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">d</kbd><span>Dashboard</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">j</kbd><span>Jots</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">p</kbd><span>Projects</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">?</kbd><span>This help</span>
+        <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;text-align:center;font-family:monospace;font-size:12px;">esc</kbd><span>Close modals</span>
+      </div>
+      <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-dim);">Press any key or click outside to close</div>
+    </div>
+  `;
+  document.body.appendChild(help);
+}
+
+function closeAllModals() {
+  // Close any open modals
+  document.querySelectorAll('[id$="-modal"]').forEach(m => {
+    if (m.style.display !== 'none') m.style.display = 'none';
+  });
+  document.getElementById('shortcuts-help')?.remove();
+  document.body.style.overflow = '';
+}
+
+// ═══════════════════════════════════════
 // SELECTION TOOLBAR
 // ═══════════════════════════════════════
 
@@ -2597,6 +2687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
     initJotDragDrop();
     initSelectionToolbar();
+    initKeyboardShortcuts();
   }
 });
 </script>
