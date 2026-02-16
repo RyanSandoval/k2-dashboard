@@ -1130,8 +1130,10 @@ document.querySelectorAll('.nav-item').forEach(item => {
 
 // Render Dashboard
 function renderDashboard() {
+  console.log('[K2 Debug] renderDashboard called, DATA.projects:', DATA.projects.length, 'items, statuses:', DATA.projects.map(p=>p.status));
   const pendingTasks = DATA.tasks.filter(t => !t.done).length;
   const activeProjects = DATA.projects.filter(p => p.status === 'active').length;
+  console.log('[K2 Debug] activeProjects:', activeProjects);
   const totalDecisions = DATA.decisions.length;
   const openQuestions = DATA.discussions.reduce((n, d) => n + (d.openQuestions || []).length, 0);
 
