@@ -2752,7 +2752,7 @@ function openProjectModal(projectId) {
         <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>!t.done).length}/${tasks.length})</div>
         <div style="max-height:120px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:8px;">
           ${tasks.map(t => `
-            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${t.id})">
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${JSON.stringify(t.id)})">
               <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;"></div>
               <span style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${t.text}</span>
               <span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>
