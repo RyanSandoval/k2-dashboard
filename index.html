@@ -2126,7 +2126,7 @@ function renderJotEntry(jot) {
   return `
     <div class="jot-entry" data-jot-id="${jot.id}">
       ${hasCheckbox ? `<div class="jot-check ${isChecked ? 'done' : ''}" onclick="toggleJot(${jot.id})"></div>` : ''}
-      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" ${!hasCheckbox ? 'onclick="editJot(' + jot.id + ')"' : ''}>${renderedText}</div>
+      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" onclick="if(!window.getSelection().toString().trim() && ${!hasCheckbox})editJot(${jot.id})">${renderedText}</div>
       <div class="jot-time">${timeStr}</div>
       <button class="jot-delete" onclick="deleteJot(${jot.id})" title="Delete">✕</button>
     </div>
@@ -2197,10 +2197,12 @@ async function addJot() {
 }
 
 async function editJot(jotId) {
-  const jot = DATA.jots.find(j => j.id === jotId);
+  const jot = DATA.jots.find(j => j.id == jotId); // == for loose comparison (string vs number)
   if (!jot) return;
 
-  const jotElement = document.querySelector(`[data-jot-id="${jotId}"] .jot-text`);
+  // Try multiple selectors for robustness
+  let jotElement = document.querySelector(`[data-jot-id="${jotId}"] .jot-text`);
+  if (!jotElement) jotElement = document.querySelector(`.jot-entry[data-jot-id="${jotId}"] .jot-text`);
   if (!jotElement) return;
 
   const currentText = jot.text;
@@ -2216,7 +2218,7 @@ async function editJot(jotId) {
 }
 
 async function saveJotEdit(jotId, newText) {
-  const jot = DATA.jots.find(j => j.id === jotId);
+  const jot = DATA.jots.find(j => j.id == jotId);
   if (!jot) return;
 
   jot.text = newText.trim();
@@ -2225,7 +2227,7 @@ async function saveJotEdit(jotId, newText) {
 }
 
 async function toggleJot(jotId) {
-  const jot = DATA.jots.find(j => j.id === jotId);
+  const jot = DATA.jots.find(j => j.id == jotId);
   if (!jot) return;
 
   jot.done = !jot.done;
@@ -2482,7 +2484,7 @@ async function selectionFormat(wrapper) {
   const { jotId, text } = selectionContext;
   if (!jotId || !text) return;
 
-  const jot = DATA.jots.find(j => j.id === jotId);
+  const jot = DATA.jots.find(j => j.id == jotId);
   if (!jot) return;
 
   const wrapped = wrapper + text + wrapper;
@@ -2497,7 +2499,7 @@ async function selectionHighlight() {
   const { jotId } = selectionContext;
   if (!jotId) return;
 
-  const jot = DATA.jots.find(j => j.id === jotId);
+  const jot = DATA.jots.find(j => j.id == jotId);
   if (!jot) return;
 
   jot.pinned = !jot.pinned;
