@@ -1495,13 +1495,28 @@ function openTaskModal(taskId) {
   const ownerLabel = task.owner === 'k2' ? 'K-2' : 'Ryan';
   const priorityCycle = { high: 'medium', medium: 'low', low: 'high' };
 
+  const isK2 = task.owner === 'k2';
+  const k2Status = task.k2Status || 'pending';
+  const k2StatusConfig = { pending: { icon: '⏳', label: 'Pending', color: 'var(--text-dim)' }, 'in-progress': { icon: '🔨', label: 'In Progress', color: 'var(--orange)' }, review: { icon: '👀', label: 'Review', color: 'var(--yellow)' }, done: { icon: '✅', label: 'Done', color: 'var(--green)' } };
+  const statusInfo = (isK2 ? k2StatusConfig[k2Status] : null) || k2StatusConfig.pending;
+
+  // Left element: checkbox for Ryan, status for K-2
+  const leftElModal = isK2
+    ? `<span style="font-size:20px;flex-shrink:0;margin-top:2px;" title="${statusInfo.label}">${statusInfo.icon}</span>`
+    : `<div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${JSON.stringify(task.id)});openTaskModal(${JSON.stringify(task.id)})" style="margin-top:2px;flex-shrink:0;"></div>`;
+
+  // Activity log
+  const activity = task.activity || [];
+  const activityActionIcons = { started: '🔨', completed: '✅', queued: '🚀', rework: '🔄', accepted: '👍', created: '📝' };
+
   document.getElementById('task-modal-content').innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
-      <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${JSON.stringify(task.id)});openTaskModal(${JSON.stringify(task.id)})" style="margin-top:2px;flex-shrink:0;"></div>
+      ${leftElModal}
       <div style="flex:1;">
         <h3 style="font-size:16px;font-weight:700;cursor:pointer;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${JSON.stringify(task.id)},'text',this)" title="Click to edit">${task.text || task.title || 'Untitled'}</h3>
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
           <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${JSON.stringify(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
+          ${isK2 ? `<span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.icon} ${statusInfo.label}</span>` : ''}
           <span class="tag tag-blue">${projectName}</span>
           <span class="task-priority priority-${task.priority}" style="cursor:pointer;" onclick="cycleTaskPriority(${JSON.stringify(task.id)})" title="Click to cycle priority">${task.priority}</span>
           <span class="tag tag-purple">${task.created}</span>
@@ -1525,9 +1540,34 @@ function openTaskModal(taskId) {
     </div>
     ` : ''}
 
-    ${task.owner === 'k2' && !task.done ? `
+    ${isK2 && k2Status === 'pending' && !task.done ? `
     <div style="margin-bottom:12px;">
       <button onclick="queueTaskForK2(${JSON.stringify(task.id)})" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">▶ Queue for K-2</button>
+    </div>
+    ` : ''}
+
+    ${isK2 && k2Status === 'review' ? `
+    <div style="margin-bottom:12px;display:flex;gap:8px;">
+      <button onclick="acceptK2Task(${JSON.stringify(task.id)})" style="flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">👍 Accept</button>
+      <button onclick="reworkK2Task(${JSON.stringify(task.id)})" style="flex:1;padding:10px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">👎 Rework</button>
+    </div>
+    ` : ''}
+
+    ${activity.length > 0 ? `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px;">Recent Activity</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${[...activity].reverse().map(a => `
+          <div style="display:flex;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:8px;font-size:12px;">
+            <span style="flex-shrink:0;">${activityActionIcons[a.action] || '📌'}</span>
+            <div style="flex:1;">
+              <div style="font-weight:600;color:var(--text);text-transform:capitalize;">${a.action}</div>
+              ${a.detail ? `<div style="color:var(--text-dim);margin-top:2px;line-height:1.5;">${a.detail}</div>` : ''}
+            </div>
+            <span style="font-size:10px;color:var(--text-dim);flex-shrink:0;white-space:nowrap;">${a.date ? new Date(a.date).toLocaleDateString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : ''}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
     ` : ''}
 
@@ -1788,22 +1828,43 @@ function renderTasks() {
 
     const taskText = task.text || task.title || 'Untitled';
     const taskId = JSON.stringify(task.id);
-    const ownerBadge = task.owner === 'k2' ? '🤖' : '👤';
-    const doItBtn = task.owner === 'k2' && !task.done ? `<button onclick="event.stopPropagation();queueTaskForK2(${taskId})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>` : '';
+    const isK2 = task.owner === 'k2';
+    const ownerBadge = isK2 ? '🤖' : '👤';
+    const k2Status = task.k2Status || 'pending';
+    const k2StatusConfig = { pending: { icon: '⏳', label: 'Pending', color: 'var(--text-dim)' }, 'in-progress': { icon: '🔨', label: 'In Progress', color: 'var(--orange)' }, review: { icon: '👀', label: 'Review', color: 'var(--yellow)' }, done: { icon: '✅', label: 'Done', color: 'var(--green)' } };
+    const statusInfo = k2StatusConfig[k2Status] || k2StatusConfig.pending;
+
+    // K-2 tasks: status indicator + Do it (only pending) + review actions
+    // Ryan tasks: normal checkbox
+    let leftEl, actionBtns = '';
+    if (isK2) {
+      leftEl = `<span style="font-size:16px;flex-shrink:0;margin-top:1px;" title="${statusInfo.label}">${statusInfo.icon}</span>`;
+      if (k2Status === 'pending' && !task.done) {
+        actionBtns = `<button onclick="event.stopPropagation();queueTaskForK2(${taskId})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>`;
+      } else if (k2Status === 'review') {
+        actionBtns = `
+          <button onclick="event.stopPropagation();acceptK2Task(${taskId})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" title="Accept">👍</button>
+          <button onclick="event.stopPropagation();reworkK2Task(${taskId})" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:8px;" title="Rework">👎</button>`;
+      }
+    } else {
+      leftEl = `<div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${taskId})"></div>`;
+    }
+
     return `
       <li class="task-item" onclick="openTaskModal(${taskId})">
-        <div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${taskId})"></div>
+        ${leftEl}
         <div class="task-content ${task.done ? 'done' : ''}">
           <div style="display:flex;align-items:center;gap:6px;">
-            <span title="${task.owner === 'k2' ? 'K-2' : 'Ryan'}">${ownerBadge}</span>
+            <span title="${isK2 ? 'K-2' : 'Ryan'}">${ownerBadge}</span>
             <span>${taskText}</span>
+            ${isK2 ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.label}</span>` : ''}
           </div>
           ${task.context ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic;opacity:0.8;">${task.context}</div>` : ''}
           <div class="task-meta">
             ${projectName} • ${task.created}${task.source === 'jot' ? ' • 📝 from jot' : ''}
           </div>
         </div>
-        ${doItBtn}
+        ${actionBtns}
         <div class="task-priority priority-${task.priority}">${task.priority}</div>
       </li>
     `;
@@ -1880,8 +1941,49 @@ async function queueTaskForK2(taskId) {
     status: 'pending',
     created: new Date().toISOString()
   });
+  if (!task.activity) task.activity = [];
+  task.activity.push({ action: 'queued', detail: 'Task queued for K-2 execution', date: new Date().toISOString() });
   await saveData();
   showToast('🚀 Queued for K-2');
+  renderTasks();
+  if (activeTaskId) openTaskModal(activeTaskId);
+}
+
+async function acceptK2Task(taskId) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  task.k2Status = 'done';
+  task.done = true;
+  if (!task.activity) task.activity = [];
+  task.activity.push({ action: 'accepted', detail: 'Ryan accepted the completed work', date: new Date().toISOString() });
+  await saveData();
+  showToast('👍 Task accepted');
+  renderTasks();
+  if (activeTaskId) openTaskModal(activeTaskId);
+}
+
+async function reworkK2Task(taskId) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  const feedback = prompt('What needs to change?');
+  if (feedback === null) return;
+  task.k2Status = 'pending';
+  if (!task.activity) task.activity = [];
+  task.activity.push({ action: 'rework', detail: feedback, date: new Date().toISOString() });
+  // Queue rework command for K-2
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push({
+    id: 'cmd-' + Date.now(),
+    type: 'rework-task',
+    taskId: task.id,
+    taskText: task.text || task.title || '',
+    feedback: feedback,
+    status: 'pending',
+    created: new Date().toISOString()
+  });
+  await saveData();
+  showToast('👎 Sent back for rework');
+  renderTasks();
   if (activeTaskId) openTaskModal(activeTaskId);
 }
 
