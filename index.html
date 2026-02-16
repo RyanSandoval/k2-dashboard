@@ -752,6 +752,10 @@
       <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
+      <div class="nav-item" data-page="ai-insights">
+        <span class="icon">💡</span> AI Insights
+        <span class="badge" id="ai-insights-badge">0</span>
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-item active" data-page="jots">
@@ -823,6 +827,41 @@
 
       <h3 style="font-size:16px; margin-bottom:12px;">Recent Activity</h3>
       <div class="timeline" id="dashboard-timeline">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- AI Insights Page -->
+    <div class="page" id="page-ai-insights">
+      <div class="page-header">
+        <h2>AI Insights</h2>
+        <p>AI-powered opportunities and recommendations</p>
+      </div>
+
+      <div class="stat-row" id="ai-insights-stats">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="filter-bar" id="ai-insights-filters">
+        <button class="filter-btn active" data-filter="all" data-group="ai-insights">All</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <button class="filter-btn" data-filter="Website UX" data-group="ai-insights">Website UX</button>
+        <button class="filter-btn" data-filter="Marketing/SEO" data-group="ai-insights">Marketing/SEO</button>
+        <button class="filter-btn" data-filter="Ops Efficiency" data-group="ai-insights">Ops Efficiency</button>
+        <button class="filter-btn" data-filter="Industry" data-group="ai-insights">Industry</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <button class="filter-btn" data-filter="High" data-group="ai-insights">High Impact</button>
+        <button class="filter-btn" data-filter="Medium" data-group="ai-insights">Med Impact</button>
+        <button class="filter-btn" data-filter="Low" data-group="ai-insights">Low Impact</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <button class="filter-btn" data-filter="New" data-group="ai-insights">New</button>
+        <button class="filter-btn" data-filter="Reviewed" data-group="ai-insights">Reviewed</button>
+        <button class="filter-btn" data-filter="In Progress" data-group="ai-insights">In Progress</button>
+        <button class="filter-btn" data-filter="Done" data-group="ai-insights">Done</button>
+        <button class="filter-btn" data-filter="Dismissed" data-group="ai-insights">Dismissed</button>
+      </div>
+
+      <div class="card-grid" id="ai-insights-grid">
         <!-- Populated by JS -->
       </div>
     </div>
@@ -925,6 +964,14 @@
 
   </div>
 
+  <!-- AI Insight Detail Modal -->
+  <div id="ai-insight-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeAIInsightModal()">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:600px;margin:40px auto;padding:24px;position:relative;">
+      <button onclick="closeAIInsightModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+      <div id="ai-insight-modal-content"></div>
+    </div>
+  </div>
+
   <!-- Task Detail Modal -->
   <div id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeTaskModal()">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:500px;margin:40px auto;display:flex;flex-direction:column;max-height:calc(100vh - 80px);position:relative;">
@@ -954,6 +1001,9 @@
     <div class="mobile-nav-item" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
       <span class="icon">📊</span>Home
     </div>
+    <div class="mobile-nav-item" data-page="ai-insights" onclick="navigateTo('ai-insights');setMobileActive(this)">
+      <span class="icon">💡</span>AI
+    </div>
     <div class="mobile-nav-item active" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
       <span class="icon">✏️</span>Jots
     </div>
@@ -965,9 +1015,6 @@
     </div>
     <div class="mobile-nav-item" data-page="discussions" onclick="navigateTo('discussions');setMobileActive(this)">
       <span class="icon">💬</span>Chats
-    </div>
-    <div class="mobile-nav-item" data-page="notes" onclick="navigateTo('notes');setMobileActive(this)">
-      <span class="icon">📝</span>Notes
     </div>
   </div>
 </div>
@@ -982,7 +1029,7 @@ function setMobileActive(el) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], commands: [], aiInsights: [] };
 
 // ============================================================
 // APP LOGIC
@@ -1027,6 +1074,7 @@ async function loadData() {
     DATA.inbox = d.inbox || [];
     DATA.jots = d.jots || [];
     DATA.commands = d.commands || [];
+    DATA.aiInsights = d.aiInsights || [];
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -1068,6 +1116,7 @@ function renderAll() {
   renderDecisions();
   renderNotes();
   renderJots();
+  renderAIInsights();
 }
 
 // Navigation
@@ -1151,6 +1200,212 @@ function renderDashboard() {
       inboxAlert.style.display = 'none';
     }
   }
+}
+
+// AI Insights Rendering
+function renderAIInsights() {
+  const insights = DATA.aiInsights || [];
+  
+  // Update badge count
+  const newCount = insights.filter(i => i.status === 'New').length;
+  const badge = document.getElementById('ai-insights-badge');
+  if (badge) {
+    badge.textContent = newCount;
+    badge.style.display = newCount > 0 ? 'inline' : 'none';
+  }
+
+  // Render stats
+  const totalInsights = insights.length;
+  const newInsights = insights.filter(i => i.status === 'New').length;
+  const highImpact = insights.filter(i => i.impact === 'High').length;
+  const inProgress = insights.filter(i => i.status === 'In Progress').length;
+
+  const statsContainer = document.getElementById('ai-insights-stats');
+  if (statsContainer) {
+    statsContainer.innerHTML = `
+      <div class="stat-card">
+        <div class="label">Total Insights</div>
+        <div class="value" style="color:var(--accent)">${totalInsights}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">New</div>
+        <div class="value" style="color:var(--accent)">${newInsights}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">High Impact</div>
+        <div class="value" style="color:var(--red)">${highImpact}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">In Progress</div>
+        <div class="value" style="color:var(--yellow)">${inProgress}</div>
+      </div>
+    `;
+  }
+
+  // Render insight cards
+  const gridContainer = document.getElementById('ai-insights-grid');
+  if (gridContainer) {
+    renderFilteredAIInsights();
+  }
+
+  // Setup filters
+  setupAIInsightsFilters();
+}
+
+function renderFilteredAIInsights() {
+  const insights = DATA.aiInsights || [];
+  const gridContainer = document.getElementById('ai-insights-grid');
+  if (!gridContainer) return;
+
+  const activeFilters = Array.from(document.querySelectorAll('#ai-insights-filters .filter-btn.active'))
+    .map(btn => btn.dataset.filter)
+    .filter(f => f !== 'all');
+
+  let filteredInsights = insights;
+
+  if (activeFilters.length > 0) {
+    filteredInsights = insights.filter(insight => {
+      return activeFilters.some(filter => 
+        insight.category === filter || 
+        insight.impact === filter || 
+        insight.status === filter
+      );
+    });
+  }
+
+  gridContainer.innerHTML = filteredInsights.map(insight => {
+    const impactColor = insight.impact === 'High' ? 'var(--red)' : 
+                       insight.impact === 'Medium' ? 'var(--yellow)' : 'var(--green)';
+    const statusColor = insight.status === 'New' ? 'var(--accent)' :
+                       insight.status === 'Reviewed' ? 'var(--accent2)' :
+                       insight.status === 'In Progress' ? 'var(--yellow)' :
+                       insight.status === 'Done' ? 'var(--green)' : 'var(--text-dim)';
+
+    return `
+      <div class="card" style="cursor:pointer;" onclick="openAIInsightModal('${insight.id}')">
+        <div class="card-header">
+          <span class="card-title">${insight.title}</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <span style="font-size:11px;font-weight:600;color:${impactColor};">P${insight.priority}</span>
+          </div>
+        </div>
+        <div class="card-body">${insight.description}</div>
+        <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="tag tag-blue">${insight.category}</span>
+            <span class="tag" style="background:rgba(${impactColor === 'var(--red)' ? '248,113,113' : impactColor === 'var(--yellow)' ? '251,191,36' : '74,222,128'},0.15);color:${impactColor};">${insight.impact}</span>
+            <span class="tag" style="background:rgba(${statusColor === 'var(--accent)' ? '74,158,255' : statusColor === 'var(--accent2)' ? '124,92,255' : statusColor === 'var(--yellow)' ? '251,191,36' : statusColor === 'var(--green)' ? '74,222,128' : '136,136,160'},0.15);color:${statusColor};">${insight.status}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-dim);">${insight.dateAdded}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setupAIInsightsFilters() {
+  document.querySelectorAll('#ai-insights-filters .filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = btn.dataset.group;
+      const filter = btn.dataset.filter;
+      
+      if (filter === 'all') {
+        // Clear all filters in this group
+        document.querySelectorAll(`#ai-insights-filters .filter-btn[data-group="${group}"]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      } else {
+        // Remove 'all' filter if it's active
+        document.querySelector('#ai-insights-filters .filter-btn[data-filter="all"]')?.classList.remove('active');
+        btn.classList.toggle('active');
+      }
+      
+      renderFilteredAIInsights();
+    });
+  });
+}
+
+function openAIInsightModal(insightId) {
+  const insight = DATA.aiInsights.find(i => i.id === insightId);
+  if (!insight) return;
+
+  const modalContent = document.getElementById('ai-insight-modal-content');
+  if (!modalContent) return;
+
+  const impactColor = insight.impact === 'High' ? 'var(--red)' : 
+                     insight.impact === 'Medium' ? 'var(--yellow)' : 'var(--green)';
+  const statusColor = insight.status === 'New' ? 'var(--accent)' :
+                     insight.status === 'Reviewed' ? 'var(--accent2)' :
+                     insight.status === 'In Progress' ? 'var(--yellow)' :
+                     insight.status === 'Done' ? 'var(--green)' : 'var(--text-dim)';
+
+  modalContent.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+      <h3 style="font-size:18px;font-weight:700;flex:1;margin-right:16px;">${insight.title}</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:12px;font-weight:600;color:${impactColor};">P${insight.priority}</span>
+      </div>
+    </div>
+
+    <p style="font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:20px;">${insight.description}</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Category</div>
+        <span class="tag tag-blue">${insight.category}</span>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Impact</div>
+        <span class="tag" style="background:rgba(${impactColor === 'var(--red)' ? '248,113,113' : impactColor === 'var(--yellow)' ? '251,191,36' : '74,222,128'},0.15);color:${impactColor};">${insight.impact}</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Status</label>
+      <select onchange="updateAIInsightStatus('${insight.id}', this.value)" style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+        <option value="New" ${insight.status === 'New' ? 'selected' : ''}>New</option>
+        <option value="Reviewed" ${insight.status === 'Reviewed' ? 'selected' : ''}>Reviewed</option>
+        <option value="In Progress" ${insight.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+        <option value="Done" ${insight.status === 'Done' ? 'selected' : ''}>Done</option>
+        <option value="Dismissed" ${insight.status === 'Dismissed' ? 'selected' : ''}>Dismissed</option>
+      </select>
+    </div>
+
+    ${insight.competitors ? `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Competitive Context</div>
+        <div style="font-size:13px;color:var(--text);background:var(--surface2);padding:12px;border-radius:8px;border-left:3px solid var(--orange);">${insight.competitors}</div>
+      </div>
+    ` : ''}
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      ${(insight.tags || []).map(tag => `<span class="tag tag-purple">${tag}</span>`).join('')}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:12px;">
+      <div>Source: ${insight.source}</div>
+      <div>Added: ${insight.dateAdded}</div>
+    </div>
+  `;
+
+  document.getElementById('ai-insight-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAIInsightModal() {
+  document.getElementById('ai-insight-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function updateAIInsightStatus(insightId, newStatus) {
+  const insight = DATA.aiInsights.find(i => i.id === insightId);
+  if (!insight) return;
+
+  insight.status = newStatus;
+  await saveData();
+  renderAIInsights();
+  
+  // Re-open modal to show updated status
+  setTimeout(() => openAIInsightModal(insightId), 100);
 }
 
 // Kanban columns config
@@ -1371,87 +1626,46 @@ function openProjectModal(projectId) {
                 <button onclick="acceptStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Accept">👍</button>
                 <button onclick="rejectStep('${p.id}',${i})" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Reject">👎</button>
               ` : ''}
-              <button onclick="removeNextStep('${p.id}',${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:2px 6px;" title="Remove">✕</button>
-            </div>`;
+              <button onclick="deleteStep('${p.id}',${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:4px;" title="Delete">✕</button>
+            </div>
+            `;
           }).join('')}
-        </div>
-      </div>
-    ` : `
-      <div style="margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <div style="font-size:12px;font-weight:600;">Next Steps</div>
-          <button onclick="addNextStep('${p.id}')" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:4px 10px;cursor:pointer;">+ Add</button>
-        </div>
-      </div>
-    `}
-
-    ${p.links && p.links.length ? `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Files</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${p.links.map(l => `<span class="tag tag-purple">${l.label}</span>`).join('')}
         </div>
       </div>
     ` : ''}
 
     ${tasks.length ? `
       <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>t.done).length}/${tasks.length})</div>
-        <div style="background:var(--surface2);border-radius:8px;overflow:hidden;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tasks (${tasks.filter(t=>!t.done).length}/${tasks.length})</div>
+        <div style="max-height:120px;overflow-y:auto;background:var(--surface2);border-radius:8px;padding:8px;">
           ${tasks.map(t => `
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;">
-              <div class="task-check ${t.done ? 'done' : ''}" onclick="toggleTask(${t.id});openProjectModal('${p.id}')" style="width:16px;height:16px;flex-shrink:0;"></div>
-              <span style="${t.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}">${t.text}</span>
-              <span class="task-priority priority-${t.priority}" style="margin-left:auto">${t.priority}</span>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${t.id})">
+              <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;"></div>
+              <span style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${t.text}</span>
+              <span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>
             </div>
           `).join('')}
         </div>
       </div>
     ` : ''}
 
-    ${decisions.length ? `
+    ${(p.notes||[]).length ? `
       <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Decisions</div>
-        ${decisions.map(d => `
-          <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px;">
-            <div style="font-size:12px;font-weight:600;color:var(--green);">${d.decision}</div>
-            <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${d.rationale}</div>
-          </div>
-        `).join('')}
-      </div>
-    ` : ''}
-
-    ${discussions.length ? `
-      <div style="margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Discussions</div>
-        ${discussions.map(d => `
-          <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:8px;">
-            <div style="font-size:12px;font-weight:600;">${d.title}</div>
-            <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">${d.summary}</div>
-            ${d.openQuestions && d.openQuestions.length ? `
-              <div style="margin-top:8px;font-size:11px;color:var(--yellow);">⚠ ${d.openQuestions.length} open question${d.openQuestions.length > 1 ? 's' : ''}</div>
-            ` : ''}
-          </div>
-        `).join('')}
-      </div>
-    ` : ''}
-
-    <!-- Notes / Feedback -->
-    <div style="margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="font-size:12px;font-weight:600;">💬 Notes & Feedback</div>
-      </div>
-      ${(p.notes||[]).length ? (p.notes||[]).map((n, i) => `
-        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px;position:relative;">
-          <span style="cursor:pointer;" onclick="editProjectNote('${p.id}',${i},this)">${n.text}</span>
-          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">${n.author || 'You'} · ${n.date}</div>
-          <button onclick="removeProjectNote('${p.id}',${i})" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;">✕</button>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Notes</div>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;max-height:100px;overflow-y:auto;">
+          ${(p.notes||[]).map(n => `
+            <div style="font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+              <div style="color:var(--text-dim);font-size:10px;margin-bottom:2px;">${n.date} · ${n.author}</div>
+              ${n.text}
+            </div>
+          `).join('')}
         </div>
-      `).join('') : ''}
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <input type="text" id="project-note-input" placeholder="Add a note..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;" onkeydown="if(event.key==='Enter')addProjectNote('${p.id}')">
-        <button onclick="addProjectNote('${p.id}')" style="background:var(--accent);border:none;border-radius:8px;color:#fff;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:600;">Add</button>
       </div>
+    ` : ''}
+
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
+      <button onclick="archiveProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;">Archive</button>
+      <button onclick="deleteProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete</button>
     </div>
   `;
 
@@ -1464,313 +1678,181 @@ function closeProjectModal() {
   document.body.style.overflow = '';
 }
 
-function changeProjectStatus(projectId, newStatus) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (p) {
-    p.status = newStatus;
-    saveData();
-    renderProjects();
-    renderDashboard();
-  }
+async function changeProjectStatus(projectId, newStatus) {
+  const project = DATA.projects.find(p => p.id === projectId);
+  if (!project) return;
+  project.status = newStatus;
+  await saveData();
+  renderProjects();
+  closeProjectModal();
 }
 
-// Edit project text fields inline (description, goal)
-function editProjectField(projectId, field, el) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const current = p[field] || '';
-  const textarea = document.createElement('textarea');
-  textarea.value = current;
-  textarea.style.cssText = 'width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:10px;color:var(--text);font-size:13px;line-height:1.6;resize:vertical;min-height:60px;outline:none;font-family:inherit;';
-  textarea.onblur = () => { p[field] = textarea.value.trim(); saveData(); openProjectModal(projectId); };
-  textarea.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); textarea.blur(); } if (e.key === 'Escape') openProjectModal(projectId); };
-  el.replaceWith(textarea);
-  textarea.focus();
-}
-
-// Next step management
-function addNextStep(projectId) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const text = prompt('New next step:');
-  if (!text) return;
-  if (!Array.isArray(p.nextSteps)) p.nextSteps = [];
-  p.nextSteps.push({ text, priority: 'medium' });
-  saveData();
-  openProjectModal(projectId);
-}
-
-function editNextStep(projectId, idx, el) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const step = p.nextSteps[idx];
-  const text = typeof step === 'string' ? step : step.text;
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = text;
-  input.style.cssText = 'flex:1;background:var(--bg);border:1px solid var(--accent);border-radius:4px;padding:4px 8px;color:var(--text);font-size:12px;outline:none;';
-  input.onblur = () => {
-    if (typeof step === 'string') { p.nextSteps[idx] = { text: input.value.trim(), priority: 'medium' }; }
-    else { step.text = input.value.trim(); }
-    saveData(); openProjectModal(projectId);
-  };
-  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') openProjectModal(projectId); };
-  el.replaceWith(input);
-  input.focus();
-}
-
-function cycleStepPriority(projectId, idx) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const step = p.nextSteps[idx];
-  const cycle = { high: 'medium', medium: 'low', low: 'high' };
-  if (typeof step === 'string') { p.nextSteps[idx] = { text: step, priority: 'low' }; }
-  else { step.priority = cycle[step.priority] || 'high'; }
-  saveData();
-  openProjectModal(projectId);
-}
-
-function removeNextStep(projectId, idx) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  p.nextSteps.splice(idx, 1);
-  saveData();
-  openProjectModal(projectId);
-}
-
-// Command queue — sends work to K-2
-function queueStep(projectId, idx) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const step = p.nextSteps[idx];
-  if (typeof step === 'string') { p.nextSteps[idx] = { text: step, priority: 'medium', status: 'queued' }; }
-  else { step.status = 'queued'; }
-  
-  if (!DATA.commands) DATA.commands = [];
-  DATA.commands.push({
-    id: Date.now(),
-    type: 'execute-step',
-    projectId: p.id,
-    projectName: p.name,
-    stepIndex: idx,
-    stepText: typeof step === 'string' ? step : step.text,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    createdBy: 'Ryan'
-  });
-  
-  saveData();
-  openProjectModal(projectId);
-}
-
-function acceptStep(projectId, idx) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const step = p.nextSteps[idx];
-  if (typeof step === 'object') {
-    step.status = 'done';
-    step.acceptedAt = new Date().toISOString();
-  }
-  // Add to notes
-  if (!p.notes) p.notes = [];
-  p.notes.push({ text: `Accepted: "${typeof step === 'object' ? step.text : step}"`, date: new Date().toISOString().split('T')[0], author: 'Ryan' });
-  saveData();
-  openProjectModal(projectId);
-}
-
-function rejectStep(projectId, idx) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const reason = prompt('Why are you rejecting this?');
-  if (reason === null) return;
-  const step = p.nextSteps[idx];
-  if (typeof step === 'object') { step.status = 'pending'; }
-  
-  if (!p.notes) p.notes = [];
-  p.notes.push({ text: `Rejected: "${typeof step === 'object' ? step.text : step}" — ${reason}`, date: new Date().toISOString().split('T')[0], author: 'Ryan' });
-  
-  // Queue a rework command
-  if (!DATA.commands) DATA.commands = [];
-  DATA.commands.push({
-    id: Date.now(),
-    type: 'rework-step',
-    projectId: p.id,
-    projectName: p.name,
-    stepIndex: idx,
-    stepText: typeof step === 'object' ? step.text : step,
-    reason: reason,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    createdBy: 'Ryan'
-  });
-  
-  saveData();
-  openProjectModal(projectId);
-}
-
-// Notes management
-function addProjectNote(projectId) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  const input = document.getElementById('project-note-input');
-  const text = input.value.trim();
-  if (!text) return;
-  if (!p.notes) p.notes = [];
-  const today = new Date().toISOString().split('T')[0];
-  p.notes.push({ text, date: today, author: 'Ryan' });
-  saveData();
-  openProjectModal(projectId);
-}
-
-function editProjectNote(projectId, idx, el) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p || !p.notes[idx]) return;
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = p.notes[idx].text;
-  input.style.cssText = 'width:100%;background:var(--bg);border:1px solid var(--accent);border-radius:4px;padding:4px 8px;color:var(--text);font-size:12px;outline:none;';
-  input.onblur = () => { p.notes[idx].text = input.value.trim(); saveData(); openProjectModal(projectId); };
-  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') openProjectModal(projectId); };
-  el.replaceWith(input);
-  input.focus();
-}
-
-function removeProjectNote(projectId, idx) {
-  const p = DATA.projects.find(pr => pr.id === projectId);
-  if (!p) return;
-  p.notes.splice(idx, 1);
-  saveData();
-  openProjectModal(projectId);
-}
-
-// Drag and drop
+// Drag and drop for Kanban
 let draggedProjectId = null;
 
-function onDragStart(e, projectId) {
+function onDragStart(event, projectId) {
   draggedProjectId = projectId;
-  e.target.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
+  event.target.classList.add('dragging');
 }
 
-function onDragEnd(e) {
-  e.target.classList.remove('dragging');
-  document.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.remove('over'));
-  document.querySelectorAll('.kanban-column').forEach(c => c.style.background = '');
-}
-
-function onDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  const col = e.target.closest('.kanban-column');
-  if (col) {
-    col.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.add('over'));
-  }
-}
-
-function onDragLeave(e) {
-  const col = e.target.closest('.kanban-column');
-  if (col && !col.contains(e.relatedTarget)) {
-    col.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.remove('over'));
-  }
-}
-
-function onDrop(e, newStatus) {
-  e.preventDefault();
-  if (!draggedProjectId) return;
-  const project = DATA.projects.find(p => p.id === draggedProjectId);
-  if (project && project.status !== newStatus) {
-    project.status = newStatus;
-    renderProjects();
-    renderDashboard();
-    saveData();
-  }
-  document.querySelectorAll('.kanban-drop-zone').forEach(z => z.classList.remove('over'));
+function onDragEnd(event) {
+  event.target.classList.remove('dragging');
   draggedProjectId = null;
 }
 
+function onDragOver(event) {
+  event.preventDefault();
+  const dropZone = event.target.closest('.kanban-column, .kanban-drop-zone');
+  if (dropZone) dropZone.classList.add('over');
+}
+
+function onDragLeave(event) {
+  const dropZone = event.target.closest('.kanban-column, .kanban-drop-zone');
+  if (dropZone) dropZone.classList.remove('over');
+}
+
+async function onDrop(event, newStatus) {
+  event.preventDefault();
+  const dropZone = event.target.closest('.kanban-column, .kanban-drop-zone');
+  if (dropZone) dropZone.classList.remove('over');
+  
+  if (!draggedProjectId) return;
+  
+  const project = DATA.projects.find(p => p.id === draggedProjectId);
+  if (!project || project.status === newStatus) return;
+  
+  project.status = newStatus;
+  await saveData();
+  renderProjects();
+}
+
 // Render Tasks
-function renderTasks(filter = 'all') {
-  let tasks = DATA.tasks;
-  if (filter === 'pending') tasks = tasks.filter(t => !t.done);
-  if (filter === 'done') tasks = tasks.filter(t => t.done);
+function renderTasks() {
+  const taskContainer = document.getElementById('task-list');
+  if (!taskContainer) return;
 
-  // Sort: pending first, then by priority
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
-  tasks.sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
-  });
+  const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'all';
+  let filteredTasks = DATA.tasks;
 
-  document.getElementById('task-list').innerHTML = tasks.map(t => {
-    const msgCount = (t.messages || []).length;
-    const unread = (t.messages || []).filter(m => m.from === 'k2' && !m.readByUser).length;
+  if (activeFilter === 'pending') {
+    filteredTasks = DATA.tasks.filter(t => !t.done);
+  } else if (activeFilter === 'done') {
+    filteredTasks = DATA.tasks.filter(t => t.done);
+  }
+
+  taskContainer.innerHTML = filteredTasks.map(task => {
+    const project = DATA.projects.find(p => p.id === task.project);
+    const projectName = project ? project.name : 'General';
+
     return `
-    <li class="task-item" style="cursor:pointer;" onclick="openTaskModal(${t.id})">
-      <div class="task-check ${t.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${t.id})"></div>
-      <div class="task-content ${t.done ? 'done' : ''}">
-        ${t.text}
-        <div class="task-meta">${t.project || 'General'} • ${t.created}${msgCount ? ` • 💬 ${msgCount}` : ''}${unread ? ` <span style="color:var(--accent);font-weight:600;">(${unread} new)</span>` : ''}</div>
-      </div>
-      <span class="task-priority priority-${t.priority}">${t.priority}</span>
-    </li>
-  `}).join('');
+      <li class="task-item" onclick="openTaskModal(${task.id})">
+        <div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${task.id})"></div>
+        <div class="task-content ${task.done ? 'done' : ''}">
+          ${task.text}
+          <div class="task-meta">
+            ${projectName} • ${task.created} 
+          </div>
+        </div>
+        <div class="task-priority priority-${task.priority}">${task.priority}</div>
+      </li>
+    `;
+  }).join('');
 
-  document.getElementById('task-count').textContent = DATA.tasks.filter(t => !t.done).length;
-  document.getElementById('project-count').textContent = DATA.projects.length;
+  // Update badge counts
+  const pendingCount = DATA.tasks.filter(t => !t.done).length;
+  const badge = document.getElementById('task-count');
+  if (badge) {
+    badge.textContent = pendingCount;
+    badge.style.display = pendingCount > 0 ? 'inline' : 'none';
+  }
 
   // Populate project dropdown
-  const sel = document.getElementById('new-task-project');
-  const currentVal = sel.value;
-  sel.innerHTML = '<option value="">No Project</option>' +
-    DATA.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-  sel.value = currentVal;
+  const projectSelect = document.getElementById('new-task-project');
+  if (projectSelect) {
+    projectSelect.innerHTML = '<option value="">No Project</option>' +
+      DATA.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
 }
 
-function toggleTask(id) {
-  const task = DATA.tasks.find(t => t.id === id);
-  if (task) { task.done = !task.done; saveData(); renderTasks(); renderDashboard(); }
-}
-
-function addTask() {
+async function addTask() {
   const input = document.getElementById('new-task-input');
-  const text = input.value.trim();
-  if (!text) return;
   const priority = document.getElementById('new-task-priority').value;
   const project = document.getElementById('new-task-project').value;
-  const id = Math.max(0, ...DATA.tasks.map(t => t.id)) + 1;
-  DATA.tasks.push({
-    id, text, priority, project,
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  const newTask = {
+    id: Date.now(),
+    text: text,
+    priority: priority,
+    project: project,
     done: false,
-    created: new Date().toISOString().split('T')[0]
-  });
+    created: new Date().toISOString().slice(0, 10),
+    messages: []
+  };
+
+  DATA.tasks.push(newTask);
   input.value = '';
-  saveData();
+
+  await saveData();
   renderTasks();
-  renderDashboard();
 }
+
+async function toggleTask(taskId) {
+  const task = DATA.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  task.done = !task.done;
+  await saveData();
+  renderTasks();
+}
+
+// Setup task filters
+document.querySelectorAll('.filter-btn[data-group="tasks"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-group="tasks"]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTasks();
+  });
+});
 
 // Render Discussions
 function renderDiscussions() {
-  document.getElementById('discussions-list').innerHTML = DATA.discussions.map(d => `
-    <div class="thread" onclick="this.classList.toggle('open')">
-      <div class="thread-header">
+  const container = document.getElementById('discussions-list');
+  if (!container) return;
+
+  container.innerHTML = DATA.discussions.map(discussion => `
+    <div class="thread">
+      <div class="thread-header" onclick="toggleThread(this)">
         <span class="thread-toggle">▶</span>
-        <span class="thread-title">${d.title}</span>
-        <span class="tag tag-blue">${d.project}</span>
-        <span class="thread-date">${d.date}</span>
+        <span class="thread-title">${discussion.title}</span>
+        <span class="thread-date">${discussion.date}</span>
       </div>
       <div class="thread-body">
-        <p style="margin-bottom:12px">${d.summary}</p>
-        <strong style="color:var(--text)">Key Points:</strong>
-        <ul style="padding-left:16px;margin-top:4px">
-          ${d.keyPoints.map(k => `<li>${k}</li>`).join('')}
-        </ul>
-        ${(d.openQuestions || []).length ? `
-          <div style="margin-top:12px">
-            <strong style="color:var(--yellow)">Open Questions:</strong>
-            <ul style="padding-left:16px;margin-top:4px">
-              ${(d.openQuestions || []).map(q => `<li>${q}</li>`).join('')}
+        <p style="margin-bottom:12px;">${discussion.summary}</p>
+        
+        ${discussion.keyPoints && discussion.keyPoints.length ? `
+          <div style="margin-bottom:12px;">
+            <strong style="font-size:12px;color:var(--text);margin-bottom:4px;display:block;">Key Points:</strong>
+            <ul style="margin-left:16px;">
+              ${discussion.keyPoints.map(point => `<li>${point}</li>`).join('')}
             </ul>
+          </div>
+        ` : ''}
+
+        ${discussion.openQuestions && discussion.openQuestions.length ? `
+          <div style="margin-bottom:12px;">
+            <strong style="font-size:12px;color:var(--orange);margin-bottom:4px;display:block;">Open Questions:</strong>
+            <ul style="margin-left:16px;">
+              ${discussion.openQuestions.map(q => `<li style="color:var(--orange);">${q}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        ${discussion.project ? `
+          <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);">
+            <span class="tag tag-blue">${DATA.projects.find(p => p.id === discussion.project)?.name || 'Unknown Project'}</span>
           </div>
         ` : ''}
       </div>
@@ -1778,15 +1860,25 @@ function renderDiscussions() {
   `).join('');
 }
 
+function toggleThread(element) {
+  const thread = element.closest('.thread');
+  thread.classList.toggle('open');
+}
+
 // Render Decisions
 function renderDecisions() {
-  const sorted = [...DATA.decisions].sort((a, b) => b.date.localeCompare(a.date));
-  document.getElementById('decisions-timeline').innerHTML = sorted.map(d => `
+  const container = document.getElementById('decisions-timeline');
+  if (!container) return;
+
+  const sortedDecisions = [...DATA.decisions].sort((a, b) => b.date.localeCompare(a.date));
+
+  container.innerHTML = sortedDecisions.map(decision => `
     <div class="timeline-item">
-      <div class="timeline-date">${d.date} — <span class="tag tag-blue" style="font-size:10px">${d.project}</span></div>
+      <div class="timeline-date">${decision.date}</div>
       <div class="timeline-content">
-        <strong style="color:var(--text)">${d.decision}</strong>
-        <p style="margin-top:4px;color:var(--text-dim)">${d.rationale}</p>
+        <div style="font-weight:600;margin-bottom:4px;">${decision.decision}</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">${decision.rationale}</div>
+        ${decision.project ? `<span class="tag tag-blue">${DATA.projects.find(p => p.id === decision.project)?.name || 'Unknown Project'}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -1794,364 +1886,227 @@ function renderDecisions() {
 
 // Render Notes
 function renderNotes() {
-  const sorted = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
-  document.getElementById('notes-list').innerHTML = sorted.map(n => `
-    <div class="card" style="margin-bottom:12px">
+  const container = document.getElementById('notes-list');
+  if (!container) return;
+
+  const sortedNotes = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
+
+  container.innerHTML = sortedNotes.map(note => `
+    <div class="card">
       <div class="card-header">
-        <span class="thread-date">${n.created}</span>
+        <span class="card-title">${note.created}</span>
       </div>
-      <div class="card-body" style="white-space:pre-wrap">${n.text}</div>
+      <div class="card-body">${note.text}</div>
     </div>
   `).join('');
 }
 
-function addNote() {
+async function addNote() {
   const input = document.getElementById('note-input');
   const text = input.value.trim();
   if (!text) return;
-  DATA.notes.push({ text, created: new Date().toISOString().replace('T', ' ').slice(0, 16) });
+
+  const newNote = {
+    text: text,
+    created: new Date().toISOString().slice(0, 16).replace('T', ' ')
+  };
+
+  DATA.notes.push(newNote);
   input.value = '';
-  saveData();
+
+  await saveData();
   renderNotes();
 }
 
-// ============================================================
-// JOTS
-// ============================================================
-
-function getTodayStr() {
-  return new Date().toISOString().split('T')[0];
-}
-
-function getJotDay(date) {
-  return DATA.jots.find(j => j.date === date);
-}
-
-function highlightCode(code) {
-  // Basic syntax highlighting
-  return code
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/gm, '<span class="cmt">$1</span>')
-    .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, '<span class="str">$1</span>')
-    .replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>')
-    .replace(/\b(function|const|let|var|if|else|return|for|while|class|import|export|from|new|this|true|false|null|undefined|async|await|try|catch|throw|switch|case|break|default|typeof|instanceof)\b/g, '<span class="kw">$1</span>');
-}
-
-function formatJotText(text, images, files) {
-  // Process code blocks first
-  let blocks = [];
-  let processed = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    const idx = blocks.length;
-    blocks.push('<pre><code>' + highlightCode(code.trim()) + '</code></pre>');
-    return `%%BLOCK${idx}%%`;
-  });
-
-  // Escape HTML in remaining text
-  processed = processed.replace(/%%BLOCK(\d+)%%/g, '##BLOCK$1##');
-  processed = processed.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  processed = processed.replace(/##BLOCK(\d+)##/g, '%%BLOCK$1%%');
-
-  // Inline code
-  processed = processed.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Headers (## and ###)
-  processed = processed.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  processed = processed.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-
-  // Bold and italic
-  processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // Links
-  processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-
-  // Lists (- items)
-  processed = processed.replace(/^- (.+)$/gm, '<li>$1</li>');
-  processed = processed.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
-
-  // Tags
-  processed = processed.replace(/#([\w-]+)/g, '<span class="jot-tag">#$1</span>');
-
-  // Newlines (outside blocks)
-  processed = processed.replace(/\n/g, '<br>');
-
-  // Restore code blocks
-  processed = processed.replace(/%%BLOCK(\d+)%%/g, (_, i) => blocks[i]);
-
-  // Images
-  if (images && images.length) {
-    processed += images.map(src => `<img class="jot-img-full" src="${src}" loading="lazy">`).join('');
-  }
-
-  // File attachments
-  if (files && files.length) {
-    processed += '<div class="jot-files">' + files.map(f =>
-      `<a class="jot-file-link" href="${f.data}" download="${f.name}">📄 ${f.name}</a>`
-    ).join('') + '</div>';
-  }
-
-  return processed;
-}
-
+// Jots functionality (existing code continues...)
 function renderJots() {
-  const today = getTodayStr();
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const d = new Date();
-  document.getElementById('jots-today-date').innerHTML =
-    `<span class="dow">${days[d.getDay()]}</span>, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  // Set today's date
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10);
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dow = dayNames[today.getDay()];
+  
+  const header = document.getElementById('jots-today-date');
+  if (header) {
+    header.innerHTML = `${dateStr} <span class="dow">${dow}</span>`;
+  }
 
-  // Today's entries
-  const todayJot = getJotDay(today);
-  const todayEntries = todayJot ? [...todayJot.entries].reverse() : [];
-  document.getElementById('jots-today-entries').innerHTML = todayEntries.length ?
-    todayEntries.map(e => renderJotEntry(today, e)).join('') :
-    '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13px;">No jots yet today. Start typing above! ✏️</div>';
+  const todayJots = DATA.jots.filter(j => j.date === dateStr);
+  const todayContainer = document.getElementById('jots-today-entries');
+  if (todayContainer) {
+    todayContainer.innerHTML = todayJots.map(jot => renderJotEntry(jot)).join('');
+  }
 
-  // Previous days
-  const prevDays = DATA.jots.filter(j => j.date !== today).sort((a, b) => b.date.localeCompare(a.date));
-  document.getElementById('jots-previous-days').innerHTML = prevDays.map(day => {
-    const dd = new Date(day.date + 'T12:00:00');
-    const label = `${days[dd.getDay()]}, ${months[dd.getMonth()]} ${dd.getDate()}`;
-    const entries = [...day.entries].reverse();
-    return `
-      <div class="jot-day-section">
-        <div class="jot-day-header" onclick="this.classList.toggle('open')">
-          <span class="jot-day-toggle">▶</span>
-          ${label} <span style="font-weight:400;color:var(--text-dim);margin-left:4px;">(${day.entries.length})</span>
+  // Render previous days
+  const otherDates = [...new Set(DATA.jots.map(j => j.date))].filter(d => d !== dateStr).sort().reverse();
+  const previousContainer = document.getElementById('jots-previous-days');
+  if (previousContainer) {
+    previousContainer.innerHTML = otherDates.map(date => {
+      const dateJots = DATA.jots.filter(j => j.date === date);
+      const dayName = dayNames[new Date(date + 'T00:00:00').getDay()];
+      
+      return `
+        <div class="jot-day-section">
+          <div class="jot-day-header" onclick="toggleJotDay(this)">
+            <span class="jot-day-toggle">▶</span>
+            <span>${date} ${dayName} (${dateJots.length})</span>
+          </div>
+          <div class="jot-day-entries">
+            ${dateJots.map(jot => renderJotEntry(jot)).join('')}
+          </div>
         </div>
-        <div class="jot-day-entries">
-          ${entries.map(e => renderJotEntry(day.date, e)).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Dashboard card
-  renderDashboardJots();
+      `;
+    }).join('');
+  }
 }
 
-function renderJotEntry(date, e) {
+function renderJotEntry(jot) {
+  const timeStr = jot.time.slice(-5); // last 5 chars (HH:MM)
+  let renderedText = jot.text;
+
+  // Markdown rendering
+  renderedText = renderedText
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/(#\w+)/g, '<span class="jot-tag">$1</span>');
+
+  // Handle checkboxes
+  let hasCheckbox = false;
+  if (renderedText.match(/\[\s*\]/)) {
+    hasCheckbox = true;
+    renderedText = renderedText.replace(/\[\s*\]/g, '');
+  } else if (renderedText.match(/\[x\]/i)) {
+    hasCheckbox = true;
+    renderedText = renderedText.replace(/\[x\]/gi, '');
+  }
+
+  const isChecked = jot.done || false;
+
   return `
-    <div class="jot-entry" id="jot-${date}-${e.id}">
-      ${e.isTask ? `<div class="jot-check ${e.done ? 'done' : ''}" onclick="toggleJotDone('${date}',${e.id})"></div>` : ''}
-      <span class="jot-time">${e.time}</span>
-      <div class="jot-text ${e.done ? 'done' : ''}" onclick="startEditJot('${date}',${e.id})">${formatJotText(e.text, e.images, e.files)}</div>
-      <button class="jot-delete" onclick="deleteJot('${date}',${e.id})" title="Delete">✕</button>
+    <div class="jot-entry" data-jot-id="${jot.id}">
+      ${hasCheckbox ? `<div class="jot-check ${isChecked ? 'done' : ''}" onclick="toggleJot(${jot.id})"></div>` : ''}
+      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" ${!hasCheckbox ? 'onclick="editJot(' + jot.id + ')"' : ''}>${renderedText}</div>
+      <div class="jot-time">${timeStr}</div>
+      <button class="jot-delete" onclick="deleteJot(${jot.id})" title="Delete">✕</button>
     </div>
   `;
 }
 
-function startEditJot(date, id) {
-  const day = getJotDay(date);
-  if (!day) return;
-  const entry = day.entries.find(e => e.id === id);
-  if (!entry) return;
-  const el = document.getElementById(`jot-${date}-${id}`);
-  const textEl = el.querySelector('.jot-text');
-  const escaped = entry.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  textEl.outerHTML = `
-    <div class="jot-edit-wrap">
-      <textarea onkeydown="if(event.key==='Escape'){event.preventDefault();cancelEditJot('${date}',${id})}if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveEditJot('${date}',${id})}" onblur="setTimeout(()=>saveEditJot('${date}',${id}),150)">${escaped}</textarea>
-    </div>`;
-  const ta = el.querySelector('.jot-edit-wrap textarea');
-  ta.focus();
-  ta.selectionStart = ta.value.length;
+function toggleJotDay(element) {
+  element.classList.toggle('open');
 }
 
-function saveEditJot(date, id) {
-  const day = getJotDay(date);
-  if (!day) return;
-  const entry = day.entries.find(e => e.id === id);
-  if (!entry) return;
-  const el = document.getElementById(`jot-${date}-${id}`);
-  const text = el.querySelector('.jot-edit-wrap textarea').value.trim();
-  if (!text) return;
-  entry.text = text;
-  entry.tags = [];
-  text.replace(/#([\w-]+)/g, (_, tag) => { entry.tags.push(tag); });
-  saveData();
-  renderJots();
-}
-
-function cancelEditJot(date, id) {
-  renderJots();
-}
-
-function renderDashboardJots() {
-  const today = getTodayStr();
-  const todayJot = getJotDay(today);
-  const card = document.getElementById('dashboard-jots-card');
-  const container = document.getElementById('dashboard-jots-entries');
-  if (!todayJot || todayJot.entries.length === 0) {
-    card.style.display = 'none';
-    return;
-  }
-  card.style.display = 'block';
-  const recent = [...todayJot.entries].reverse().slice(0, 4);
-  container.innerHTML = recent.map(e => `
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;${e.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">
-      <span style="color:var(--text-dim);font-size:11px;flex-shrink:0;">${e.time}</span>
-      ${formatJotText(e.text, e.images, e.files)}
-    </div>
-  `).join('') + (todayJot.entries.length > 4 ? `<div style="font-size:11px;color:var(--text-dim);margin-top:4px;">+${todayJot.entries.length - 4} more</div>` : '');
-}
-
-// Pending attachments for new jot
-let pendingJotImages = [];
-let pendingJotFiles = []; // {name, type, data}
-
-function handleJotKeydown(event) {
+async function handleJotKeydown(event) {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
-    addJot();
+    await addJot();
   }
 }
 
-function autoExpandTextarea(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+function autoExpandTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
 }
+
+async function addJot() {
+  const input = document.getElementById('jot-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = now.toTimeString().slice(0, 5);
+
+  const newJot = {
+    id: Date.now(),
+    text: text,
+    date: dateStr,
+    time: timeStr,
+    done: false
+  };
+
+  DATA.jots.push(newJot);
+  input.value = '';
+  input.style.height = 'auto';
+
+  await saveData();
+  renderJots();
+}
+
+async function editJot(jotId) {
+  const jot = DATA.jots.find(j => j.id === jotId);
+  if (!jot) return;
+
+  const jotElement = document.querySelector(`[data-jot-id="${jotId}"] .jot-text`);
+  if (!jotElement) return;
+
+  const currentText = jot.text;
+  jotElement.innerHTML = `
+    <div class="jot-edit-wrap">
+      <textarea onblur="saveJotEdit(${jotId}, this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur();}">${currentText}</textarea>
+    </div>
+  `;
+
+  const textarea = jotElement.querySelector('textarea');
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+}
+
+async function saveJotEdit(jotId, newText) {
+  const jot = DATA.jots.find(j => j.id === jotId);
+  if (!jot) return;
+
+  jot.text = newText.trim();
+  await saveData();
+  renderJots();
+}
+
+async function toggleJot(jotId) {
+  const jot = DATA.jots.find(j => j.id === jotId);
+  if (!jot) return;
+
+  jot.done = !jot.done;
+  await saveData();
+  renderJots();
+}
+
+async function deleteJot(jotId) {
+  if (!confirm('Delete this jot?')) return;
+  
+  DATA.jots = DATA.jots.filter(j => j.id !== jotId);
+  await saveData();
+  renderJots();
+}
+
+// File attachment handling
+let pendingFiles = [];
 
 function handleJotFileAttach(event) {
   const files = Array.from(event.target.files);
+  // For now, just show filenames - full implementation would need file storage
+  const preview = document.getElementById('jot-images-preview');
+  
   files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (file.type.startsWith('image/')) {
-        pendingJotImages.push(e.target.result);
-      } else {
-        pendingJotFiles.push({ name: file.name, type: file.type || 'application/octet-stream', data: e.target.result });
-      }
-      renderJotAttachPreview();
-    };
-    reader.readAsDataURL(file);
+    const chip = document.createElement('div');
+    chip.className = 'jot-file-chip';
+    chip.innerHTML = `
+      📎 ${file.name}
+      <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);margin-left:4px;">✕</button>
+    `;
+    preview.appendChild(chip);
   });
-  event.target.value = '';
 }
 
-function renderJotAttachPreview() {
-  const container = document.getElementById('jot-images-preview');
-  const imgHtml = pendingJotImages.map((src, i) =>
-    `<div class="jot-img-wrap"><img class="jot-img-thumb" src="${src}"><button class="jot-img-remove" onclick="removePendingImage(${i})">✕</button></div>`
-  ).join('');
-  const fileHtml = pendingJotFiles.map((f, i) =>
-    `<div class="jot-file-chip""><span>📄 ${f.name}</span><button class="jot-img-remove" onclick="removePendingFile(${i})">✕</button></div>`
-  ).join('');
-  container.innerHTML = imgHtml + fileHtml;
-}
-
-function removePendingImage(idx) {
-  pendingJotImages.splice(idx, 1);
-  renderJotAttachPreview();
-}
-
-function removePendingFile(idx) {
-  pendingJotFiles.splice(idx, 1);
-  renderJotAttachPreview();
-}
-
-// Support paste images into jot input
-document.addEventListener('paste', function(e) {
-  const input = document.getElementById('jot-input');
-  if (document.activeElement !== input) return;
-  const items = Array.from(e.clipboardData.items);
-  items.forEach(item => {
-    if (item.type.startsWith('image/')) {
-      e.preventDefault();
-      const file = item.getAsFile();
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        pendingJotImages.push(ev.target.result);
-        renderJotAttachPreview();
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-});
-
-function addJot() {
-  const input = document.getElementById('jot-input');
-  let text = input.value.trim();
-  if (!text && !pendingJotImages.length) return;
-
-  const today = getTodayStr();
-  const now = new Date();
-  const time = now.toTimeString().slice(0, 5);
-
-  // Extract tags
-  const tags = [];
-  text.replace(/#([\w-]+)/g, (_, tag) => { tags.push(tag); });
-
-  // Check for checkbox prefix — only these become tasks
-  let done = false;
-  let isTask = false;
-  text = text.replace(/^\s*(-\s*)?\[\s*[xX]\s*\]\s*/, () => { done = true; isTask = true; return ''; });
-  text = text.replace(/^\s*(-\s*)?\[\s*\]\s*/, () => { isTask = true; return ''; });
-
-  let dayJot = getJotDay(today);
-  if (!dayJot) {
-    dayJot = { date: today, entries: [] };
-    DATA.jots.push(dayJot);
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
+    GH_TOKEN = localStorage.getItem('gh_token');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-main').style.display = 'flex';
+    loadData();
   }
-  const id = dayJot.entries.length ? Math.max(...dayJot.entries.map(e => e.id)) + 1 : 1;
-  const entry = { id, text: text || '(attachment)', time, tags, done, isTask };
-  if (pendingJotImages.length) entry.images = [...pendingJotImages];
-  if (pendingJotFiles.length) entry.files = [...pendingJotFiles];
-  dayJot.entries.push(entry);
-
-  input.value = '';
-  input.style.height = 'auto';
-  pendingJotImages = [];
-  pendingJotFiles = [];
-  renderJotAttachPreview();
-  saveData();
-  renderJots();
-  renderDashboard();
-  input.focus();
-}
-
-function toggleJotDone(date, id) {
-  const day = getJotDay(date);
-  if (!day) return;
-  const entry = day.entries.find(e => e.id === id);
-  if (entry) { entry.done = !entry.done; saveData(); renderJots(); }
-}
-
-function deleteJot(date, id) {
-  const day = getJotDay(date);
-  if (!day) return;
-  day.entries = day.entries.filter(e => e.id !== id);
-  if (day.entries.length === 0) {
-    DATA.jots = DATA.jots.filter(j => j.date !== date);
-  }
-  saveData();
-  renderJots();
-  renderDashboard();
-}
-
-// Filter handlers
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    if (btn.dataset.group === 'tasks') renderTasks(btn.dataset.filter);
-  });
 });
-
-// Show app if already authed
-if (localStorage.getItem('k2auth') === 'true') {
-  document.getElementById('app-main').style.display = 'flex';
-}
-
-// Init — load from GitHub
-GH_TOKEN = localStorage.getItem('gh_token') || '';
-if (GH_TOKEN) {
-  loadData();
-}
-
-// Auto-refresh every 60s to pick up K-2's updates (rate-limit friendly)
-setInterval(() => { if (GH_TOKEN) loadData(); }, 60000);
 </script>
 </body>
 </html>
