@@ -2367,13 +2367,17 @@ function openProjectModal(projectId) {
       <div style="margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
           <div style="font-size:12px;font-weight:600;">Next Steps</div>
-          <button onclick="addNextStep('${p.id}')" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:4px 10px;cursor:pointer;">+ Add</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span onclick="window._hideDoneSteps=!window._hideDoneSteps;openProjectModal('${p.id}')" style="font-size:11px;color:var(--text-dim);cursor:pointer;padding:2px 8px;background:${window._hideDoneSteps ? 'var(--accent)' : 'var(--surface2)'};border:1px solid var(--border);border-radius:6px;">${window._hideDoneSteps ? '👁 Show done' : '🙈 Hide done'}</span>
+            <button onclick="addNextStep('${p.id}')" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);padding:4px 10px;cursor:pointer;">+ Add</button>
+          </div>
         </div>
         <div style="background:var(--surface2);border-radius:8px;overflow:hidden;">
           ${(p.nextSteps||[]).map((s, i) => {
             const text = typeof s === 'string' ? s : s.text;
             const pri = typeof s === 'string' ? 'medium' : (s.priority || 'medium');
             const status = (typeof s === 'object' && s.status) || 'pending';
+            if (window._hideDoneSteps && status === 'done') return '';
             const statusBadge = status === 'queued' ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px;">⏳ Queued</span>'
               : status === 'in-progress' ? '<span style="font-size:10px;background:var(--orange);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">🔨 In Progress</span>'
               : status === 'done' ? '<span style="font-size:10px;background:var(--green);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">✅ Done</span>'
@@ -2397,7 +2401,11 @@ function openProjectModal(projectId) {
           }).join('')}
         </div>
       </div>
-    ` : ''}
+    ` : `
+      <div style="margin-bottom:16px;">
+        <button onclick="addNextStep('${p.id}')" style="width:100%;padding:10px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;color:var(--accent);font-size:12px;cursor:pointer;">+ Add First Step</button>
+      </div>
+    `}
 
     ${tasks.length ? `
       <div style="margin-bottom:16px;">
@@ -3190,6 +3198,17 @@ function handleJotFileAttach(event) {
 // ═══════════════════════════════════════
 // PROJECT NEXT STEPS ACTIONS
 // ═══════════════════════════════════════
+
+async function addNextStep(projectId) {
+  const text = prompt('New step:');
+  if (!text || !text.trim()) return;
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  if (!p.nextSteps) p.nextSteps = [];
+  p.nextSteps.push({ text: text.trim(), priority: 'medium', status: 'pending' });
+  await saveData();
+  openProjectModal(projectId);
+}
 
 async function queueStep(projectId, stepIdx) {
   const p = DATA.projects.find(pr => pr.id === projectId);
