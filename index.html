@@ -1434,7 +1434,7 @@ async function updateAIInsightStatus(insightId, newStatus) {
   if (!insight) return;
 
   insight.status = newStatus;
-  insight.dateUpdated = new Date().toISOString().slice(0, 10);
+  insight.dateUpdated = (function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})();
   await saveData();
   renderAIInsights();
   
@@ -2081,7 +2081,7 @@ async function addTask() {
     priority: priority,
     project: project,
     done: false,
-    created: new Date().toISOString().slice(0, 10),
+    created: (function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})(),
     messages: []
   };
 
@@ -2441,7 +2441,7 @@ function jotMatchesSearch(jot) {
 
 function renderJots() {
   const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10);
+  const dateStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dow = dayNames[today.getDay()];
   
@@ -2545,7 +2545,7 @@ async function addJot() {
   if (!text) return;
 
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10);
+  const dateStr = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
   const timeStr = now.toTimeString().slice(0, 5);
 
   const newJot = {
@@ -2942,7 +2942,7 @@ async function selectionToTask() {
     priority: 'medium',
     project: '',
     done: false,
-    created: now.toISOString().slice(0, 10),
+    created: now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0"),
     source: 'jot',
     linkedJotId: jotId || null,
     messages: []
