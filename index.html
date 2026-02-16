@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="K-2 HQ">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -892,6 +898,13 @@
       <div class="kanban" id="kanban-board">
         <!-- Populated by JS -->
       </div>
+      <div id="archived-projects" style="margin-top:24px;display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;" onclick="document.getElementById('archived-list').style.display=document.getElementById('archived-list').style.display==='none'?'block':'none'">
+          <span style="font-size:14px;font-weight:600;color:var(--text-dim);">📦 Archived</span>
+          <span id="archived-count" style="font-size:11px;color:var(--text-dim);"></span>
+        </div>
+        <div id="archived-list" style="display:none;" class="card-grid"></div>
+      </div>
     </div>
 
     <!-- Tasks Page -->
@@ -1426,8 +1439,8 @@ const KANBAN_COLUMNS = [
 ];
 
 function renderProjects() {
-  // Update sidebar badge
-  const activeCount = DATA.projects.filter(p => p.status !== 'done').length;
+  // Update sidebar badge (exclude archived)
+  const activeCount = DATA.projects.filter(p => p.status !== 'done' && p.status !== 'archived').length;
   const projBadge = document.getElementById('project-count');
   if (projBadge) {
     projBadge.textContent = activeCount;
@@ -1480,6 +1493,36 @@ function renderProjects() {
       </div>
     `;
   }).join('');
+
+  // Render archived projects
+  const archived = DATA.projects.filter(p => p.status === 'archived');
+  const archivedSection = document.getElementById('archived-projects');
+  const archivedList = document.getElementById('archived-list');
+  const archivedCount = document.getElementById('archived-count');
+  if (archivedSection && archivedList) {
+    archivedSection.style.display = archived.length > 0 ? 'block' : 'none';
+    if (archivedCount) archivedCount.textContent = `(${archived.length})`;
+    archivedList.innerHTML = archived.map(p => `
+      <div class="card" style="opacity:0.7;cursor:pointer;" onclick="openProjectModal('${p.id}')">
+        <div class="card-header">
+          <span class="card-title">📦 ${p.name}</span>
+          <button onclick="event.stopPropagation();unarchiveProject('${p.id}')" style="background:var(--accent);border:none;border-radius:6px;color:#fff;padding:3px 8px;cursor:pointer;font-size:11px;">Restore</button>
+        </div>
+        <div class="card-body" style="font-size:12px;">${p.description}</div>
+        ${p.archivedAt ? `<div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Archived ${p.archivedAt}</div>` : ''}
+      </div>
+    `).join('');
+  }
+}
+
+async function unarchiveProject(projectId) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  p.status = 'active';
+  delete p.archivedAt;
+  await saveData();
+  renderProjects();
+  showToast('📂 Project restored: ' + p.name);
 }
 
 // Task Detail Modal
@@ -2552,6 +2595,31 @@ async function rejectStep(projectId, stepIdx) {
   openProjectModal(projectId);
 }
 
+async function archiveProject(projectId) {
+  const p = DATA.projects.find(pr => pr.id === projectId);
+  if (!p) return;
+  p.status = 'archived';
+  p.archivedAt = new Date().toISOString().slice(0, 10);
+  await saveData();
+  renderProjects();
+  renderDashboard();
+  // Close modal
+  document.querySelectorAll('[id$="-modal"]').forEach(m => m.style.display = 'none');
+  document.body.style.overflow = '';
+  showToast('📦 Project archived: ' + p.name);
+}
+
+async function deleteProject(projectId) {
+  if (!confirm('Permanently delete this project? This cannot be undone.')) return;
+  DATA.projects = DATA.projects.filter(p => p.id !== projectId);
+  await saveData();
+  renderProjects();
+  renderDashboard();
+  document.querySelectorAll('[id$="-modal"]').forEach(m => m.style.display = 'none');
+  document.body.style.overflow = '';
+  showToast('🗑️ Project deleted');
+}
+
 async function deleteStep(projectId, stepIdx) {
   const p = DATA.projects.find(pr => pr.id === projectId);
   if (!p || !p.nextSteps) return;
@@ -2900,6 +2968,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initJotDragDrop();
     initSelectionToolbar();
     initKeyboardShortcuts();
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
   }
 });
 </script>
