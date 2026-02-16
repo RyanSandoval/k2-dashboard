@@ -1215,14 +1215,35 @@
 
       <div style="border-top:1px solid var(--border);padding-top:16px;">
         <h3 style="font-size:15px;font-weight:700;color:var(--text);margin:0 0 12px 0;">📝 Notes</h3>
-        <div class="note-editor">
-          <textarea id="note-input" placeholder="Think out loud... K-2 will weigh in with analysis, ideas, and feedback"></textarea>
-          <div class="note-actions">
-            <button class="btn btn-primary" onclick="addNote()">Save Note</button>
-          </div>
-        </div>
+        <button onclick="openNoteEditor()" style="width:100%;padding:14px;background:var(--surface2);border:1px dashed var(--border);border-radius:10px;color:var(--accent);font-size:14px;cursor:pointer;margin-bottom:16px;">+ New Note</button>
         <div id="notes-list">
           <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Full-screen note editor -->
+      <div id="note-editor-view" style="display:none;max-width:800px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <button onclick="closeNoteEditor()" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;">← Back to Notes</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="note-project-link" onchange="linkNoteToProject()" style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;">
+              <option value="">No project</option>
+            </select>
+            <span id="note-save-status" style="font-size:11px;color:var(--text-dim);">Saved</span>
+            <button onclick="deleteCurrentNote()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;" title="Delete">🗑</button>
+          </div>
+        </div>
+        <input type="text" id="note-title-input" placeholder="Note title..." style="width:100%;padding:12px 0;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:22px;font-weight:700;margin-bottom:12px;outline:none;">
+        <textarea id="note-body-input" placeholder="Start writing... (Cmd+S to save)" style="width:100%;min-height:50vh;padding:16px 0;background:none;border:none;color:var(--text);font-size:15px;line-height:1.8;resize:none;outline:none;font-family:inherit;"></textarea>
+        <div id="note-k2-response" style="display:none;margin-top:24px;padding:16px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:12px;color:var(--accent);font-weight:600;">🤖 K-2's Take</span>
+            <span id="note-k2-date" style="font-size:10px;color:var(--text-dim);"></span>
+          </div>
+          <div id="note-k2-text" style="font-size:14px;color:var(--text);line-height:1.7;"></div>
+        </div>
+        <div style="margin-top:16px;text-align:center;">
+          <button onclick="requestK2TakeFromEditor()" id="note-k2-btn" style="padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🤖 Get K-2's Take</button>
         </div>
       </div>
     </div>
@@ -2995,123 +3016,173 @@ function renderDecisions() {
 }
 
 // Render Notes
+let activeNoteId = null;
+let noteAutoSaveTimer = null;
+
 function renderNotes() {
   const container = document.getElementById('notes-list');
   if (!container) return;
 
   const sortedNotes = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
 
-  container.innerHTML = sortedNotes.map((note, idx) => {
-    const noteId = note.id || idx;
+  container.innerHTML = sortedNotes.length === 0
+    ? '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">No notes yet. Create one to get started.</div>'
+    : sortedNotes.map(note => {
+    const noteId = note.id;
     const hasResponse = note.k2Response;
     const isPending = note.k2Status === 'pending';
-    
+    const title = note.title || note.text.split('\n')[0].slice(0, 60) || 'Untitled';
+    const preview = note.text.split('\n').slice(note.title ? 0 : 1).join(' ').slice(0, 120);
+    const projectLabel = note.projectId ? (DATA.projects.find(p => p.id === note.projectId)||{}).name || '' : '';
+
     return `
-    <div class="card" style="position:relative;">
-      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span class="card-title">${note.created}</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          ${isPending ? '<span style="font-size:11px;color:var(--yellow);font-weight:600;">⏳ K-2 thinking...</span>' : ''}
-          ${!hasResponse && !isPending ? `<button onclick="requestK2Take('${noteId}')" style="background:var(--accent);border:none;border-radius:6px;color:#fff;padding:3px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Get K-2's take">🤖 Get take</button>` : ''}
-          <button onclick="deleteNote('${noteId}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;" title="Delete">✕</button>
+    <div class="card" style="cursor:pointer;margin-bottom:8px;" onclick="openNoteEditor('${noteId}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${preview}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:12px;">
+          <span style="font-size:10px;color:var(--text-dim);">${note.created}</span>
+          ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
+          ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
+          ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
         </div>
       </div>
-      <div class="card-body" style="cursor:pointer;" onclick="editNote('${noteId}', this)">${note.text}</div>
-      ${hasResponse ? `
-        <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
-          <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">🤖 K-2's Take</div>
-          <div style="font-size:13px;color:var(--text);line-height:1.6;">${note.k2Response}</div>
-          ${note.k2RespondedAt ? `<div style="font-size:10px;color:var(--text-dim);margin-top:8px;">${note.k2RespondedAt}</div>` : ''}
-        </div>
-      ` : ''}
     </div>
   `}).join('');
 }
 
-async function addNote() {
-  const input = document.getElementById('note-input');
-  const text = input.value.trim();
-  if (!text) return;
+function openNoteEditor(noteId) {
+  let note;
+  if (noteId) {
+    note = DATA.notes.find(n => n.id === noteId);
+    if (!note) return;
+  } else {
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
+    note = { id: 'note-' + Date.now(), title: '', text: '', created: dateStr };
+    DATA.notes.push(note);
+  }
+  activeNoteId = note.id;
 
-  const noteId = 'note-' + Date.now();
-  const newNote = {
-    id: noteId,
-    text: text,
-    created: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    k2Status: 'pending'
+  // Show editor, hide list
+  document.getElementById('note-editor-view').style.display = 'block';
+  document.querySelector('#page-notes > .page-header').style.display = 'none';
+  document.querySelector('#page-notes > div:nth-child(2)').style.display = 'none'; // insights
+  document.querySelector('#page-notes > div:nth-child(3)').style.display = 'none'; // notes list wrapper
+
+  // Populate
+  document.getElementById('note-title-input').value = note.title || '';
+  document.getElementById('note-body-input').value = note.text || '';
+
+  // Project dropdown
+  const sel = document.getElementById('note-project-link');
+  sel.innerHTML = '<option value="">No project</option>' + DATA.projects.map(p => '<option value="' + p.id + '"' + (note.projectId === p.id ? ' selected' : '') + '>' + p.name + '</option>').join('');
+
+  // K-2 response
+  const k2Block = document.getElementById('note-k2-response');
+  if (note.k2Response) {
+    k2Block.style.display = 'block';
+    document.getElementById('note-k2-text').textContent = note.k2Response;
+    document.getElementById('note-k2-date').textContent = note.k2RespondedAt || '';
+    document.getElementById('note-k2-btn').textContent = '🤖 Get Fresh Take';
+  } else {
+    k2Block.style.display = 'none';
+    document.getElementById('note-k2-btn').textContent = '🤖 Get K-2\'s Take';
+  }
+
+  // Auto-save on typing
+  const titleInput = document.getElementById('note-title-input');
+  const bodyInput = document.getElementById('note-body-input');
+  const statusEl = document.getElementById('note-save-status');
+
+  const autoSave = () => {
+    clearTimeout(noteAutoSaveTimer);
+    statusEl.textContent = 'Saving...';
+    noteAutoSaveTimer = setTimeout(async () => {
+      note.title = titleInput.value.trim();
+      note.text = bodyInput.value.trim();
+      await saveData();
+      statusEl.textContent = 'Saved ✓';
+    }, 1500);
   };
 
-  DATA.notes.push(newNote);
+  titleInput.oninput = autoSave;
+  bodyInput.oninput = autoSave;
 
-  // Queue command for K-2 to analyze
-  DATA.commands = DATA.commands || [];
-  DATA.commands.push({
-    id: 'cmd-' + Date.now(),
-    type: 'analyze-note',
-    noteId: noteId,
-    noteText: text,
-    status: 'pending',
-    created: new Date().toISOString()
-  });
+  // Cmd+S to force save
+  bodyInput.onkeydown = titleInput.onkeydown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      clearTimeout(noteAutoSaveTimer);
+      note.title = titleInput.value.trim();
+      note.text = bodyInput.value.trim();
+      saveData().then(() => { statusEl.textContent = 'Saved ✓'; });
+    }
+  };
 
-  input.value = '';
-  await saveData();
-  renderNotes();
+  bodyInput.focus();
 }
 
-async function requestK2Take(noteId) {
-  const note = DATA.notes.find(n => n.id === noteId || DATA.notes.indexOf(n) === parseInt(noteId));
-  if (!note) return;
-
-  note.k2Status = 'pending';
-
-  DATA.commands = DATA.commands || [];
-  DATA.commands.push({
-    id: 'cmd-' + Date.now(),
-    type: 'analyze-note',
-    noteId: note.id || noteId,
-    noteText: note.text,
-    status: 'pending',
-    created: new Date().toISOString()
-  });
-
-  await saveData();
-  renderNotes();
-}
-
-async function deleteNote(noteId) {
-  const idx = DATA.notes.findIndex(n => n.id === noteId || DATA.notes.indexOf(n) === parseInt(noteId));
-  if (idx === -1) return;
-  DATA.notes.splice(idx, 1);
-  await saveData();
-  renderNotes();
-}
-
-function editNote(noteId, el) {
-  const note = DATA.notes.find(n => n.id === noteId || DATA.notes.indexOf(n) === parseInt(noteId));
-  if (!note) return;
-
-  const textarea = document.createElement('textarea');
-  textarea.value = note.text;
-  textarea.style.cssText = 'width:100%;min-height:60px;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;color:var(--text);padding:8px;font-size:13px;font-family:inherit;resize:vertical;';
-
-  const save = async () => {
-    const newText = textarea.value.trim();
-    if (newText && newText !== note.text) {
-      note.text = newText;
+async function closeNoteEditor() {
+  if (activeNoteId) {
+    const note = DATA.notes.find(n => n.id === activeNoteId);
+    if (note) {
+      clearTimeout(noteAutoSaveTimer);
+      note.title = document.getElementById('note-title-input').value.trim();
+      note.text = document.getElementById('note-body-input').value.trim();
+      // Remove empty untitled notes
+      if (!note.title && !note.text) {
+        DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
+      }
       await saveData();
     }
-    renderNotes();
-  };
+  }
+  activeNoteId = null;
+  document.getElementById('note-editor-view').style.display = 'none';
+  document.querySelector('#page-notes > .page-header').style.display = '';
+  document.querySelector('#page-notes > div:nth-child(2)').style.display = '';
+  document.querySelector('#page-notes > div:nth-child(3)').style.display = '';
+  renderNotes();
+}
 
-  textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
-    if (e.key === 'Escape') renderNotes();
+async function linkNoteToProject() {
+  const note = DATA.notes.find(n => n.id === activeNoteId);
+  if (!note) return;
+  note.projectId = document.getElementById('note-project-link').value || undefined;
+  await saveData();
+  document.getElementById('note-save-status').textContent = 'Saved ✓';
+}
+
+async function deleteCurrentNote() {
+  if (!activeNoteId) return;
+  if (!confirm('Delete this note?')) return;
+  DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
+  await saveData();
+  activeNoteId = null;
+  closeNoteEditor();
+}
+
+async function requestK2TakeFromEditor() {
+  const note = DATA.notes.find(n => n.id === activeNoteId);
+  if (!note) return;
+  // Save current text first
+  note.title = document.getElementById('note-title-input').value.trim();
+  note.text = document.getElementById('note-body-input').value.trim();
+  note.k2Status = 'pending';
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push({
+    id: 'cmd-' + Date.now(),
+    type: 'analyze-note',
+    noteId: note.id,
+    noteText: (note.title ? note.title + '\n\n' : '') + note.text,
+    status: 'pending',
+    created: new Date().toISOString()
   });
-  textarea.addEventListener('blur', save);
-
-  el.replaceWith(textarea);
-  textarea.focus();
+  await saveData();
+  document.getElementById('note-k2-btn').textContent = '⏳ K-2 thinking...';
+  document.getElementById('note-k2-btn').disabled = true;
 }
 
 // Jots functionality
