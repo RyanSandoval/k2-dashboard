@@ -3069,8 +3069,8 @@ function openNoteEditor(noteId) {
   // Show editor, hide list
   document.getElementById('note-editor-view').style.display = 'block';
   document.querySelector('#page-notes > .page-header').style.display = 'none';
-  document.querySelector('#page-notes > div:nth-child(2)').style.display = 'none'; // insights
-  document.querySelector('#page-notes > div:nth-child(3)').style.display = 'none'; // notes list wrapper
+  document.getElementById('notes-insights-section').style.display = 'none';
+  document.getElementById('notes-list').parentElement.style.display = 'none';
 
   // Populate
   document.getElementById('note-title-input').value = note.title || '';
@@ -3142,8 +3142,8 @@ async function closeNoteEditor() {
   activeNoteId = null;
   document.getElementById('note-editor-view').style.display = 'none';
   document.querySelector('#page-notes > .page-header').style.display = '';
-  document.querySelector('#page-notes > div:nth-child(2)').style.display = '';
-  document.querySelector('#page-notes > div:nth-child(3)').style.display = '';
+  document.getElementById('notes-insights-section').style.display = '';
+  document.getElementById('notes-list').parentElement.style.display = '';
   renderNotes();
 }
 
