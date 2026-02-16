@@ -832,6 +832,9 @@
     gap: 4px;
     justify-content: flex-end;
     margin-bottom: 10px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
   }
   .time-toggle-btn {
     padding: 4px 12px;
@@ -1115,10 +1118,12 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div style="font-size:15px;font-weight:600;">Cumulative P&L Over Time</div>
             <div class="time-toggle" style="margin-bottom:0;" id="toggle-pnl">
-              <button class="time-toggle-btn" data-range="1D" onclick="setChartRange('pnl','1D')">1D</button>
+              <button class="time-toggle-btn" data-range="1H" onclick="setChartRange('pnl','1H')">1H</button>
+              <button class="time-toggle-btn" data-range="6H" onclick="setChartRange('pnl','6H')">6H</button>
+              <button class="time-toggle-btn active" data-range="1D" onclick="setChartRange('pnl','1D')">1D</button>
               <button class="time-toggle-btn" data-range="1W" onclick="setChartRange('pnl','1W')">1W</button>
               <button class="time-toggle-btn" data-range="1M" onclick="setChartRange('pnl','1M')">1M</button>
-              <button class="time-toggle-btn active" data-range="ALL" onclick="setChartRange('pnl','ALL')">ALL</button>
+              <button class="time-toggle-btn" data-range="ALL" onclick="setChartRange('pnl','ALL')">ALL</button>
             </div>
           </div>
           <div style="position:relative;height:300px;" class="chart-container-pnl">
@@ -1138,10 +1143,12 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div style="font-size:15px;font-weight:600;">Balance Over Time</div>
               <div class="time-toggle" style="margin-bottom:0;" id="toggle-balance">
-                <button class="time-toggle-btn" data-range="1D" onclick="setChartRange('balance','1D')">1D</button>
+                <button class="time-toggle-btn" data-range="1H" onclick="setChartRange('balance','1H')">1H</button>
+                <button class="time-toggle-btn" data-range="6H" onclick="setChartRange('balance','6H')">6H</button>
+                <button class="time-toggle-btn active" data-range="1D" onclick="setChartRange('balance','1D')">1D</button>
                 <button class="time-toggle-btn" data-range="1W" onclick="setChartRange('balance','1W')">1W</button>
                 <button class="time-toggle-btn" data-range="1M" onclick="setChartRange('balance','1M')">1M</button>
-                <button class="time-toggle-btn active" data-range="ALL" onclick="setChartRange('balance','ALL')">ALL</button>
+                <button class="time-toggle-btn" data-range="ALL" onclick="setChartRange('balance','ALL')">ALL</button>
               </div>
             </div>
             <div style="position:relative;height:300px;" class="chart-container-bal">
@@ -1799,7 +1806,7 @@ function renderTrading() {
 
 // Trading Charts
 let chartPnl = null, chartWinrate = null, chartBalance = null;
-let chartRangePnl = 'ALL', chartRangeBalance = 'ALL';
+let chartRangePnl = '1D', chartRangeBalance = '1D';
 let _tradingBooks = []; // cached for re-render on range change
 
 const BOOK_COLORS = {
@@ -1815,6 +1822,8 @@ function getBookColor(name) {
 function getRangeCutoff(range) {
   if (range === 'ALL') return null;
   const now = new Date();
+  if (range === '1H') return new Date(now - 60*60*1000);
+  if (range === '6H') return new Date(now - 6*60*60*1000);
   if (range === '1D') return new Date(now - 24*60*60*1000);
   if (range === '1W') return new Date(now - 7*24*60*60*1000);
   if (range === '1M') return new Date(now - 30*24*60*60*1000);
@@ -1824,6 +1833,8 @@ function getRangeCutoff(range) {
 function formatLabel(dateStr, range) {
   const d = new Date(dateStr);
   if (isNaN(d)) return dateStr;
+  if (range === '1H') return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (range === '6H') return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
   if (range === '1D') return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
   if (range === '1W') return d.toLocaleDateString('en-US', { weekday: 'short' });
   if (range === '1M') return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1832,7 +1843,7 @@ function formatLabel(dateStr, range) {
 }
 
 function getDateKey(dateStr, range) {
-  if (range === '1D') return dateStr; // keep full timestamp for hour grouping
+  if (range === '1H' || range === '6H' || range === '1D') return dateStr; // keep full timestamp for granular grouping
   return (dateStr || '').slice(0, 10);
 }
 
