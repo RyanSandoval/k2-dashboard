@@ -1383,6 +1383,14 @@ const KANBAN_COLUMNS = [
 ];
 
 function renderProjects() {
+  // Update sidebar badge
+  const activeCount = DATA.projects.filter(p => p.status !== 'done').length;
+  const projBadge = document.getElementById('project-count');
+  if (projBadge) {
+    projBadge.textContent = activeCount;
+    projBadge.style.display = activeCount > 0 ? 'inline' : 'none';
+  }
+
   const board = document.getElementById('kanban-board');
   board.innerHTML = KANBAN_COLUMNS.map(col => {
     const projects = DATA.projects.filter(p => p.status === col.id);
