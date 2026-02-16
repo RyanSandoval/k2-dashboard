@@ -3099,7 +3099,7 @@ function renderJotEntry(jot) {
     <div class="jot-entry" data-jot-id="${jot.id}" draggable="true" ondragstart="jotDragStart(event,${jot.id})" ondragover="jotDragOver(event)" ondragleave="jotDragLeave(event)" ondrop="jotDrop(event,${jot.id})">
       <div class="jot-drag-handle" title="Drag to reorder">⠿</div>
       ${hasCheckbox ? `<div class="jot-check ${isChecked ? 'done' : ''}" onclick="toggleJot(${jot.id})"></div>` : ''}
-      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" onclick="if(!window.getSelection().toString().trim() && ${!hasCheckbox})editJot(${jot.id})">
+      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" onclick="if(!window.getSelection().toString().trim())editJot(${jot.id})">
         ${renderedText}
         ${badgeRow}
       </div>
