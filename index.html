@@ -835,6 +835,9 @@
         <div class="jots-date-header" id="jots-today-date"></div>
         <p>Quick capture — type and hit enter</p>
       </div>
+      <div style="margin-bottom:12px;">
+        <input type="text" id="jot-search" placeholder="🔍 Search jots... (text, #tags)" oninput="filterJots()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
       <div id="jot-images-preview" class="jot-images-preview"></div>
       <div class="jot-input-wrap" id="jot-drop-zone">
         <textarea id="jot-input" rows="1" placeholder="What's on your mind? Use #tags, [] for checkboxes, **bold**, *italic*..." onkeydown="handleJotKeydown(event)" oninput="autoExpandTextarea(this)"></textarea>
@@ -1981,9 +1984,32 @@ function editNote(noteId, el) {
   textarea.focus();
 }
 
-// Jots functionality (existing code continues...)
+// Jots functionality
+let jotSearchQuery = '';
+
+function filterJots() {
+  jotSearchQuery = (document.getElementById('jot-search')?.value || '').trim().toLowerCase();
+  renderJots();
+}
+
+function jotMatchesSearch(jot) {
+  if (!jotSearchQuery) return true;
+  const text = (jot.text || '').toLowerCase();
+  const tags = (jot.tags || []).map(t => t.toLowerCase());
+  
+  // Support multiple search terms (space-separated)
+  const terms = jotSearchQuery.split(/\s+/);
+  return terms.every(term => {
+    if (term.startsWith('#')) {
+      // Tag search
+      const tagTerm = term.slice(1);
+      return tags.some(t => t.includes(tagTerm));
+    }
+    return text.includes(term) || tags.some(t => t.includes(term));
+  });
+}
+
 function renderJots() {
-  // Set today's date
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10);
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1994,32 +2020,43 @@ function renderJots() {
     header.innerHTML = `${dateStr} <span class="dow">${dow}</span>`;
   }
 
-  const todayJots = DATA.jots.filter(j => j.date === dateStr);
+  const allJots = DATA.jots.filter(jotMatchesSearch);
+  const isSearching = !!jotSearchQuery;
+
+  const todayJots = allJots.filter(j => j.date === dateStr);
   const todayContainer = document.getElementById('jots-today-entries');
   if (todayContainer) {
-    todayContainer.innerHTML = todayJots.map(jot => renderJotEntry(jot)).join('');
+    if (isSearching && todayJots.length === 0) {
+      todayContainer.innerHTML = '';
+    } else {
+      todayContainer.innerHTML = todayJots.map(jot => renderJotEntry(jot)).join('');
+    }
   }
 
-  // Render previous days
-  const otherDates = [...new Set(DATA.jots.map(j => j.date))].filter(d => d !== dateStr).sort().reverse();
+  // Render previous days (auto-expand when searching)
+  const otherDates = [...new Set(allJots.map(j => j.date))].filter(d => d !== dateStr).sort().reverse();
   const previousContainer = document.getElementById('jots-previous-days');
   if (previousContainer) {
-    previousContainer.innerHTML = otherDates.map(date => {
-      const dateJots = DATA.jots.filter(j => j.date === date);
-      const dayName = dayNames[new Date(date + 'T00:00:00').getDay()];
-      
-      return `
-        <div class="jot-day-section">
-          <div class="jot-day-header" onclick="toggleJotDay(this)">
-            <span class="jot-day-toggle">▶</span>
-            <span>${date} ${dayName} (${dateJots.length})</span>
+    if (isSearching && allJots.length === 0) {
+      previousContainer.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:13px;">No jots matching "' + jotSearchQuery + '"</div>';
+    } else {
+      previousContainer.innerHTML = otherDates.map(date => {
+        const dateJots = allJots.filter(j => j.date === date);
+        const dayName = dayNames[new Date(date + 'T00:00:00').getDay()];
+        
+        return `
+          <div class="jot-day-section">
+            <div class="jot-day-header" onclick="toggleJotDay(this)">
+              <span class="jot-day-toggle">${isSearching ? '▼' : '▶'}</span>
+              <span>${date} ${dayName} (${dateJots.length})</span>
+            </div>
+            <div class="jot-day-entries" style="${isSearching ? '' : 'display:none;'}">
+              ${dateJots.map(jot => renderJotEntry(jot)).join('')}
+            </div>
           </div>
-          <div class="jot-day-entries">
-            ${dateJots.map(jot => renderJotEntry(jot)).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    }
   }
 }
 
