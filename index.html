@@ -630,7 +630,18 @@
     align-items: center; justify-content: center; line-height: 1;
   }
   .jot-img-wrap { position: relative; display: inline-block; }
-  /* Markdown rendering in jots */
+  /* Markdown rendering (universal) */
+  .md-content h1 { font-size: 18px; font-weight: 700; margin: 8px 0 4px; }
+  .md-content h2 { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
+  .md-content h3 { font-size: 14px; font-weight: 600; margin: 3px 0 2px; }
+  .md-content h4 { font-size: 13px; font-weight: 600; margin: 3px 0 2px; }
+  .md-content blockquote { border-left: 3px solid var(--accent); padding: 4px 12px; margin: 6px 0; color: var(--text-dim); }
+  .md-content table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+  .md-content th, .md-content td { padding: 6px 8px; border: 1px solid var(--border); }
+  .md-content th { background: var(--surface2); text-align: left; }
+  .md-content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .md-content del { color: var(--text-dim); }
+  .md-content mark { background: rgba(255,213,79,0.3); padding: 1px 3px; border-radius: 3px; }
   .jot-text h2 { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
   .jot-text h3 { font-size: 14px; font-weight: 600; margin: 3px 0 2px; }
   .jot-text code {
@@ -1391,7 +1402,7 @@
             <span style="font-size:12px;color:var(--accent);font-weight:600;">🤖 K-2's Take</span>
             <span id="note-k2-date" style="font-size:10px;color:var(--text-dim);"></span>
           </div>
-          <div id="note-k2-text" style="font-size:14px;color:var(--text);line-height:1.7;"></div>
+          <div id="note-k2-text" class="md-content" style="font-size:14px;color:var(--text);line-height:1.7;"></div>
         </div>
         <div style="margin-top:16px;text-align:center;">
           <button onclick="requestK2TakeFromEditor()" id="note-k2-btn" style="padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🤖 Get K-2's Take</button>
@@ -2769,7 +2780,7 @@ function openProjectModal(projectId) {
           ${(p.notes||[]).map(n => `
             <div style="font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">
               <div style="color:var(--text-dim);font-size:10px;margin-bottom:2px;">${n.date} · ${n.author}</div>
-              ${n.text}
+              <div class="md-content">${renderMarkdown(n.text)}</div>
             </div>
           `).join('')}
         </div>
@@ -3248,7 +3259,7 @@ function openNoteEditor(noteId) {
   const k2Block = document.getElementById('note-k2-response');
   if (note.k2Response) {
     k2Block.style.display = 'block';
-    document.getElementById('note-k2-text').textContent = note.k2Response;
+    document.getElementById('note-k2-text').innerHTML = renderMarkdown(note.k2Response);
     document.getElementById('note-k2-date').textContent = note.k2RespondedAt || '';
     document.getElementById('note-k2-btn').textContent = '🤖 Get Fresh Take';
   } else {
@@ -3451,19 +3462,7 @@ function renderJotEntry(jot) {
   const timeStr = jot.time.slice(-5); // last 5 chars (HH:MM)
   let renderedText = jot.text;
 
-  // Markdown rendering
-  renderedText = renderedText
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/(https?:\/\/[^\s<]+)/g, (url) => {
-      let display = url;
-      try { const u = new URL(url); display = u.hostname + (u.pathname.length > 20 ? u.pathname.slice(0,20) + '…' : u.pathname); } catch(e) { if (url.length > 50) display = url.slice(0,50) + '…'; }
-      return '<a href="' + url + '" target="_blank" rel="noopener" title="' + url.replace(/"/g,'&quot;') + '" style="color:var(--accent);text-decoration:underline;word-break:break-all;">' + display + '</a>';
-    })
-    .replace(/(#\w+)/g, '<span class="jot-tag">$1</span>');
-
-  // Handle checkboxes
+  // Handle checkboxes (before markdown rendering)
   let hasCheckbox = false;
   if (renderedText.match(/\[\s*\]/)) {
     hasCheckbox = true;
@@ -3472,6 +3471,9 @@ function renderJotEntry(jot) {
     hasCheckbox = true;
     renderedText = renderedText.replace(/\[x\]/gi, '');
   }
+
+  // Full markdown rendering
+  renderedText = renderMarkdown(renderedText);
 
   const isChecked = jot.done || false;
 
@@ -3737,6 +3739,103 @@ function extractAndCreateTasks(text, projectId) {
 // Backward-compatible aliases
 function jotAutocompleteCheck(textarea) { richInputCheck(textarea); }
 function jotAutocompleteKeydown(event) { richInputKeydown(event); }
+
+// ═══ Markdown Renderer ═══
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = text;
+
+  // Escape HTML first
+  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Code blocks (``` ... ```)
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
+    return '<pre><code class="lang-' + lang + '">' + code.trim() + '</code></pre>';
+  });
+
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Images ![alt](url)
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:6px 0;">');
+
+  // Links [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">$1</a>');
+
+  // Auto-linkify URLs (not already in href or src)
+  html = html.replace(/(?<!href="|src=")(https?:\/\/[^\s<"]+)/g, (url) => {
+    let display = url;
+    try { const u = new URL(url); display = u.hostname + (u.pathname.length > 20 ? u.pathname.slice(0,20) + '…' : u.pathname); } catch(e) { if (url.length > 50) display = url.slice(0,50) + '…'; }
+    return '<a href="' + url + '" target="_blank" rel="noopener" title="' + url.replace(/"/g,'&amp;quot;') + '" style="color:var(--accent);text-decoration:underline;word-break:break-all;">' + display + '</a>';
+  });
+
+  // Headers (must be at line start)
+  html = html.replace(/^#### (.+)$/gm, '<h4 style="font-size:13px;font-weight:600;margin:6px 0 2px;">$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:18px;font-weight:700;margin:8px 0 4px;">$1</h1>');
+
+  // Horizontal rule
+  html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">');
+
+  // Blockquotes
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding:4px 12px;margin:6px 0;color:var(--text-dim);font-style:italic;">$1</blockquote>');
+
+  // Bold + italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Strikethrough
+  html = html.replace(/~~(.+?)~~/g, '<del style="color:var(--text-dim);">$1</del>');
+
+  // Highlight
+  html = html.replace(/==(.+?)==/g, '<mark style="background:rgba(255,213,79,0.3);padding:1px 3px;border-radius:3px;">$1</mark>');
+
+  // Tables
+  html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)+)/gm, (match, headerRow, sepRow, bodyRows) => {
+    const headers = headerRow.split('|').filter(c => c.trim());
+    const rows = bodyRows.trim().split('\n').map(r => r.split('|').filter(c => c.trim()));
+    return '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:12px;"><thead><tr>' +
+      headers.map(h => '<th style="padding:6px 8px;border:1px solid var(--border);background:var(--surface2);text-align:left;">' + h.trim() + '</th>').join('') +
+      '</tr></thead><tbody>' +
+      rows.map(r => '<tr>' + r.map(c => '<td style="padding:6px 8px;border:1px solid var(--border);">' + c.trim() + '</td>').join('') + '</tr>').join('') +
+      '</tbody></table>';
+  });
+
+  // Unordered lists (-, *, +)
+  html = html.replace(/^((?:[ ]*[-*+] .+\n?)+)/gm, (block) => {
+    const items = block.trim().split('\n').map(line => {
+      const indent = line.match(/^(\s*)/)[1].length;
+      const text = line.replace(/^\s*[-*+] /, '');
+      return '<li style="margin:2px 0;margin-left:' + (indent > 0 ? indent * 8 : 0) + 'px;">' + text + '</li>';
+    });
+    return '<ul style="margin:4px 0 4px 18px;font-size:inherit;">' + items.join('') + '</ul>';
+  });
+
+  // Ordered lists
+  html = html.replace(/^((?:[ ]*\d+\. .+\n?)+)/gm, (block) => {
+    const items = block.trim().split('\n').map(line => {
+      const text = line.replace(/^\s*\d+\. /, '');
+      return '<li style="margin:2px 0;">' + text + '</li>';
+    });
+    return '<ol style="margin:4px 0 4px 18px;font-size:inherit;">' + items.join('') + '</ol>';
+  });
+
+  // Hashtags (but not inside links/code)
+  html = html.replace(/(?<![&\w])(#\w+)/g, '<span class="jot-tag">$1</span>');
+
+  // Line breaks (double newline = paragraph, single = br)
+  html = html.replace(/\n\n+/g, '</p><p style="margin:8px 0;">');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p style="margin:0;">' + html + '</p>';
+
+  // Clean up empty paragraphs
+  html = html.replace(/<p style="margin:0;"><\/p>/g, '');
+  html = html.replace(/<p style="margin:8px 0;"><\/p>/g, '');
+
+  return html;
+}
 
 async function editJot(jotId) {
   const jot = DATA.jots.find(j => j.id == jotId); // == for loose comparison (string vs number)
