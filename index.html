@@ -597,6 +597,38 @@
   }
   .jot-entry:hover .jot-delete { opacity: 1; }
   .jot-delete:hover { color: var(--red); background: rgba(248,113,113,0.1); }
+
+  /* Selection toolbar */
+  .selection-toolbar {
+    position: fixed;
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 300;
+    gap: 2px;
+    align-items: center;
+  }
+  .selection-toolbar.visible { display: flex; }
+  .sel-btn {
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .sel-btn:hover { background: var(--surface2); }
+  .sel-btn.sel-task { color: var(--green); }
+  .sel-btn.sel-task:hover { background: rgba(74,222,128,0.12); }
+  .sel-divider { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+
   .jot-file-chip {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--surface2); border: 1px solid var(--border);
@@ -2368,6 +2400,121 @@ async function editNextStep(projectId, stepIdx, el) {
   input.select();
 }
 
+// ═══════════════════════════════════════
+// SELECTION TOOLBAR
+// ═══════════════════════════════════════
+
+let selectionContext = { jotId: null, text: '', range: null };
+
+function initSelectionToolbar() {
+  const toolbar = document.getElementById('selection-toolbar');
+  if (!toolbar) return;
+
+  document.addEventListener('mouseup', (e) => {
+    // Small delay to let selection finalize
+    setTimeout(() => {
+      const selection = window.getSelection();
+      const text = selection.toString().trim();
+
+      if (!text || text.length < 2) {
+        toolbar.classList.remove('visible');
+        return;
+      }
+
+      // Check if selection is inside a jot
+      const jotEntry = selection.anchorNode?.parentElement?.closest?.('.jot-entry');
+      if (!jotEntry) {
+        toolbar.classList.remove('visible');
+        return;
+      }
+
+      const jotId = parseInt(jotEntry.dataset.jotId);
+      selectionContext = { jotId, text, range: selection.getRangeAt(0).cloneRange() };
+
+      // Position toolbar above selection
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      toolbar.style.left = Math.max(8, rect.left + rect.width / 2 - toolbar.offsetWidth / 2) + 'px';
+      toolbar.style.top = (rect.top - 44 + window.scrollY) + 'px';
+      toolbar.classList.add('visible');
+    }, 10);
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.selection-toolbar')) {
+      toolbar.classList.remove('visible');
+    }
+  });
+}
+
+async function selectionToTask() {
+  const { jotId, text } = selectionContext;
+  if (!text) return;
+
+  const taskText = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').trim();
+  if (!taskText) return;
+
+  const now = new Date();
+  const newTask = {
+    id: Date.now(),
+    text: taskText,
+    priority: 'medium',
+    project: '',
+    done: false,
+    created: now.toISOString().slice(0, 10),
+    source: 'jot',
+    linkedJotId: jotId || null,
+    messages: []
+  };
+
+  DATA.tasks.push(newTask);
+  await saveData();
+  renderTasks();
+
+  // Hide toolbar and show confirmation
+  document.getElementById('selection-toolbar').classList.remove('visible');
+  window.getSelection().removeAllRanges();
+  
+  // Brief toast
+  showToast('☑️ Task created: ' + taskText.slice(0, 40) + (taskText.length > 40 ? '...' : ''));
+}
+
+async function selectionFormat(wrapper) {
+  const { jotId, text } = selectionContext;
+  if (!jotId || !text) return;
+
+  const jot = DATA.jots.find(j => j.id === jotId);
+  if (!jot) return;
+
+  const wrapped = wrapper + text + wrapper;
+  jot.text = jot.text.replace(text, wrapped);
+
+  await saveData();
+  renderJots();
+  document.getElementById('selection-toolbar').classList.remove('visible');
+}
+
+async function selectionHighlight() {
+  const { jotId } = selectionContext;
+  if (!jotId) return;
+
+  const jot = DATA.jots.find(j => j.id === jotId);
+  if (!jot) return;
+
+  jot.pinned = !jot.pinned;
+  await saveData();
+  renderJots();
+  document.getElementById('selection-toolbar').classList.remove('visible');
+  showToast(jot.pinned ? '🔖 Jot pinned' : '📌 Jot unpinned');
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+}
+
 // Drag and drop for jot attachments
 function initJotDragDrop() {
   const dropZone = document.getElementById('jot-drop-zone');
@@ -2447,8 +2594,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('app-main').style.display = 'flex';
     loadData();
     initJotDragDrop();
+    initSelectionToolbar();
   }
 });
 </script>
+<!-- Selection Toolbar -->
+<div class="selection-toolbar" id="selection-toolbar">
+  <button class="sel-btn sel-task" onclick="selectionToTask()">☑️ Task</button>
+  <div class="sel-divider"></div>
+  <button class="sel-btn" onclick="selectionFormat('**')"><b>B</b></button>
+  <button class="sel-btn" onclick="selectionFormat('*')"><i>I</i></button>
+  <button class="sel-btn" onclick="selectionFormat('`')">&lt;/&gt;</button>
+  <div class="sel-divider"></div>
+  <button class="sel-btn" onclick="selectionHighlight()">🔖 Pin</button>
+</div>
 </body>
 </html>
