@@ -1730,7 +1730,7 @@ function renderTasks() {
         <div class="task-content ${task.done ? 'done' : ''}">
           ${task.text}
           <div class="task-meta">
-            ${projectName} • ${task.created} 
+            ${projectName} • ${task.created}${task.source === 'jot' ? ' • 📝 from jot' : ''}
           </div>
         </div>
         <div class="task-priority priority-${task.priority}">${task.priority}</div>
@@ -1784,8 +1784,16 @@ async function toggleTask(taskId) {
   if (!task) return;
 
   task.done = !task.done;
+
+  // Sync linked jot
+  if (task.linkedJotId) {
+    const jot = DATA.jots.find(j => j.id === task.linkedJotId);
+    if (jot) jot.done = task.done;
+  }
+
   await saveData();
   renderTasks();
+  renderJots();
 }
 
 // Setup task filters
@@ -2127,11 +2135,33 @@ async function addJot() {
   };
 
   DATA.jots.push(newJot);
+
+  // If jot has checkbox syntax, also create a linked task
+  if (text.match(/\[\s*\]|\[x\]/i)) {
+    const taskText = text.replace(/\[\s*\]/g, '').replace(/\[x\]/gi, '').replace(/(#\w+)/g, '').trim();
+    if (taskText) {
+      const newTask = {
+        id: Date.now() + 1,
+        text: taskText,
+        priority: 'medium',
+        project: '',
+        done: false,
+        created: dateStr,
+        source: 'jot',
+        linkedJotId: newJot.id,
+        messages: []
+      };
+      DATA.tasks.push(newTask);
+      newJot.linkedTaskId = newTask.id;
+    }
+  }
+
   input.value = '';
   input.style.height = 'auto';
 
   await saveData();
   renderJots();
+  renderTasks();
 }
 
 async function editJot(jotId) {
@@ -2167,8 +2197,16 @@ async function toggleJot(jotId) {
   if (!jot) return;
 
   jot.done = !jot.done;
+
+  // Sync linked task
+  if (jot.linkedTaskId) {
+    const task = DATA.tasks.find(t => t.id === jot.linkedTaskId);
+    if (task) task.done = jot.done;
+  }
+
   await saveData();
   renderJots();
+  renderTasks();
 }
 
 async function deleteJot(jotId) {
