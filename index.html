@@ -670,10 +670,28 @@
     gap: 12px;
     padding: 12px 14px;
     border-radius: 10px;
-    transition: background 0.1s;
+    transition: background 0.1s, opacity 0.2s, transform 0.15s;
     position: relative;
   }
   .jot-entry:hover { background: var(--surface2); }
+  .jot-entry.dragging { opacity: 0.3; }
+  .jot-entry.drag-over { border-top: 2px solid var(--accent); margin-top: -2px; }
+  .jot-drag-handle {
+    cursor: grab; opacity: 0; font-size: 14px; color: var(--text-dim);
+    flex-shrink: 0; margin-top: 2px; user-select: none; -webkit-user-select: none;
+    touch-action: none; padding: 2px 0; transition: opacity 0.15s;
+  }
+  .jot-entry:hover .jot-drag-handle { opacity: 0.6; }
+  .jot-drag-handle:hover { opacity: 1 !important; color: var(--accent); }
+  .jot-link-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; padding: 1px 6px; border-radius: 6px;
+    cursor: pointer; font-weight: 600; margin-right: 4px; margin-top: 4px;
+    transition: opacity 0.15s; text-decoration: none;
+  }
+  .jot-link-badge:hover { opacity: 0.8; }
+  .jot-link-badge.project { background: rgba(124,92,255,0.15); color: var(--accent2); }
+  .jot-link-badge.note { background: rgba(74,158,255,0.15); color: var(--accent); }
   .jot-entry .jot-check {
     width: 22px; height: 22px;
     border: 2px solid var(--border);
@@ -775,6 +793,7 @@
   .jot-day-header.open + .jot-day-entries { display: block !important; }
 
   @media (max-width: 768px) {
+    .jot-drag-handle { opacity: 0.4; }
     .jot-delete { opacity: 0.6; }
     .jot-entry .jot-check { width: 28px; height: 28px; }
     .jot-entry .jot-check.done::after { font-size: 16px; }
@@ -2998,7 +3017,7 @@ function renderJots() {
   const allJots = DATA.jots.filter(jotMatchesSearch);
   const isSearching = !!jotSearchQuery;
 
-  const todayJots = allJots.filter(j => j.date === dateStr);
+  const todayJots = allJots.filter(j => j.date === dateStr).sort((a,b) => (a.order||0) - (b.order||0));
   const todayContainer = document.getElementById('jots-today-entries');
   if (todayContainer) {
     if (isSearching && todayJots.length === 0) {
@@ -3016,7 +3035,7 @@ function renderJots() {
       previousContainer.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:13px;">No jots matching "' + jotSearchQuery + '"</div>';
     } else {
       previousContainer.innerHTML = otherDates.map(date => {
-        const dateJots = allJots.filter(j => j.date === date);
+        const dateJots = allJots.filter(j => j.date === date).sort((a,b) => (a.order||0) - (b.order||0));
         const dayName = dayNames[new Date(date + 'T00:00:00').getDay()];
         
         return `
@@ -3058,10 +3077,26 @@ function renderJotEntry(jot) {
 
   const isChecked = jot.done || false;
 
+  // Link badges
+  let badges = '';
+  if (jot.projectId) {
+    const proj = (DATA.projects||[]).find(p => p.id === jot.projectId);
+    if (proj) badges += `<a class="jot-link-badge project" onclick="event.stopPropagation();navigateTo('projects');setTimeout(()=>showProjectDetail&&showProjectDetail('${proj.id}'),100)">📁 ${proj.name}</a>`;
+  }
+  if (jot.noteId) {
+    const note = (DATA.notes||[]).find(n => (n.id||'') == jot.noteId);
+    if (note) badges += `<a class="jot-link-badge note" onclick="event.stopPropagation();navigateTo('notes')">📝 ${(note.created||'Note').slice(0,10)}</a>`;
+  }
+  const badgeRow = badges ? `<div style="display:flex;flex-wrap:wrap;gap:2px;">${badges}</div>` : '';
+
   return `
-    <div class="jot-entry" data-jot-id="${jot.id}">
+    <div class="jot-entry" data-jot-id="${jot.id}" draggable="true" ondragstart="jotDragStart(event,${jot.id})" ondragover="jotDragOver(event)" ondragleave="jotDragLeave(event)" ondrop="jotDrop(event,${jot.id})">
+      <div class="jot-drag-handle" title="Drag to reorder">⠿</div>
       ${hasCheckbox ? `<div class="jot-check ${isChecked ? 'done' : ''}" onclick="toggleJot(${jot.id})"></div>` : ''}
-      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" onclick="if(!window.getSelection().toString().trim() && ${!hasCheckbox})editJot(${jot.id})">${renderedText}</div>
+      <div class="jot-text ${hasCheckbox && isChecked ? 'done' : ''}" onclick="if(!window.getSelection().toString().trim() && ${!hasCheckbox})editJot(${jot.id})">
+        ${renderedText}
+        ${badgeRow}
+      </div>
       <div class="jot-time">${timeStr}</div>
       <button class="jot-delete" onclick="deleteJot(${jot.id})" title="Delete">✕</button>
     </div>
@@ -3093,12 +3128,14 @@ async function addJot() {
   const dateStr = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
   const timeStr = now.toTimeString().slice(0, 5);
 
+  const maxOrder = (DATA.jots||[]).filter(j => j.date === dateStr).reduce((m, j) => Math.max(m, j.order||0), -1);
   const newJot = {
     id: Date.now(),
     text: text,
     date: dateStr,
     time: timeStr,
-    done: false
+    done: false,
+    order: maxOrder + 1
   };
 
   DATA.jots.push(newJot);
@@ -3144,6 +3181,9 @@ async function editJot(jotId) {
   jotElement.innerHTML = `
     <div class="jot-edit-wrap">
       <textarea onblur="saveJotEdit(${jotId}, this.value)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur();}">${currentText}</textarea>
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        <button onclick="event.stopPropagation();editJotLinks(${jotId})" style="font-size:11px;padding:2px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);cursor:pointer;">🔗 Link</button>
+      </div>
     </div>
   `;
 
@@ -3551,6 +3591,178 @@ function showToast(msg) {
   toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.3s;';
   document.body.appendChild(toast);
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+}
+
+// ═══════════════════════════════════════
+// JOT DRAG-REORDER
+// ═══════════════════════════════════════
+let draggedJotId = null;
+
+function jotDragStart(e, jotId) {
+  draggedJotId = jotId;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', jotId);
+  setTimeout(() => {
+    const el = document.querySelector(`[data-jot-id="${jotId}"]`);
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+
+function jotDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const entry = e.target.closest('.jot-entry');
+  if (entry && !entry.classList.contains('dragging')) {
+    document.querySelectorAll('.jot-entry.drag-over').forEach(el => el.classList.remove('drag-over'));
+    entry.classList.add('drag-over');
+  }
+}
+
+function jotDragLeave(e) {
+  const entry = e.target.closest('.jot-entry');
+  if (entry) entry.classList.remove('drag-over');
+}
+
+async function jotDrop(e, targetJotId) {
+  e.preventDefault();
+  document.querySelectorAll('.jot-entry.dragging,.jot-entry.drag-over').forEach(el => {
+    el.classList.remove('dragging', 'drag-over');
+  });
+  if (!draggedJotId || draggedJotId === targetJotId) { draggedJotId = null; return; }
+
+  const dragged = (DATA.jots||[]).find(j => j.id == draggedJotId);
+  const target = (DATA.jots||[]).find(j => j.id == targetJotId);
+  if (!dragged || !target || dragged.date !== target.date) { draggedJotId = null; return; }
+
+  // Get jots for this date, sorted by order
+  const dateJots = (DATA.jots||[]).filter(j => j.date === dragged.date);
+  dateJots.forEach((j, i) => { if (j.order == null) j.order = i; });
+  dateJots.sort((a, b) => (a.order||0) - (b.order||0));
+
+  const fromIdx = dateJots.findIndex(j => j.id == draggedJotId);
+  const toIdx = dateJots.findIndex(j => j.id == targetJotId);
+  if (fromIdx < 0 || toIdx < 0) { draggedJotId = null; return; }
+
+  dateJots.splice(fromIdx, 1);
+  dateJots.splice(toIdx, 0, dragged);
+  dateJots.forEach((j, i) => { j.order = i; });
+
+  draggedJotId = null;
+  await saveData();
+  renderJots();
+}
+
+// Touch drag support for mobile
+let touchDragJotId = null;
+let touchDragEl = null;
+let touchClone = null;
+
+document.addEventListener('touchstart', (e) => {
+  const handle = e.target.closest('.jot-drag-handle');
+  if (!handle) return;
+  const entry = handle.closest('.jot-entry');
+  if (!entry) return;
+  e.preventDefault();
+  touchDragJotId = parseInt(entry.dataset.jotId);
+  touchDragEl = entry;
+  entry.classList.add('dragging');
+  touchClone = entry.cloneNode(true);
+  touchClone.style.cssText = 'position:fixed;pointer-events:none;z-index:999;opacity:0.8;width:' + entry.offsetWidth + 'px;';
+  document.body.appendChild(touchClone);
+  const touch = e.touches[0];
+  touchClone.style.left = touch.clientX - 20 + 'px';
+  touchClone.style.top = touch.clientY - 20 + 'px';
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+  if (!touchDragJotId) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  if (touchClone) {
+    touchClone.style.left = touch.clientX - 20 + 'px';
+    touchClone.style.top = touch.clientY - 20 + 'px';
+  }
+  document.querySelectorAll('.jot-entry.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (el) {
+    const entry = el.closest('.jot-entry');
+    if (entry && entry !== touchDragEl) entry.classList.add('drag-over');
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', async (e) => {
+  if (!touchDragJotId) return;
+  if (touchClone) { touchClone.remove(); touchClone = null; }
+  document.querySelectorAll('.jot-entry.dragging').forEach(el => el.classList.remove('dragging'));
+
+  const touch = e.changedTouches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const targetEntry = el ? el.closest('.jot-entry') : null;
+  if (targetEntry && targetEntry.dataset.jotId) {
+    const targetId = parseInt(targetEntry.dataset.jotId);
+    if (targetId !== touchDragJotId) {
+      // Reuse drop logic
+      draggedJotId = touchDragJotId;
+      await jotDrop(new Event('drop'), targetId);
+    }
+  }
+  document.querySelectorAll('.jot-entry.drag-over').forEach(el => el.classList.remove('drag-over'));
+  touchDragJotId = null;
+  touchDragEl = null;
+});
+
+// ═══════════════════════════════════════
+// JOT LINKING (Projects & Notes)
+// ═══════════════════════════════════════
+async function editJotLinks(jotId) {
+  const jot = (DATA.jots||[]).find(j => j.id == jotId);
+  if (!jot) return;
+
+  const projectOptions = (DATA.projects||[]).map(p =>
+    `<option value="${p.id}" ${jot.projectId === p.id ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+  const noteOptions = (DATA.notes||[]).map((n, i) => {
+    const nId = n.id || i;
+    return `<option value="${nId}" ${(jot.noteId||'') == nId ? 'selected' : ''}>${(n.created||'Note').slice(0,10)} - ${(n.text||'').slice(0,30)}</option>`;
+  }).join('');
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:400px;width:90%;">
+      <h3 style="font-size:15px;margin-bottom:16px;">Link Jot</h3>
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Project</label>
+      <select id="jot-link-project" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:12px;">
+        <option value="">None</option>${projectOptions}
+      </select>
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Note</label>
+      <select id="jot-link-note" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:16px;">
+        <option value="">None</option>${noteOptions}
+      </select>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:13px;">Cancel</button>
+        <button onclick="saveJotLinks(${jotId})" style="padding:8px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveJotLinks(jotId) {
+  const jot = (DATA.jots||[]).find(j => j.id == jotId);
+  if (!jot) return;
+  const projVal = document.getElementById('jot-link-project').value;
+  const noteVal = document.getElementById('jot-link-note').value;
+  jot.projectId = projVal || undefined;
+  jot.noteId = noteVal || undefined;
+  // Clean up undefined fields
+  if (!jot.projectId) delete jot.projectId;
+  if (!jot.noteId) delete jot.noteId;
+  document.querySelector('div[style*="fixed"][style*="z-index:300"]').remove();
+  await saveData();
+  renderJots();
+  showToast('Jot links updated');
 }
 
 // Drag and drop for jot attachments
