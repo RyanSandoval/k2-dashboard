@@ -915,7 +915,7 @@
     <div class="page" id="page-notes">
       <div class="page-header">
         <h2>Notes</h2>
-        <p>Quick reference, scratch pad & AI insights</p>
+        <p>Think out loud — K-2 weighs in with analysis, ideas & pushback</p>
       </div>
 
       <!-- Viking AI Insights Section -->
@@ -943,7 +943,7 @@
       <div style="border-top:1px solid var(--border);padding-top:16px;">
         <h3 style="font-size:15px;font-weight:700;color:var(--text);margin:0 0 12px 0;">📝 Notes</h3>
         <div class="note-editor">
-          <textarea id="note-input" placeholder="Write a note..."></textarea>
+          <textarea id="note-input" placeholder="Think out loud... K-2 will weigh in with analysis, ideas, and feedback"></textarea>
           <div class="note-actions">
             <button class="btn btn-primary" onclick="addNote()">Save Note</button>
           </div>
@@ -1868,14 +1868,31 @@ function renderNotes() {
 
   const sortedNotes = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
 
-  container.innerHTML = sortedNotes.map(note => `
-    <div class="card">
-      <div class="card-header">
+  container.innerHTML = sortedNotes.map((note, idx) => {
+    const noteId = note.id || idx;
+    const hasResponse = note.k2Response;
+    const isPending = note.k2Status === 'pending';
+    
+    return `
+    <div class="card" style="position:relative;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
         <span class="card-title">${note.created}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${isPending ? '<span style="font-size:11px;color:var(--yellow);font-weight:600;">⏳ K-2 thinking...</span>' : ''}
+          ${!hasResponse && !isPending ? `<button onclick="requestK2Take('${noteId}')" style="background:var(--accent);border:none;border-radius:6px;color:#fff;padding:3px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Get K-2's take">🤖 Get take</button>` : ''}
+          <button onclick="deleteNote('${noteId}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;" title="Delete">✕</button>
+        </div>
       </div>
-      <div class="card-body">${note.text}</div>
+      <div class="card-body" style="cursor:pointer;" onclick="editNote('${noteId}', this)">${note.text}</div>
+      ${hasResponse ? `
+        <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
+          <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">🤖 K-2's Take</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.6;">${note.k2Response}</div>
+          ${note.k2RespondedAt ? `<div style="font-size:10px;color:var(--text-dim);margin-top:8px;">${note.k2RespondedAt}</div>` : ''}
+        </div>
+      ` : ''}
     </div>
-  `).join('');
+  `}).join('');
 }
 
 async function addNote() {
@@ -1883,16 +1900,85 @@ async function addNote() {
   const text = input.value.trim();
   if (!text) return;
 
+  const noteId = 'note-' + Date.now();
   const newNote = {
+    id: noteId,
     text: text,
-    created: new Date().toISOString().slice(0, 16).replace('T', ' ')
+    created: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    k2Status: 'pending'
   };
 
   DATA.notes.push(newNote);
+
+  // Queue command for K-2 to analyze
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push({
+    id: 'cmd-' + Date.now(),
+    type: 'analyze-note',
+    noteId: noteId,
+    noteText: text,
+    status: 'pending',
+    created: new Date().toISOString()
+  });
+
   input.value = '';
+  await saveData();
+  renderNotes();
+}
+
+async function requestK2Take(noteId) {
+  const note = DATA.notes.find(n => n.id === noteId || DATA.notes.indexOf(n) === parseInt(noteId));
+  if (!note) return;
+
+  note.k2Status = 'pending';
+
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push({
+    id: 'cmd-' + Date.now(),
+    type: 'analyze-note',
+    noteId: note.id || noteId,
+    noteText: note.text,
+    status: 'pending',
+    created: new Date().toISOString()
+  });
 
   await saveData();
   renderNotes();
+}
+
+async function deleteNote(noteId) {
+  const idx = DATA.notes.findIndex(n => n.id === noteId || DATA.notes.indexOf(n) === parseInt(noteId));
+  if (idx === -1) return;
+  DATA.notes.splice(idx, 1);
+  await saveData();
+  renderNotes();
+}
+
+function editNote(noteId, el) {
+  const note = DATA.notes.find(n => n.id === noteId || DATA.notes.indexOf(n) === parseInt(noteId));
+  if (!note) return;
+
+  const textarea = document.createElement('textarea');
+  textarea.value = note.text;
+  textarea.style.cssText = 'width:100%;min-height:60px;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;color:var(--text);padding:8px;font-size:13px;font-family:inherit;resize:vertical;';
+
+  const save = async () => {
+    const newText = textarea.value.trim();
+    if (newText && newText !== note.text) {
+      note.text = newText;
+      await saveData();
+    }
+    renderNotes();
+  };
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
+    if (e.key === 'Escape') renderNotes();
+  });
+  textarea.addEventListener('blur', save);
+
+  el.replaceWith(textarea);
+  textarea.focus();
 }
 
 // Jots functionality (existing code continues...)
