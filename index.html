@@ -913,8 +913,9 @@
         <button onclick="addTask()">Add</button>
       </div>
       <div class="filter-bar">
-        <button class="filter-btn active" data-filter="all" data-group="tasks">All</button>
-        <button class="filter-btn" data-filter="pending" data-group="tasks">Pending</button>
+        <button class="filter-btn active" data-filter="my" data-group="tasks">👤 My Tasks</button>
+        <button class="filter-btn" data-filter="k2" data-group="tasks">🤖 K-2's Tasks</button>
+        <button class="filter-btn" data-filter="all" data-group="tasks">All</button>
         <button class="filter-btn" data-filter="done" data-group="tasks">Done</button>
       </div>
       <div class="card">
@@ -1489,19 +1490,46 @@ function openTaskModal(taskId) {
   
   const project = DATA.projects.find(p => p.id === task.project);
   const projectName = project ? project.name : 'General';
+  const projectGoal = project ? project.goal : '';
+  const ownerBadge = task.owner === 'k2' ? '🤖' : '👤';
+  const ownerLabel = task.owner === 'k2' ? 'K-2' : 'Ryan';
+  const priorityCycle = { high: 'medium', medium: 'low', low: 'high' };
 
   document.getElementById('task-modal-content').innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
       <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${JSON.stringify(task.id)});openTaskModal(${JSON.stringify(task.id)})" style="margin-top:2px;flex-shrink:0;"></div>
-      <div>
-        <h3 style="font-size:16px;font-weight:700;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}">${task.text || task.title || 'Untitled'}</h3>
-        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+      <div style="flex:1;">
+        <h3 style="font-size:16px;font-weight:700;cursor:pointer;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${JSON.stringify(task.id)},'text',this)" title="Click to edit">${task.text || task.title || 'Untitled'}</h3>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+          <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${JSON.stringify(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
           <span class="tag tag-blue">${projectName}</span>
-          <span class="task-priority priority-${task.priority}">${task.priority}</span>
+          <span class="task-priority priority-${task.priority}" style="cursor:pointer;" onclick="cycleTaskPriority(${JSON.stringify(task.id)})" title="Click to cycle priority">${task.priority}</span>
           <span class="tag tag-purple">${task.created}</span>
         </div>
       </div>
     </div>
+
+    ${task.context ? `
+    <div style="margin-bottom:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--accent2);cursor:pointer;" onclick="editTaskField(${JSON.stringify(task.id)},'context',this.querySelector('.ctx-text'))" title="Click to edit context">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent2);font-weight:600;margin-bottom:4px;">Context</div>
+      <div class="ctx-text" style="font-size:12px;color:var(--text-dim);line-height:1.5;">${task.context}</div>
+    </div>
+    ` : `
+    <div style="margin-bottom:12px;font-size:12px;color:var(--text-dim);cursor:pointer;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center;" onclick="editTaskField(${JSON.stringify(task.id)},'context',this)">+ Add context</div>
+    `}
+
+    ${projectGoal ? `
+    <div style="margin-bottom:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--green);">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--green);font-weight:600;margin-bottom:4px;">🎯 Project Goal — ${projectName}</div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">${projectGoal}</div>
+    </div>
+    ` : ''}
+
+    ${task.owner === 'k2' && !task.done ? `
+    <div style="margin-bottom:12px;">
+      <button onclick="queueTaskForK2(${JSON.stringify(task.id)})" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">▶ Queue for K-2</button>
+    </div>
+    ` : ''}
 
     <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-dim);">Thread</div>
     <div id="task-thread" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;">
@@ -1743,11 +1771,13 @@ function renderTasks() {
   const taskContainer = document.getElementById('task-list');
   if (!taskContainer) return;
 
-  const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'all';
+  const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'my';
   let filteredTasks = DATA.tasks;
 
-  if (activeFilter === 'pending') {
-    filteredTasks = DATA.tasks.filter(t => !t.done && t.status !== 'done');
+  if (activeFilter === 'my') {
+    filteredTasks = DATA.tasks.filter(t => (!t.done && t.status !== 'done') && (t.owner === 'ryan' || !t.owner));
+  } else if (activeFilter === 'k2') {
+    filteredTasks = DATA.tasks.filter(t => (!t.done && t.status !== 'done') && t.owner === 'k2');
   } else if (activeFilter === 'done') {
     filteredTasks = DATA.tasks.filter(t => t.done || t.status === 'done');
   }
@@ -1758,15 +1788,22 @@ function renderTasks() {
 
     const taskText = task.text || task.title || 'Untitled';
     const taskId = JSON.stringify(task.id);
+    const ownerBadge = task.owner === 'k2' ? '🤖' : '👤';
+    const doItBtn = task.owner === 'k2' && !task.done ? `<button onclick="event.stopPropagation();queueTaskForK2(${taskId})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>` : '';
     return `
       <li class="task-item" onclick="openTaskModal(${taskId})">
         <div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${taskId})"></div>
         <div class="task-content ${task.done ? 'done' : ''}">
-          ${taskText}
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span title="${task.owner === 'k2' ? 'K-2' : 'Ryan'}">${ownerBadge}</span>
+            <span>${taskText}</span>
+          </div>
+          ${task.context ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic;opacity:0.8;">${task.context}</div>` : ''}
           <div class="task-meta">
             ${projectName} • ${task.created}${task.source === 'jot' ? ' • 📝 from jot' : ''}
           </div>
         </div>
+        ${doItBtn}
         <div class="task-priority priority-${task.priority}">${task.priority}</div>
       </li>
     `;
@@ -1828,6 +1865,74 @@ async function toggleTask(taskId) {
   await saveData();
   renderTasks();
   renderJots();
+}
+
+async function queueTaskForK2(taskId) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  const taskText = task.text || task.title || '';
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push({
+    id: 'cmd-' + Date.now(),
+    type: 'execute-task',
+    taskId: task.id,
+    taskText: taskText,
+    status: 'pending',
+    created: new Date().toISOString()
+  });
+  await saveData();
+  showToast('🚀 Queued for K-2');
+  if (activeTaskId) openTaskModal(activeTaskId);
+}
+
+async function cycleTaskOwner(taskId) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  task.owner = task.owner === 'k2' ? 'ryan' : 'k2';
+  await saveData();
+  renderTasks();
+  openTaskModal(taskId);
+}
+
+async function cycleTaskPriority(taskId) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  const cycle = { high: 'medium', medium: 'low', low: 'high' };
+  task.priority = cycle[task.priority] || 'high';
+  await saveData();
+  renderTasks();
+  openTaskModal(taskId);
+}
+
+async function editTaskField(taskId, field, el) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  const currentVal = task[field] || '';
+  const isTitle = field === 'text';
+
+  const input = document.createElement(isTitle ? 'input' : 'textarea');
+  if (isTitle) input.type = 'text';
+  input.value = currentVal;
+  input.style.cssText = `width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;color:var(--text);padding:8px 10px;font-size:${isTitle ? '16px;font-weight:700' : '12px'};font-family:inherit;${isTitle ? '' : 'min-height:50px;resize:vertical;'}outline:none;`;
+
+  const save = async () => {
+    const newVal = input.value.trim();
+    if (newVal !== currentVal) {
+      task[field] = newVal;
+      if (field === 'text' && task.title) task.title = newVal;
+      await saveData();
+    }
+    openTaskModal(taskId);
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (isTitle || e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
+    if (e.key === 'Escape') openTaskModal(taskId);
+  });
+  input.addEventListener('blur', save);
+
+  el.replaceWith(input);
+  input.focus();
 }
 
 // Setup task filters
