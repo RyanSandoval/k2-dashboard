@@ -3396,41 +3396,10 @@ async function closeNoteEditor() {
     if (note) {
       clearTimeout(noteAutoSaveTimer);
       note.title = document.getElementById('note-title-input').value.trim();
-      
-      // Convert textarea content to HTML for inline editor compatibility
-      const textareaContent = document.getElementById('note-body-input').value.trim();
-      if (textareaContent) {
-        // Convert plain text to basic HTML structure
-        const htmlContent = textareaContent
-          .split('\n\n')
-          .map(paragraph => paragraph.trim())
-          .filter(p => p.length > 0)
-          .map(p => {
-            // Handle task lists
-            if (p.includes('[] ') || p.includes('[x]')) {
-              const items = p.split('\n').map(line => {
-                if (line.includes('[] ')) {
-                  return `<li data-type="taskItem" data-checked="false"><label><input type="checkbox"></label><div><p>${line.replace(/^\s*\[\s*\]\s*/, '')}</p></div></li>`;
-                } else if (line.includes('[x]')) {
-                  return `<li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked></label><div><p>${line.replace(/^\s*\[x\]\s*/i, '')}</p></div></li>`;
-                } else {
-                  return line;
-                }
-              });
-              return `<ul data-type="taskList">${items.join('')}</ul>`;
-            }
-            // Regular paragraphs
-            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-          })
-          .join('');
-        
-        note.text = htmlContent || '<p></p>';
-      } else {
-        note.text = '<p></p>';
-      }
+      note.text = document.getElementById('note-body-input').value.trim();
       
       // Remove empty untitled notes
-      if (!note.title && (!note.text || note.text === '<p></p>')) {
+      if (!note.title && !note.text) {
         DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
       }
       await saveData();
@@ -3533,13 +3502,16 @@ function initNoteInlineEditor(noteId) {
         window.TaskList.configure({ nested: true }),
         window.TaskItem.configure({ nested: true })
       ],
-      content: note.text || '<p></p>',
+      content: convertTextToHTML(note.text || ''),
       onUpdate: ({ editor }) => {
         clearTimeout(window._noteEditors[noteId].saveTimer);
         window._noteEditors[noteId].saveTimer = setTimeout(async () => {
           const updatedNote = DATA.notes.find(n => n.id === noteId);
           if (updatedNote) {
-            updatedNote.text = editor.getHTML();
+            // Convert HTML to plain text for storage
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = editor.getHTML();
+            updatedNote.text = tempDiv.textContent || tempDiv.innerText || '';
             await saveData();
             console.log('Saved note content via inline editor:', noteId);
           }
@@ -3558,11 +3530,8 @@ function initNoteInlineEditor(noteId) {
     // Fallback to textarea
     console.log('Using textarea fallback for note:', noteId);
     const textContent = note.text || '';
-    const plainText = textContent.includes('<') && textContent.includes('>') 
-      ? (() => { const div = document.createElement('div'); div.innerHTML = textContent; return div.textContent || div.innerText || ''; })()
-      : textContent;
     
-    container.innerHTML = `<textarea style="width:100%;height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;resize:vertical;padding:8px;font-family:inherit;" onchange="updateNoteText('${noteId}', this.value)" placeholder="Start writing...">${plainText}</textarea>`;
+    container.innerHTML = `<textarea style="width:100%;height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;resize:vertical;padding:8px;font-family:inherit;" onchange="updateNoteText('${noteId}', this.value)" placeholder="Start writing...">${textContent}</textarea>`;
   }
 }
 
@@ -3586,6 +3555,22 @@ function debugNoteEditors() {
   console.log('Active note editors:', window._noteEditors);
   console.log('TipTap available:', !!window.Editor);
   console.log('StarterKit available:', !!window.StarterKit);
+}
+
+// Convert plain text to basic HTML for TipTap display (safe conversion)
+function convertTextToHTML(text) {
+  if (!text || text.trim() === '') return '<p></p>';
+  
+  // If it's already HTML, return as-is
+  if (text.includes('<') && text.includes('>')) {
+    return text;
+  }
+  
+  // Convert plain text to basic HTML paragraphs
+  const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
+  if (paragraphs.length === 0) return '<p></p>';
+  
+  return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
 }
 
 async function deleteNote(noteId) {
