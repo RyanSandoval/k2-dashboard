@@ -3278,7 +3278,16 @@ function renderNotes() {
 
     // Initialize inline editors for all notes
     sortedNotes.forEach(note => {
+      // Try to initialize immediately
       initNoteInlineEditor(note.id);
+      
+      // If TipTap isn't ready, retry after a short delay
+      if (!window.Editor || !window.StarterKit) {
+        setTimeout(() => {
+          console.log('Retrying TipTap initialization for note:', note.id);
+          initNoteInlineEditor(note.id);
+        }, 500);
+      }
     });
   }
 }
@@ -3494,7 +3503,10 @@ function initNoteInlineEditor(noteId) {
 
   // Import TipTap if available, otherwise use simple textarea  
   if (window.Editor && window.StarterKit && window.TaskList && window.TaskItem) {
-    console.log('Creating TipTap editor for note:', noteId);
+    console.log('Creating TipTap editor for note:', noteId, 'with content:', note.text);
+    const htmlContent = convertTextToHTML(note.text || '');
+    console.log('Converted HTML content:', htmlContent);
+    
     const editor = new window.Editor({
       element: container,
       extensions: [
@@ -3502,16 +3514,16 @@ function initNoteInlineEditor(noteId) {
         window.TaskList.configure({ nested: true }),
         window.TaskItem.configure({ nested: true })
       ],
-      content: convertTextToHTML(note.text || ''),
+      content: htmlContent,
       onUpdate: ({ editor }) => {
         clearTimeout(window._noteEditors[noteId].saveTimer);
         window._noteEditors[noteId].saveTimer = setTimeout(async () => {
           const updatedNote = DATA.notes.find(n => n.id === noteId);
           if (updatedNote) {
-            // Convert HTML to plain text for storage
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = editor.getHTML();
-            updatedNote.text = tempDiv.textContent || tempDiv.innerText || '';
+            // Convert HTML back to markdown-like plain text for storage
+            const html = editor.getHTML();
+            const plainText = convertHTMLToText(html);
+            updatedNote.text = plainText;
             await saveData();
             console.log('Saved note content via inline editor:', noteId);
           }
@@ -3527,11 +3539,21 @@ function initNoteInlineEditor(noteId) {
     window._noteEditors[noteId] = { editor, saveTimer: null };
     console.log('TipTap editor created for note:', noteId);
   } else {
-    // Fallback to textarea
+    // Fallback to textarea - also check why TipTap failed
     console.log('Using textarea fallback for note:', noteId);
+    console.log('TipTap availability check:', {
+      Editor: !!window.Editor,
+      StarterKit: !!window.StarterKit,
+      TaskList: !!window.TaskList,
+      TaskItem: !!window.TaskItem
+    });
+    
     const textContent = note.text || '';
     
-    container.innerHTML = `<textarea style="width:100%;height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;resize:vertical;padding:8px;font-family:inherit;" onchange="updateNoteText('${noteId}', this.value)" placeholder="Start writing...">${textContent}</textarea>`;
+    container.innerHTML = `<div style="padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Rich editor loading... Using plain text fallback.</div>
+      <textarea style="width:100%;height:80px;background:none;border:none;color:var(--text);outline:none;resize:vertical;font-family:inherit;" onchange="updateNoteText('${noteId}', this.value)" placeholder="Start writing...">${textContent}</textarea>
+    </div>`;
   }
 }
 
@@ -3566,11 +3588,152 @@ function convertTextToHTML(text) {
     return text;
   }
   
-  // Convert plain text to basic HTML paragraphs
-  const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
-  if (paragraphs.length === 0) return '<p></p>';
+  // Split into lines for processing
+  const lines = text.split('\n');
+  const result = [];
+  let i = 0;
   
-  return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines
+    if (line === '') {
+      i++;
+      continue;
+    }
+    
+    // Handle headers (# ## ###)
+    if (line.match(/^#{1,6}\s+/)) {
+      const level = line.match(/^#+/)[0].length;
+      const text = line.replace(/^#+\s+/, '');
+      result.push(`<h${level}>${text}</h${level}>`);
+      i++;
+      continue;
+    }
+    
+    // Handle task items ([] or [x])
+    if (line.match(/^\s*\[\s*\]\s+/) || line.match(/^\s*\[x\]\s+/i)) {
+      const checked = line.match(/^\s*\[x\]\s+/i) ? 'true' : 'false';
+      const checkboxHtml = checked === 'true' ? '<input type="checkbox" checked>' : '<input type="checkbox">';
+      const taskText = line.replace(/^\s*\[[x\s]*\]\s+/i, '');
+      result.push(`<ul data-type="taskList"><li data-type="taskItem" data-checked="${checked}"><label>${checkboxHtml}</label><div><p>${taskText}</p></div></li></ul>`);
+      i++;
+      continue;
+    }
+    
+    // Handle bullet points (- or *)
+    if (line.match(/^\s*[-*]\s+/)) {
+      const bulletText = line.replace(/^\s*[-*]\s+/, '');
+      
+      // Collect consecutive bullet points
+      const bulletItems = [bulletText];
+      i++;
+      while (i < lines.length && lines[i].trim().match(/^\s*[-*]\s+/)) {
+        bulletItems.push(lines[i].trim().replace(/^\s*[-*]\s+/, ''));
+        i++;
+      }
+      
+      // Create bullet list
+      const listItems = bulletItems.map(item => `<li><p>${item}</p></li>`).join('');
+      result.push(`<ul>${listItems}</ul>`);
+      continue;
+    }
+    
+    // Handle numbered lists (1. 2. etc.)
+    if (line.match(/^\s*\d+\.\s+/)) {
+      const numberText = line.replace(/^\s*\d+\.\s+/, '');
+      
+      // Collect consecutive numbered items
+      const numberItems = [numberText];
+      i++;
+      while (i < lines.length && lines[i].trim().match(/^\s*\d+\.\s+/)) {
+        numberItems.push(lines[i].trim().replace(/^\s*\d+\.\s+/, ''));
+        i++;
+      }
+      
+      // Create numbered list
+      const listItems = numberItems.map(item => `<li><p>${item}</p></li>`).join('');
+      result.push(`<ol>${listItems}</ol>`);
+      continue;
+    }
+    
+    // Regular paragraph
+    result.push(`<p>${line}</p>`);
+    i++;
+  }
+  
+  return result.length > 0 ? result.join('') : '<p></p>';
+}
+
+// Convert HTML back to plain text with markdown-like formatting
+function convertHTMLToText(html) {
+  if (!html || html.trim() === '' || html === '<p></p>') return '';
+  
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  let result = [];
+  
+  // Process each top-level element
+  Array.from(tempDiv.children).forEach(element => {
+    const tagName = element.tagName.toLowerCase();
+    
+    switch (tagName) {
+      case 'h1':
+        result.push(`# ${element.textContent}`);
+        break;
+      case 'h2':
+        result.push(`## ${element.textContent}`);
+        break;
+      case 'h3':
+        result.push(`### ${element.textContent}`);
+        break;
+      case 'h4':
+        result.push(`#### ${element.textContent}`);
+        break;
+      case 'h5':
+        result.push(`##### ${element.textContent}`);
+        break;
+      case 'h6':
+        result.push(`###### ${element.textContent}`);
+        break;
+      case 'ul':
+        if (element.hasAttribute('data-type') && element.getAttribute('data-type') === 'taskList') {
+          // Task list
+          Array.from(element.children).forEach(li => {
+            const isChecked = li.getAttribute('data-checked') === 'true';
+            const checkbox = isChecked ? '[x]' : '[]';
+            const text = li.textContent || '';
+            result.push(`${checkbox} ${text}`);
+          });
+        } else {
+          // Regular bullet list
+          Array.from(element.children).forEach(li => {
+            result.push(`- ${li.textContent || ''}`);
+          });
+        }
+        break;
+      case 'ol':
+        // Numbered list
+        Array.from(element.children).forEach((li, index) => {
+          result.push(`${index + 1}. ${li.textContent || ''}`);
+        });
+        break;
+      case 'p':
+        const text = element.textContent || '';
+        if (text.trim() !== '') {
+          result.push(text);
+        }
+        break;
+      default:
+        const text = element.textContent || '';
+        if (text.trim() !== '') {
+          result.push(text);
+        }
+    }
+  });
+  
+  return result.join('\n');
 }
 
 async function deleteNote(noteId) {
