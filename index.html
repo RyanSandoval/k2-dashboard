@@ -1087,6 +1087,10 @@
       <div class="nav-item" data-page="notes">
         <span class="icon">📝</span> Notes
       </div>
+      <div class="nav-item" data-page="ai-insights">
+        <span class="icon">🚀</span> AI Insights
+        <span class="badge" id="ai-insights-badge">0</span>
+      </div>
     </div>
     <div class="sidebar-footer">
       Last synced: <span id="last-sync">just now</span>
@@ -1315,34 +1319,8 @@
         </div>
       </div>
 
-      <!-- Viking AI Insights Section -->
-      <div id="notes-insights-section" style="margin-bottom:24px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h3 style="font-size:15px;font-weight:700;color:var(--accent);margin:0;">🚀 Viking AI Insights</h3>
-          <span id="notes-insights-count" style="font-size:11px;color:var(--text-dim);"></span>
-        </div>
-        <div class="filter-bar" id="notes-insights-filters" style="margin-bottom:12px;">
-          <button class="filter-btn active" data-filter="all" data-group="notes-insights">All</button>
-          <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-          <button class="filter-btn" data-filter="New" data-group="notes-insights">New</button>
-          <button class="filter-btn" data-filter="Reviewed" data-group="notes-insights">Reviewed</button>
-          <button class="filter-btn" data-filter="In Progress" data-group="notes-insights">In Progress</button>
-          <button class="filter-btn" data-filter="Done" data-group="notes-insights">Done</button>
-          <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
-          <button class="filter-btn" data-filter="High" data-group="notes-insights">High</button>
-          <button class="filter-btn" data-filter="Medium" data-group="notes-insights">Med</button>
-        </div>
-        <div id="notes-insights-grid" class="card-grid">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-
-      <div style="border-top:1px solid var(--border);padding-top:16px;">
-        <h3 style="font-size:15px;font-weight:700;color:var(--text);margin:0 0 12px 0;">📝 Notes</h3>
-        <button onclick="openNoteEditor()" style="width:100%;padding:14px;background:var(--surface2);border:1px dashed var(--border);border-radius:10px;color:var(--accent);font-size:14px;cursor:pointer;margin-bottom:16px;">+ New Note</button>
-        <div id="notes-list">
-          <!-- Populated by JS -->
-        </div>
+      <div id="notes-list">
+        <!-- Populated by JS -->
       </div>
 
       <!-- Full-screen note editor -->
@@ -1369,6 +1347,30 @@
         <div style="margin-top:16px;text-align:center;">
           <button onclick="requestK2TakeFromEditor()" id="note-k2-btn" style="padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🤖 Get K-2's Take</button>
         </div>
+      </div>
+    </div>
+
+    <!-- AI Insights Page -->
+    <div class="page" id="page-ai-insights">
+      <div class="page-header">
+        <h2>🚀 Viking AI Insights</h2>
+        <p>AI-powered recommendations and insights from the Viking team</p>
+      </div>
+      
+      <div class="filter-bar" id="ai-insights-filters" style="margin-bottom:16px;">
+        <button class="filter-btn active" data-filter="all" data-group="ai-insights">All</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <button class="filter-btn" data-filter="New" data-group="ai-insights">New</button>
+        <button class="filter-btn" data-filter="Reviewed" data-group="ai-insights">Reviewed</button>
+        <button class="filter-btn" data-filter="In Progress" data-group="ai-insights">In Progress</button>
+        <button class="filter-btn" data-filter="Done" data-group="ai-insights">Done</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px;"></div>
+        <button class="filter-btn" data-filter="High" data-group="ai-insights">High</button>
+        <button class="filter-btn" data-filter="Medium" data-group="ai-insights">Med</button>
+      </div>
+      
+      <div id="ai-insights-grid" class="card-grid">
+        <!-- Populated by JS -->
       </div>
     </div>
 
@@ -1422,6 +1424,9 @@
     <!-- Viking Insights removed from mobile nav -->
     <div class="mobile-nav-item active" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
       <span class="icon">✏️</span>Jots
+    </div>
+    <div class="mobile-nav-item" data-page="notes" onclick="navigateTo('notes');setMobileActive(this)">
+      <span class="icon">📝</span>Notes
     </div>
     <div class="mobile-nav-item" data-page="projects" onclick="navigateTo('projects');setMobileActive(this)">
       <span class="icon">🚀</span>Projects
@@ -1639,20 +1644,17 @@ function renderDashboard() {
   }
 }
 
-// Viking AI Insights Rendering (embedded in Notes page)
+// Viking AI Insights Rendering (dedicated page)
 function renderAIInsights() {
   const insights = DATA.vikingInsights || [];
   
-  // Update count label
-  const countEl = document.getElementById('notes-insights-count');
-  if (countEl) {
+  // Update nav badge
+  const badge = document.getElementById('ai-insights-badge');
+  if (badge) {
     const newCount = insights.filter(i => i.status === 'New').length;
-    countEl.textContent = newCount > 0 ? `${newCount} new · ${insights.length} total` : `${insights.length} total`;
+    badge.textContent = newCount;
+    badge.style.display = newCount > 0 ? 'inline' : 'none';
   }
-
-  // Hide section if no insights
-  const section = document.getElementById('notes-insights-section');
-  if (section) section.style.display = insights.length > 0 ? 'block' : 'none';
 
   renderFilteredAIInsights();
   setupAIInsightsFilters();
@@ -1660,10 +1662,10 @@ function renderAIInsights() {
 
 function renderFilteredAIInsights() {
   const insights = DATA.vikingInsights || [];
-  const gridContainer = document.getElementById('notes-insights-grid');
+  const gridContainer = document.getElementById('ai-insights-grid');
   if (!gridContainer) return;
 
-  const activeFilters = Array.from(document.querySelectorAll('#notes-insights-filters .filter-btn.active'))
+  const activeFilters = Array.from(document.querySelectorAll('#ai-insights-filters .filter-btn.active'))
     .map(btn => btn.dataset.filter)
     .filter(f => f !== 'all');
 
@@ -1721,19 +1723,19 @@ function renderFilteredAIInsights() {
 }
 
 function setupAIInsightsFilters() {
-  document.querySelectorAll('#notes-insights-filters .filter-btn').forEach(btn => {
+  document.querySelectorAll('#ai-insights-filters .filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const filter = btn.dataset.filter;
       
       if (filter === 'all') {
-        document.querySelectorAll('#notes-insights-filters .filter-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#ai-insights-filters .filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       } else {
-        document.querySelector('#notes-insights-filters .filter-btn[data-filter="all"]')?.classList.remove('active');
+        document.querySelector('#ai-insights-filters .filter-btn[data-filter="all"]')?.classList.remove('active');
         btn.classList.toggle('active');
         // If nothing active, re-activate "all"
-        const anyActive = document.querySelectorAll('#notes-insights-filters .filter-btn.active').length;
-        if (!anyActive) document.querySelector('#notes-insights-filters .filter-btn[data-filter="all"]').classList.add('active');
+        const anyActive = document.querySelectorAll('#ai-insights-filters .filter-btn.active').length;
+        if (!anyActive) document.querySelector('#ai-insights-filters .filter-btn[data-filter="all"]').classList.add('active');
       }
       
       renderFilteredAIInsights();
@@ -3249,6 +3251,8 @@ function renderNotes() {
               ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
               ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
               ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
+              <button onclick="openNoteEditor('${noteId}'); event.stopPropagation();" 
+                      style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Expand">⤢</button>
               <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();" 
                       style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px;">🤖</button>
               <button onclick="deleteNote('${noteId}'); event.stopPropagation();" 
@@ -3291,8 +3295,7 @@ function openNoteEditor(noteId) {
   // Show editor, hide list
   document.getElementById('note-editor-view').style.display = 'block';
   document.querySelector('#page-notes > .page-header').style.display = 'none';
-  document.getElementById('notes-insights-section').style.display = 'none';
-  document.getElementById('notes-list').parentElement.style.display = 'none';
+  document.getElementById('notes-list').style.display = 'none';
 
   // Populate
   document.getElementById('note-title-input').value = note.title || '';
@@ -3385,8 +3388,7 @@ async function closeNoteEditor() {
   activeNoteId = null;
   document.getElementById('note-editor-view').style.display = 'none';
   document.querySelector('#page-notes > .page-header').style.display = '';
-  document.getElementById('notes-insights-section').style.display = '';
-  document.getElementById('notes-list').parentElement.style.display = '';
+  document.getElementById('notes-list').style.display = '';
   renderNotes();
 }
 
