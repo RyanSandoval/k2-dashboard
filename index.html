@@ -1336,7 +1336,7 @@
           </div>
         </div>
         <input type="text" id="note-title-input" placeholder="Note title..." style="width:100%;padding:12px 0;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:22px;font-weight:700;margin-bottom:12px;outline:none;">
-        <textarea id="note-body-input" placeholder="Start writing... (Cmd+S to save)" style="width:100%;min-height:50vh;padding:16px 0;background:none;border:none;color:var(--text);font-size:15px;line-height:1.8;resize:none;outline:none;font-family:inherit;"></textarea>
+        <textarea id="note-body-input" placeholder="Start writing... (Cmd+S to save)" style="width:100%;min-height:50vh;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;line-height:1.8;resize:vertical;outline:none;font-family:inherit;"></textarea>
         <div id="note-k2-response" style="display:none;margin-top:24px;padding:16px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-size:12px;color:var(--accent);font-weight:600;">🤖 K-2's Take</span>
@@ -3243,9 +3243,10 @@ function renderNotes() {
         <div class="card note-card" data-note-id="${noteId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
             <input type="text" class="note-title-inline" value="${title}" 
-                   style="background:none;border:none;font-size:14px;font-weight:600;color:var(--text);flex:1;outline:none;"
+                   style="background:none;border:none;font-size:14px;font-weight:600;color:var(--text);flex:1;outline:none;cursor:pointer;"
                    onchange="updateNoteTitle('${noteId}', this.value)"
-                   onclick="event.stopPropagation()">
+                   onclick="event.stopPropagation()"
+                   ondblclick="openNoteEditor('${noteId}'); event.stopPropagation();">
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
               <span style="font-size:10px;color:var(--text-dim);">${note.created}</span>
               ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
@@ -3260,7 +3261,10 @@ function renderNotes() {
             </div>
           </div>
           <div class="note-editor-inline" id="note-editor-${noteId}" 
-               style="min-height:100px;border:1px solid var(--border);border-radius:8px;padding:12px;">
+               style="min-height:100px;border:1px solid var(--border);border-radius:8px;padding:12px;position:relative;">
+            <div onclick="openNoteEditor('${noteId}')" 
+                 style="position:absolute;top:-4px;right:8px;color:var(--text-dim);cursor:pointer;font-size:12px;opacity:0.7;z-index:10;" 
+                 title="Double-click title or click here to expand">⤢ Expand</div>
           </div>
           ${hasResponse ? `
             <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
@@ -3299,7 +3303,16 @@ function openNoteEditor(noteId) {
 
   // Populate
   document.getElementById('note-title-input').value = note.title || '';
-  document.getElementById('note-body-input').value = note.text || '';
+  
+  // Convert HTML to plain text for textarea
+  let textContent = note.text || '';
+  if (textContent.includes('<') && textContent.includes('>')) {
+    // HTML content - convert to plain text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = textContent;
+    textContent = tempDiv.textContent || tempDiv.innerText || '';
+  }
+  document.getElementById('note-body-input').value = textContent;
 
   // Project dropdown
   const sel = document.getElementById('note-project-link');
@@ -3369,6 +3382,12 @@ function openNoteEditor(noteId) {
   };
 
   bodyInput.focus();
+  
+  // Debug logging
+  console.log('Opening note editor for:', note.id);
+  console.log('Note title:', note.title);
+  console.log('Note text:', note.text);
+  console.log('Converted text content:', textContent);
 }
 
 async function closeNoteEditor() {
@@ -3437,10 +3456,18 @@ function initNoteInlineEditor(noteId) {
   if (window._noteEditors[noteId]) return; // Already initialized
 
   const note = DATA.notes.find(n => n.id === noteId);
-  if (!note) return;
+  if (!note) {
+    console.warn('Note not found for inline editor:', noteId);
+    return;
+  }
 
   const container = document.getElementById(`note-editor-${noteId}`);
-  if (!container) return;
+  if (!container) {
+    console.warn('Container not found for note editor:', noteId);
+    return;
+  }
+  
+  console.log('Initializing inline editor for note:', noteId, note);
 
   // Import TipTap if available, otherwise use simple textarea
   if (window.Editor) {
@@ -3464,7 +3491,13 @@ function initNoteInlineEditor(noteId) {
     window._noteEditors[noteId] = { editor, saveTimer: null };
   } else {
     // Fallback to textarea
-    container.innerHTML = `<textarea style="width:100%;height:100px;background:none;border:none;color:var(--text);outline:none;resize:vertical;" onchange="updateNoteText('${noteId}', this.value)">${note.text || ''}</textarea>`;
+    console.log('Using textarea fallback for note:', noteId);
+    const textContent = note.text || '';
+    const plainText = textContent.includes('<') && textContent.includes('>') 
+      ? (() => { const div = document.createElement('div'); div.innerHTML = textContent; return div.textContent || div.innerText || ''; })()
+      : textContent;
+    
+    container.innerHTML = `<textarea style="width:100%;height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;resize:vertical;padding:8px;font-family:inherit;" onchange="updateNoteText('${noteId}', this.value)" placeholder="Start writing...">${plainText}</textarea>`;
   }
 }
 
@@ -3522,10 +3555,13 @@ async function requestK2TakeFromNote(noteId) {
 async function createNewNote() {
   const now = new Date();
   const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
-  const note = { id: 'note-' + Date.now(), title: '', text: '<p></p>', created: dateStr };
+  const note = { id: 'note-' + Date.now(), title: 'New Note', text: '<p>Start writing...</p>', created: dateStr };
   DATA.notes.push(note);
   await saveData();
   renderNotes();
+  
+  // Automatically open the new note in full-screen editor
+  setTimeout(() => openNoteEditor(note.id), 100);
 }
 
 // Jots functionality
