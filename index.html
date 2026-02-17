@@ -3396,9 +3396,41 @@ async function closeNoteEditor() {
     if (note) {
       clearTimeout(noteAutoSaveTimer);
       note.title = document.getElementById('note-title-input').value.trim();
-      note.text = document.getElementById('note-body-input').value.trim();
+      
+      // Convert textarea content to HTML for inline editor compatibility
+      const textareaContent = document.getElementById('note-body-input').value.trim();
+      if (textareaContent) {
+        // Convert plain text to basic HTML structure
+        const htmlContent = textareaContent
+          .split('\n\n')
+          .map(paragraph => paragraph.trim())
+          .filter(p => p.length > 0)
+          .map(p => {
+            // Handle task lists
+            if (p.includes('[] ') || p.includes('[x]')) {
+              const items = p.split('\n').map(line => {
+                if (line.includes('[] ')) {
+                  return `<li data-type="taskItem" data-checked="false"><label><input type="checkbox"></label><div><p>${line.replace(/^\s*\[\s*\]\s*/, '')}</p></div></li>`;
+                } else if (line.includes('[x]')) {
+                  return `<li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked></label><div><p>${line.replace(/^\s*\[x\]\s*/i, '')}</p></div></li>`;
+                } else {
+                  return line;
+                }
+              });
+              return `<ul data-type="taskList">${items.join('')}</ul>`;
+            }
+            // Regular paragraphs
+            return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+          })
+          .join('');
+        
+        note.text = htmlContent || '<p></p>';
+      } else {
+        note.text = '<p></p>';
+      }
+      
       // Remove empty untitled notes
-      if (!note.title && !note.text) {
+      if (!note.title && (!note.text || note.text === '<p></p>')) {
         DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
       }
       await saveData();
@@ -3408,6 +3440,17 @@ async function closeNoteEditor() {
   document.getElementById('note-editor-view').style.display = 'none';
   document.querySelector('#page-notes > .page-header').style.display = '';
   document.getElementById('notes-list').style.display = '';
+  
+  // Destroy existing inline editors to force refresh with updated content
+  if (window._noteEditors) {
+    Object.values(window._noteEditors).forEach(editorData => {
+      if (editorData.editor && editorData.editor.destroy) {
+        editorData.editor.destroy();
+      }
+    });
+    window._noteEditors = {};
+  }
+  
   renderNotes();
 }
 
@@ -3450,10 +3493,18 @@ async function requestK2TakeFromEditor() {
 }
 
 // Inline note editing functions
-window._noteEditors = {};
+if (!window._noteEditors) {
+  window._noteEditors = {};
+}
 
 function initNoteInlineEditor(noteId) {
-  if (window._noteEditors[noteId]) return; // Already initialized
+  // Clean up existing editor first
+  if (window._noteEditors && window._noteEditors[noteId]) {
+    if (window._noteEditors[noteId].editor && window._noteEditors[noteId].editor.destroy) {
+      window._noteEditors[noteId].editor.destroy();
+    }
+    delete window._noteEditors[noteId];
+  }
 
   const note = DATA.notes.find(n => n.id === noteId);
   if (!note) {
@@ -3467,10 +3518,14 @@ function initNoteInlineEditor(noteId) {
     return;
   }
   
+  // Clear container
+  container.innerHTML = '';
+  
   console.log('Initializing inline editor for note:', noteId, note);
 
-  // Import TipTap if available, otherwise use simple textarea
-  if (window.Editor) {
+  // Import TipTap if available, otherwise use simple textarea  
+  if (window.Editor && window.StarterKit && window.TaskList && window.TaskItem) {
+    console.log('Creating TipTap editor for note:', noteId);
     const editor = new window.Editor({
       element: container,
       extensions: [
@@ -3482,13 +3537,23 @@ function initNoteInlineEditor(noteId) {
       onUpdate: ({ editor }) => {
         clearTimeout(window._noteEditors[noteId].saveTimer);
         window._noteEditors[noteId].saveTimer = setTimeout(async () => {
-          note.text = editor.getHTML();
-          await saveData();
+          const updatedNote = DATA.notes.find(n => n.id === noteId);
+          if (updatedNote) {
+            updatedNote.text = editor.getHTML();
+            await saveData();
+            console.log('Saved note content via inline editor:', noteId);
+          }
         }, 1500);
+      },
+      editorProps: {
+        attributes: {
+          style: 'outline: none; min-height: 80px; padding: 8px;'
+        }
       }
     });
 
     window._noteEditors[noteId] = { editor, saveTimer: null };
+    console.log('TipTap editor created for note:', noteId);
   } else {
     // Fallback to textarea
     console.log('Using textarea fallback for note:', noteId);
@@ -3513,6 +3578,14 @@ async function updateNoteText(noteId, newText) {
   if (!note) return;
   note.text = newText.trim();
   await saveData();
+  console.log('Updated note text via textarea fallback:', noteId);
+}
+
+// Debug function to check editor status
+function debugNoteEditors() {
+  console.log('Active note editors:', window._noteEditors);
+  console.log('TipTap available:', !!window.Editor);
+  console.log('StarterKit available:', !!window.StarterKit);
 }
 
 async function deleteNote(noteId) {
