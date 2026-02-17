@@ -1306,8 +1306,13 @@
     <!-- Notes Page -->
     <div class="page" id="page-notes">
       <div class="page-header">
-        <h2>Notes</h2>
-        <p>Think out loud — K-2 weighs in with analysis, ideas & pushback</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h2>Notes</h2>
+            <p>Think out loud — K-2 weighs in with analysis, ideas & pushback</p>
+          </div>
+          <button onclick="createNewNote()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">✏️ New Note</button>
+        </div>
       </div>
 
       <!-- Viking AI Insights Section -->
@@ -3222,51 +3227,64 @@ function renderNotes() {
 
   const sortedNotes = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
 
-  container.innerHTML = sortedNotes.length === 0
-    ? '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">No notes yet. Create one to get started.</div>'
-    : sortedNotes.map(note => {
-    const noteId = note.id;
-    const hasResponse = note.k2Response;
-    const isPending = note.k2Status === 'pending';
-    const title = note.title || note.text.split('\n')[0].slice(0, 60) || 'Untitled';
-    const preview = note.text.split('\n').slice(note.title ? 0 : 1).join(' ').slice(0, 120);
-    const projectLabel = note.projectId ? (DATA.projects.find(p => p.id === note.projectId)||{}).name || '' : '';
+  if (sortedNotes.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">No notes yet. Create one to get started.</div>';
+  } else {
+    container.innerHTML = sortedNotes.map(note => {
+      const noteId = note.id;
+      const hasResponse = note.k2Response;
+      const isPending = note.k2Status === 'pending';
+      const title = note.title || note.text.split('\n')[0].slice(0, 60) || 'Untitled';
+      const projectLabel = note.projectId ? (DATA.projects.find(p => p.id === note.projectId)||{}).name || '' : '';
 
-    return `
-    <div class="card" style="cursor:pointer;margin-bottom:8px;" onclick="openNoteEditor('${noteId}')">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
-          <div style="font-size:12px;color:var(--text-dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${preview}</div>
+      return `
+        <div class="card note-card" data-note-id="${noteId}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <input type="text" class="note-title-inline" value="${title}" 
+                   style="background:none;border:none;font-size:14px;font-weight:600;color:var(--text);flex:1;outline:none;"
+                   onchange="updateNoteTitle('${noteId}', this.value)"
+                   onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
+              <span style="font-size:10px;color:var(--text-dim);">${note.created}</span>
+              ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
+              ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
+              ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
+              <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();" 
+                      style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px;">🤖</button>
+              <button onclick="deleteNote('${noteId}'); event.stopPropagation();" 
+                      style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;">🗑</button>
+            </div>
+          </div>
+          <div class="note-editor-inline" id="note-editor-${noteId}" 
+               style="min-height:100px;border:1px solid var(--border);border-radius:8px;padding:12px;">
+          </div>
+          ${hasResponse ? `
+            <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
+              <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">🤖 K-2's Take</div>
+              <div class="md-content" style="font-size:13px;color:var(--text);line-height:1.6;">${renderMarkdown(note.k2Response)}</div>
+            </div>
+          ` : ''}
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:12px;">
-          <span style="font-size:10px;color:var(--text-dim);">${note.created}</span>
-          ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
-          ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
-          ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
-        </div>
-      </div>
-    </div>
-  `}).join('');
-}
+      `;
+    }).join('');
+
+    // Initialize inline editors for all notes
+    sortedNotes.forEach(note => {
+      initNoteInlineEditor(note.id);
+    });
+  }
 
 function openNoteEditor(noteId) {
-  console.log('openNoteEditor called with:', noteId);
-  console.log('DATA.notes:', DATA.notes);
   let note;
   if (noteId) {
     note = DATA.notes.find(n => n.id === noteId);
-    if (!note) {
-      console.error('Note not found:', noteId);
-      return;
-    }
+    if (!note) return;
   } else {
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
     note = { id: 'note-' + Date.now(), title: '', text: '', created: dateStr };
     DATA.notes.push(note);
   }
-  console.log('Setting activeNoteId to:', note.id);
   activeNoteId = note.id;
 
   // Show editor, hide list
@@ -3407,6 +3425,104 @@ async function requestK2TakeFromEditor() {
   await saveData();
   document.getElementById('note-k2-btn').textContent = '⏳ K-2 thinking...';
   document.getElementById('note-k2-btn').disabled = true;
+}
+
+// Inline note editing functions
+window._noteEditors = {};
+
+function initNoteInlineEditor(noteId) {
+  if (window._noteEditors[noteId]) return; // Already initialized
+
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (!note) return;
+
+  const container = document.getElementById(`note-editor-${noteId}`);
+  if (!container) return;
+
+  // Import TipTap if available, otherwise use simple textarea
+  if (window.Editor) {
+    const editor = new window.Editor({
+      element: container,
+      extensions: [
+        window.StarterKit,
+        window.TaskList.configure({ nested: true }),
+        window.TaskItem.configure({ nested: true })
+      ],
+      content: note.text || '<p></p>',
+      onUpdate: ({ editor }) => {
+        clearTimeout(window._noteEditors[noteId].saveTimer);
+        window._noteEditors[noteId].saveTimer = setTimeout(async () => {
+          note.text = editor.getHTML();
+          await saveData();
+        }, 1500);
+      }
+    });
+
+    window._noteEditors[noteId] = { editor, saveTimer: null };
+  } else {
+    // Fallback to textarea
+    container.innerHTML = `<textarea style="width:100%;height:100px;background:none;border:none;color:var(--text);outline:none;resize:vertical;" onchange="updateNoteText('${noteId}', this.value)">${note.text || ''}</textarea>`;
+  }
+}
+
+async function updateNoteTitle(noteId, newTitle) {
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (!note) return;
+  note.title = newTitle.trim();
+  await saveData();
+}
+
+async function updateNoteText(noteId, newText) {
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (!note) return;
+  note.text = newText.trim();
+  await saveData();
+}
+
+async function deleteNote(noteId) {
+  if (!confirm('Delete this note?')) return;
+  DATA.notes = DATA.notes.filter(n => n.id !== noteId);
+  if (window._noteEditors[noteId]) {
+    if (window._noteEditors[noteId].editor) {
+      window._noteEditors[noteId].editor.destroy();
+    }
+    delete window._noteEditors[noteId];
+  }
+  await saveData();
+  renderNotes();
+}
+
+async function requestK2TakeFromNote(noteId) {
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (!note) return;
+  
+  // Get current text from editor
+  if (window._noteEditors[noteId] && window._noteEditors[noteId].editor) {
+    note.text = window._noteEditors[noteId].editor.getHTML();
+  }
+  
+  note.k2Status = 'pending';
+  DATA.commands = DATA.commands || [];
+  DATA.commands.push({
+    id: 'cmd-' + Date.now(),
+    type: 'analyze-note',
+    noteId: note.id,
+    noteText: (note.title ? note.title + '\n\n' : '') + note.text,
+    status: 'pending',
+    created: new Date().toISOString()
+  });
+  await saveData();
+  showToast('🤖 K-2 will analyze this note');
+  renderNotes();
+}
+
+async function createNewNote() {
+  const now = new Date();
+  const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
+  const note = { id: 'note-' + Date.now(), title: '', text: '<p></p>', created: dateStr };
+  DATA.notes.push(note);
+  await saveData();
+  renderNotes();
 }
 
 // Jots functionality
@@ -4368,6 +4484,12 @@ import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.11.5';
 import Typography from 'https://esm.sh/@tiptap/extension-typography@2.11.5';
 import { Node, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.11.5';
 import { PluginKey, Plugin } from 'https://esm.sh/@tiptap/pm@2.11.5/state';
+
+// Make TipTap available globally for note editors
+window.Editor = Editor;
+window.StarterKit = StarterKit;
+window.TaskList = TaskList;
+window.TaskItem = TaskItem;
 
 // Custom Mention Nodes
 const ProjectMention = Node.create({
