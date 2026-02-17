@@ -1225,10 +1225,31 @@
 
     <!-- Trading Page -->
     <div class="page" id="page-trading">
-      <div class="page-header">
-        <h2>Trading</h2>
-        <p>Books, positions & P&L across all strategies</p>
+      <div class="page-header" id="trading-page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 id="trading-title">Trading</h2>
+            <p id="trading-subtitle">Books, positions & P&L across all strategies</p>
+          </div>
+          <div id="trading-mode-toggle" style="display:flex;align-items:center;gap:8px;">
+            <div style="display:flex;background:var(--surface2);border-radius:20px;padding:3px;border:1px solid var(--border);">
+              <button id="toggle-live" onclick="setTradingMode('live')" style="padding:6px 16px;border-radius:18px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;">
+                <span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+                LIVE
+              </button>
+              <button id="toggle-paper" onclick="setTradingMode('paper')" style="padding:6px 16px;border-radius:18px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">
+                📝 PAPER
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+      <style>
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .trading-live-mode #trading-page-header { border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(239,68,68,0.1); }
+        .trading-paper-mode #trading-page-header { border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-bottom: 24px; }
+        .trading-paper-mode .paper-watermark { display: block !important; }
+      </style>
       <div class="stat-row" id="trading-stats-row"></div>
 
       <!-- Trading Charts -->
@@ -1279,6 +1300,7 @@
       </div>
 
       <div class="card-grid" id="trading-books-grid"></div>
+      <div class="paper-watermark" style="display:none;text-align:center;color:rgba(136,136,160,0.2);font-size:48px;font-weight:900;letter-spacing:8px;margin-top:24px;user-select:none;">PAPER TRADING</div>
     </div>
 
     <!-- Notes Page -->
@@ -1472,6 +1494,10 @@ async function loadData() {
     DATA.commands = d.commands || [];
     DATA.vikingInsights = d.vikingInsights || [];
     DATA.trading = d.trading || { books: [] };
+    // Backward compat: old format had trading.books, new has trading.paper/live
+    if (DATA.trading.books && !DATA.trading.paper) {
+      DATA.trading = { paper: { books: DATA.trading.books }, live: { books: [] } };
+    }
     DATA.growth = d.growth || null;
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
@@ -1873,9 +1899,65 @@ async function addComment(insightId) {
   openAIInsightModal(insightId);
 }
 
+// Trading mode state
+let tradingMode = 'live'; // default to LIVE
+
+function setTradingMode(mode) {
+  tradingMode = mode;
+  renderTrading();
+}
+
+function getTradingBooks() {
+  const trading = DATA.trading || {};
+  if (tradingMode === 'live') {
+    return (trading.live || {}).books || [];
+  } else {
+    return (trading.paper || {}).books || [];
+  }
+}
+
 // Trading
 function renderTrading() {
-  const books = (DATA.trading || {}).books || [];
+  const books = getTradingBooks();
+
+  // Update toggle buttons styling
+  const liveBtn = document.getElementById('toggle-live');
+  const paperBtn = document.getElementById('toggle-paper');
+  const tradingPage = document.getElementById('page-trading');
+  if (liveBtn && paperBtn) {
+    if (tradingMode === 'live') {
+      liveBtn.style.background = '#ef4444';
+      liveBtn.style.color = '#fff';
+      paperBtn.style.background = 'transparent';
+      paperBtn.style.color = 'var(--text-dim)';
+      tradingPage.classList.add('trading-live-mode');
+      tradingPage.classList.remove('trading-paper-mode');
+      document.getElementById('trading-subtitle').textContent = '🔴 LIVE — Real money positions';
+    } else {
+      paperBtn.style.background = '#3b82f6';
+      paperBtn.style.color = '#fff';
+      liveBtn.style.background = 'transparent';
+      liveBtn.style.color = 'var(--text-dim)';
+      tradingPage.classList.add('trading-paper-mode');
+      tradingPage.classList.remove('trading-live-mode');
+      document.getElementById('trading-subtitle').textContent = '📝 PAPER — Simulated trading';
+    }
+  }
+
+  // Empty state for live
+  if (books.length === 0) {
+    document.getElementById('trading-stats-row').innerHTML = '';
+    document.getElementById('trading-books-grid').innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-dim);">
+        <div style="font-size:48px;margin-bottom:12px;">${tradingMode === 'live' ? '🔴' : '📝'}</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px;">No ${tradingMode} trades yet</div>
+        <div style="font-size:13px;">Trades will appear here once the ${tradingMode} bot starts executing.</div>
+      </div>
+    `;
+    const section = document.getElementById('trading-charts-section');
+    if (section) section.style.display = 'none';
+    return;
+  }
   const totalBankroll = books.reduce((s, b) => s + (b.bankroll || 0), 0);
   const totalPnL = books.reduce((s, b) => s + (b.realizedPnL || 0), 0);
   const totalWins = books.reduce((s, b) => s + (b.wins || 0), 0);
