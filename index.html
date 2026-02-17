@@ -4003,6 +4003,15 @@ function migrateJotsToDailyDocs() {
     const linkedProjects = [...new Set(sorted.filter(j => j.projectId).map(j => j.projectId))];
     const linkedNotes = [...new Set(sorted.filter(j => j.noteId).map(j => j.noteId))];
     
+    // Extract tasks from migrated jots content
+    const plainText = (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (plainText) {
+      const taskCount = extractAndCreateTasks(plainText, null);
+      if (taskCount > 0) {
+        console.log(`Created ${taskCount} tasks during jots migration for ${date}`);
+      }
+    }
+    
     DATA.dailyDocs[date] = {
       content: html || '<p></p>',
       updatedAt: new Date().toISOString(),
@@ -4137,6 +4146,17 @@ function debouncedSaveDailyDoc() {
     if (!DATA.dailyDocs[today]) DATA.dailyDocs[today] = {};
     DATA.dailyDocs[today].content = html;
     DATA.dailyDocs[today].updatedAt = new Date().toISOString();
+    
+    // Convert HTML to plain text and extract tasks
+    const plainText = convertHTMLToText(html);
+    if (plainText) {
+      const taskCount = extractAndCreateTasks(plainText, null); // No specific project for jots
+      if (taskCount > 0) {
+        console.log(`Created ${taskCount} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
+        showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
+        renderTasks(); // Refresh tasks view if visible
+      }
+    }
     
     // Extract linked projects/notes from mentions
     const doc = window._todayEditor.getJSON();
@@ -4658,6 +4678,14 @@ async function selectionFormat(wrapper) {
 
   const wrapped = wrapper + text + wrapper;
   jot.text = jot.text.replace(text, wrapped);
+
+  // Extract and create tasks from updated jot (legacy system)
+  const taskCount = extractAndCreateTasks(jot.text, jot.projectId);
+  if (taskCount > 0) {
+    console.log(`Created ${taskCount} tasks from legacy jot:`, jot.id);
+    showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
+    renderTasks();
+  }
 
   await saveData();
   renderJots();
