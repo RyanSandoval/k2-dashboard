@@ -2919,14 +2919,42 @@ function renderTasks() {
 
   const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'my';
   let filteredTasks = DATA.tasks;
+  
+  console.log('renderTasks() called:', {
+    totalTasks: DATA.tasks.length,
+    activeFilter: activeFilter,
+    recentTasks: DATA.tasks.slice(-3).map(t => ({id: t.id, text: t.text.substring(0, 30), owner: t.owner, done: t.done}))
+  });
 
   if (activeFilter === 'my') {
-    filteredTasks = DATA.tasks.filter(t => (!t.done && t.status !== 'done') && (t.owner === 'ryan' || !t.owner));
+    filteredTasks = DATA.tasks.filter(t => {
+      const notDone = (!t.done && t.status !== 'done');
+      const isMyTask = (t.owner === 'ryan' || !t.owner);
+      const passes = notDone && isMyTask;
+      if (!passes && (t.id > 1771000000000)) { // Debug recent tasks
+        console.log('Task filtered out:', {
+          id: t.id, 
+          text: t.text.substring(0, 30), 
+          done: t.done, 
+          status: t.status, 
+          owner: t.owner,
+          notDone: notDone,
+          isMyTask: isMyTask
+        });
+      }
+      return passes;
+    });
   } else if (activeFilter === 'k2') {
     filteredTasks = DATA.tasks.filter(t => (!t.done && t.status !== 'done') && t.owner === 'k2');
   } else if (activeFilter === 'done') {
     filteredTasks = DATA.tasks.filter(t => t.done || t.status === 'done');
   }
+  
+  console.log('Filtered tasks:', {
+    filter: activeFilter,
+    beforeFiltering: DATA.tasks.length,
+    afterFiltering: filteredTasks.length
+  });
 
   taskContainer.innerHTML = filteredTasks.map(task => {
     const project = DATA.projects.find(p => p.id === task.project);
@@ -3005,6 +3033,7 @@ async function addTask() {
     text: text,
     priority: priority,
     project: project,
+    owner: 'ryan',
     done: false,
     created: (function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})(),
     messages: []
@@ -4650,6 +4679,7 @@ async function selectionToTask() {
     text: taskText,
     priority: 'medium',
     project: '',
+    owner: 'ryan',
     done: false,
     created: now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0"),
     source: 'jot',
