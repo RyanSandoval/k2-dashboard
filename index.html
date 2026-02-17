@@ -3720,15 +3720,15 @@ function convertHTMLToText(html) {
         });
         break;
       case 'p':
-        const text = element.textContent || '';
-        if (text.trim() !== '') {
-          result.push(text);
+        const paragraphText = element.textContent || '';
+        if (paragraphText.trim() !== '') {
+          result.push(paragraphText);
         }
         break;
       default:
-        const text = element.textContent || '';
-        if (text.trim() !== '') {
-          result.push(text);
+        const defaultText = element.textContent || '';
+        if (defaultText.trim() !== '') {
+          result.push(defaultText);
         }
     }
   });
