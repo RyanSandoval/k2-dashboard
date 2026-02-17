@@ -1235,6 +1235,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
     </div>
 
+    <!-- ========== TRADING SECTION START ========== -->
+    <!-- TRADING TOPIC K-2: You can ONLY edit between these markers -->
+    <!-- DO NOT touch anything outside START/END markers -->
     <!-- Trading Page -->
     <div class="page" id="page-trading">
       <div class="page-header" id="trading-page-header">
@@ -1314,6 +1317,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="card-grid" id="trading-books-grid"></div>
       <div class="paper-watermark" style="display:none;text-align:center;color:rgba(136,136,160,0.2);font-size:48px;font-weight:900;letter-spacing:8px;margin-top:24px;user-select:none;">PAPER TRADING</div>
     </div>
+    <!-- ========== TRADING SECTION END ========== -->
 
     <!-- Notes Page -->
     <div class="page" id="page-notes">
@@ -1914,6 +1918,9 @@ async function addComment(insightId) {
   openAIInsightModal(insightId);
 }
 
+// ========== TRADING JAVASCRIPT START ==========
+// TRADING TOPIC K-2: You can edit trading functions between these markers
+// DO NOT modify functions outside these boundaries
 // Trading mode state
 let tradingMode = 'live'; // default to LIVE
 
@@ -2322,6 +2329,7 @@ const KANBAN_COLUMNS = [
   { id: 'review', label: 'Review', dot: 'dot-review' },
   { id: 'done', label: 'Done', dot: 'dot-done' }
 ];
+// ========== TRADING JAVASCRIPT END ==========
 
 function renderGrowth() {
   const container = document.getElementById('growth-content');
