@@ -1336,7 +1336,7 @@
           </div>
         </div>
         <input type="text" id="note-title-input" placeholder="Note title..." style="width:100%;padding:12px 0;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:22px;font-weight:700;margin-bottom:12px;outline:none;">
-        <textarea id="note-body-input" placeholder="Start writing... (Cmd+S to save)" style="width:100%;min-height:50vh;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;line-height:1.8;resize:vertical;outline:none;font-family:inherit;"></textarea>
+        <div id="note-body-input" style="width:100%;min-height:50vh;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;line-height:1.8;outline:none;font-family:inherit;"></div>
         <div id="note-k2-response" style="display:none;margin-top:24px;padding:16px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-size:12px;color:var(--accent);font-weight:600;">🤖 K-2's Take</span>
@@ -3313,15 +3313,8 @@ function openNoteEditor(noteId) {
   // Populate
   document.getElementById('note-title-input').value = note.title || '';
   
-  // Convert HTML to plain text for textarea
-  let textContent = note.text || '';
-  if (textContent.includes('<') && textContent.includes('>')) {
-    // HTML content - convert to plain text
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = textContent;
-    textContent = tempDiv.textContent || tempDiv.innerText || '';
-  }
-  document.getElementById('note-body-input').value = textContent;
+  // Initialize TipTap editor for full-screen mode
+  initFullScreenEditor(note.id, note.text || '');
 
   // Project dropdown
   const sel = document.getElementById('note-project-link');
@@ -3341,7 +3334,6 @@ function openNoteEditor(noteId) {
 
   // Auto-save on typing
   const titleInput = document.getElementById('note-title-input');
-  const bodyInput = document.getElementById('note-body-input');
   const statusEl = document.getElementById('note-save-status');
 
   const autoSave = () => {
@@ -3349,14 +3341,28 @@ function openNoteEditor(noteId) {
     statusEl.textContent = 'Saving...';
     noteAutoSaveTimer = setTimeout(async () => {
       note.title = titleInput.value.trim();
-      note.text = bodyInput.value.trim();
+      
+      // Get content from TipTap editor or fallback textarea
+      if (fullScreenEditor) {
+        const html = fullScreenEditor.getHTML();
+        note.text = convertHTMLToText(html);
+      } else {
+        // Fallback: try to get from textarea
+        const textarea = document.querySelector('#note-body-input textarea');
+        if (textarea) {
+          note.text = textarea.value.trim();
+        }
+      }
+      
       await saveData();
       statusEl.textContent = 'Saved ✓';
     }, 1500);
   };
 
   titleInput.oninput = autoSave;
-  bodyInput.oninput = (e) => { autoSave(); richInputCheck(bodyInput); };
+  
+  // TipTap editor handles its own auto-save via onUpdate callback
+  // No need to set up bodyInput.oninput since it's now a TipTap editor
 
   // Link callback for notes — links project to the note
   bodyInput._richOnLink = (item) => {
@@ -3367,36 +3373,41 @@ function openNoteEditor(noteId) {
   };
 
   // Cmd+S to force save, also extract tasks from [] syntax
-  bodyInput.onkeydown = (e) => {
-    richInputKeydown(e);
-    if (window._acActive) return;
-    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-      e.preventDefault();
-      clearTimeout(noteAutoSaveTimer);
-      note.title = titleInput.value.trim();
-      note.text = bodyInput.value.trim();
-      const count = extractAndCreateTasks(note.text, note.projectId);
-      if (count > 0) showToast(count + ' task' + (count>1?'s':'') + ' created');
-      saveData().then(() => { statusEl.textContent = 'Saved ✓'; });
-    }
-  };
+  // TipTap editor handles its own keyboard events
+  // Removed bodyInput.onkeydown since body is now a TipTap editor
   titleInput.onkeydown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault();
       clearTimeout(noteAutoSaveTimer);
       note.title = titleInput.value.trim();
-      note.text = bodyInput.value.trim();
+      
+      // Get content from TipTap editor or fallback textarea
+      if (fullScreenEditor) {
+        const html = fullScreenEditor.getHTML();
+        note.text = convertHTMLToText(html);
+      } else {
+        // Fallback: try to get from textarea
+        const textarea = document.querySelector('#note-body-input textarea');
+        if (textarea) {
+          note.text = textarea.value.trim();
+        }
+      }
+      
       saveData().then(() => { statusEl.textContent = 'Saved ✓'; });
     }
   };
 
-  bodyInput.focus();
+  // Focus the editor after a brief delay to ensure it's fully initialized
+  setTimeout(() => {
+    if (fullScreenEditor) {
+      fullScreenEditor.commands.focus('end');
+    }
+  }, 100);
   
   // Debug logging
   console.log('Opening note editor for:', note.id);
   console.log('Note title:', note.title);
   console.log('Note text:', note.text);
-  console.log('Converted text content:', textContent);
 }
 
 async function closeNoteEditor() {
@@ -3405,13 +3416,32 @@ async function closeNoteEditor() {
     if (note) {
       clearTimeout(noteAutoSaveTimer);
       note.title = document.getElementById('note-title-input').value.trim();
-      note.text = document.getElementById('note-body-input').value.trim();
+      
+      // Get content from TipTap editor or fallback textarea
+      if (fullScreenEditor) {
+        const html = fullScreenEditor.getHTML();
+        note.text = convertHTMLToText(html);
+      } else {
+        // Fallback: try to get from textarea
+        const textarea = document.querySelector('#note-body-input textarea');
+        if (textarea) {
+          note.text = textarea.value.trim();
+        } else {
+          note.text = document.getElementById('note-body-input').textContent || '';
+        }
+      }
       
       // Remove empty untitled notes
       if (!note.title && !note.text) {
         DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
       }
       await saveData();
+    }
+    
+    // Clean up full-screen editor
+    if (fullScreenEditor) {
+      fullScreenEditor.destroy();
+      fullScreenEditor = null;
     }
   }
   activeNoteId = null;
@@ -3474,6 +3504,9 @@ async function requestK2TakeFromEditor() {
 if (!window._noteEditors) {
   window._noteEditors = {};
 }
+
+// Full-screen editor instance
+let fullScreenEditor = null;
 
 function initNoteInlineEditor(noteId) {
   // Clean up existing editor first
@@ -3734,6 +3767,71 @@ function convertHTMLToText(html) {
   });
   
   return result.join('\n');
+}
+
+// Initialize full-screen TipTap editor
+function initFullScreenEditor(noteId, content) {
+  const container = document.getElementById('note-body-input');
+  if (!container) {
+    console.error('Full-screen editor container not found');
+    return;
+  }
+  
+  // Destroy existing editor if any
+  if (fullScreenEditor) {
+    fullScreenEditor.destroy();
+    fullScreenEditor = null;
+  }
+  
+  // Clear container
+  container.innerHTML = '';
+  
+  if (window.Editor && window.StarterKit && window.TaskList && window.TaskItem) {
+    console.log('Creating full-screen TipTap editor for note:', noteId);
+    const htmlContent = convertTextToHTML(content);
+    console.log('Full-screen editor content:', htmlContent);
+    
+    fullScreenEditor = new window.Editor({
+      element: container,
+      extensions: [
+        window.StarterKit,
+        window.TaskList.configure({ nested: true }),
+        window.TaskItem.configure({ nested: true })
+      ],
+      content: htmlContent,
+      onUpdate: ({ editor }) => {
+        clearTimeout(noteAutoSaveTimer);
+        const statusEl = document.getElementById('note-save-status');
+        if (statusEl) statusEl.textContent = 'Saving...';
+        
+        noteAutoSaveTimer = setTimeout(async () => {
+          const updatedNote = DATA.notes.find(n => n.id === noteId);
+          if (updatedNote) {
+            const html = editor.getHTML();
+            updatedNote.text = convertHTMLToText(html);
+            await saveData();
+            if (statusEl) statusEl.textContent = 'Saved ✓';
+            console.log('Auto-saved full-screen note:', noteId);
+          }
+        }, 1500);
+      },
+      editorProps: {
+        attributes: {
+          style: 'outline: none; min-height: 40vh; padding: 16px; font-size: 15px; line-height: 1.8;'
+        }
+      }
+    });
+    
+    console.log('Full-screen TipTap editor created');
+    
+    // Focus the editor
+    setTimeout(() => {
+      fullScreenEditor.commands.focus('end');
+    }, 100);
+  } else {
+    console.warn('TipTap not available for full-screen editor, using fallback');
+    container.innerHTML = `<textarea placeholder="Start writing... (Rich editor loading...)" style="width:100%;min-height:40vh;padding:16px;background:none;border:none;color:var(--text);font-size:15px;line-height:1.8;resize:none;outline:none;font-family:inherit;">${content}</textarea>`;
+  }
 }
 
 async function deleteNote(noteId) {
