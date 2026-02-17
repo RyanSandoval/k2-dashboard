@@ -3251,16 +3251,22 @@ function renderNotes() {
 }
 
 function openNoteEditor(noteId) {
+  console.log('openNoteEditor called with:', noteId);
+  console.log('DATA.notes:', DATA.notes);
   let note;
   if (noteId) {
     note = DATA.notes.find(n => n.id === noteId);
-    if (!note) return;
+    if (!note) {
+      console.error('Note not found:', noteId);
+      return;
+    }
   } else {
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
     note = { id: 'note-' + Date.now(), title: '', text: '', created: dateStr };
     DATA.notes.push(note);
   }
+  console.log('Setting activeNoteId to:', note.id);
   activeNoteId = note.id;
 
   // Show editor, hide list

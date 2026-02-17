@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Note Editor Debug</title>
+<style>
+body { font-family: system-ui; background: #111; color: #fff; padding: 20px; }
+.note { background: #333; padding: 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; }
+.editor { display: none; background: #222; padding: 20px; margin: 20px 0; border-radius: 8px; }
+.editor input, .editor textarea { width: 100%; background: #444; color: #fff; border: 1px solid #666; padding: 10px; margin: 10px 0; }
+</style>
+</head>
+<body>
+
+<h1>Note Editor Test</h1>
+<div id="notes-list"></div>
+<div id="editor" class="editor">
+  <button onclick="closeEditor()">Close</button>
+  <input id="title-input" placeholder="Title">
+  <textarea id="body-input" placeholder="Body" rows="10"></textarea>
+  <button onclick="saveNote()">Save</button>
+</div>
+
+<script>
+let notes = [];
+let activeNoteId = null;
+
+// Fetch data
+fetch('https://api.github.com/repos/RyanSandoval/k2-data/contents/data.json')
+  .then(r => r.json())
+  .then(data => {
+    const decoded = atob(data.content);
+    const json = JSON.parse(decoded);
+    notes = json.notes || [];
+    renderNotes();
+  })
+  .catch(e => {
+    document.body.innerHTML = '<p>Error: ' + e.message + '</p>';
+  });
+
+function renderNotes() {
+  const container = document.getElementById('notes-list');
+  container.innerHTML = notes.map(note => 
+    `<div class="note" onclick="openEditor('${note.id}')">
+       <strong>${note.title || 'Untitled'}</strong><br>
+       <small>${note.text.substring(0, 100)}...</small>
+     </div>`
+  ).join('');
+}
+
+function openEditor(noteId) {
+  console.log('Opening editor for:', noteId);
+  const note = notes.find(n => n.id === noteId);
+  if (!note) {
+    console.error('Note not found:', noteId);
+    return;
+  }
+  
+  activeNoteId = noteId;
+  document.getElementById('title-input').value = note.title || '';
+  document.getElementById('body-input').value = note.text || '';
+  document.getElementById('editor').style.display = 'block';
+  document.getElementById('notes-list').style.display = 'none';
+}
+
+function closeEditor() {
+  document.getElementById('editor').style.display = 'none';
+  document.getElementById('notes-list').style.display = 'block';
+  activeNoteId = null;
+}
+
+function saveNote() {
+  if (!activeNoteId) return;
+  const note = notes.find(n => n.id === activeNoteId);
+  if (!note) return;
+  
+  note.title = document.getElementById('title-input').value;
+  note.text = document.getElementById('body-input').value;
+  alert('Note saved (debug mode - not actually saved)');
+}
+</script>
+
+</body>
+</html>
