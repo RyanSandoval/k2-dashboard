@@ -167,7 +167,60 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
 
   /* Comments section styles */
-  .comments-section {
+  
+
+  /* Submission (copy/paste) */
+  .submission-section {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-bottom: 20px;
+  }
+  .submission-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .submission-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    position: relative;
+  }
+  .submission-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .submission-textarea {
+    width: 100%;
+    min-height: 56px;
+    resize: vertical;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.06);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    outline: none;
+  }
+  .copy-btn {
+    margin-top: 8px;
+    background: rgba(74,158,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(74,158,255,0.3);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: rgba(74,158,255,0.22); }
+  .copied-flash { border-color: rgba(74,222,128,0.9) !important; }
+
+.comments-section {
     margin-top: 24px;
     padding-top: 20px;
     border-top: 1px solid var(--border);
@@ -1708,6 +1761,29 @@ function renderFilteredAIInsights() {
                        insight.status === 'In Progress' ? 'var(--yellow)' :
                        insight.status === 'Done' ? 'var(--green)' : 'var(--text-dim)';
 
+
+  // Submission (copy/paste) fields
+  const sub = insight.submission || {};
+  const submissionOverview = sub.overview || '';
+  const submissionDetails = bullets(sub.details || []);
+  const submissionBenefits = bullets(sub.benefits || []);
+  const submissionTech = bullets(sub.technologyRequired || []);
+  const submissionEffort = sub.levelOfEffort || '';
+  const submissionHorizon = sub.benefitHorizon || '';
+  const submissionCost = sub.estimatedCost || '';
+  const submissionSecurity = bullets(sub.securityConcerns || []);
+
+  const submissionAllText = [
+    `1. Idea Overview\n${submissionOverview}`,
+    `2. Idea Details\n${submissionDetails}`,
+    `3. Benefits to Viking\n${submissionBenefits}`,
+    `4. Technology Required\n${submissionTech}`,
+    `5. Level of Effort to Implement\n${submissionEffort}`,
+    `6. Short or long term benefits\n${submissionHorizon}`,
+    `7. Estimated Cost\n${submissionCost}`,
+    `8. Security Concerns\n${submissionSecurity}`
+  ].join('\n\n');
+
     // Get comment count for badge
     const commentCount = (insight.comments || []).length;
 
@@ -1822,6 +1898,70 @@ function openAIInsightModal(insightId) {
       <div>Added: ${insight.dateAdded}</div>
     </div>
 
+
+
+    <!-- Submission (copy/paste) Section -->
+    <div class="submission-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
+        <h4 style="margin:0;">📋 Submission (copy/paste)</h4>
+        <button class="copy-btn" onclick="copyFromTextarea('submission-all-${insight.id}')">Copy All (1–8)</button>
+      </div>
+
+      <textarea id="submission-all-${insight.id}" class="submission-textarea" readonly style="display:none;">${submissionAllText}</textarea>
+
+      <div class="submission-grid">
+        <div class="submission-field">
+          <div class="submission-label">1. Idea Overview</div>
+          <textarea id="sub-ov-${insight.id}" class="submission-textarea" readonly>${submissionOverview}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-ov-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">2. Idea Details</div>
+          <textarea id="sub-det-${insight.id}" class="submission-textarea" readonly>${submissionDetails}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-det-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">3. Benefits to Viking</div>
+          <textarea id="sub-ben-${insight.id}" class="submission-textarea" readonly>${submissionBenefits}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-ben-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">4. Technology Required</div>
+          <textarea id="sub-tech-${insight.id}" class="submission-textarea" readonly>${submissionTech}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-tech-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">5. Level of Effort to Implement</div>
+          <textarea id="sub-eff-${insight.id}" class="submission-textarea" readonly>${submissionEffort}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-eff-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">6. Short or long term benefits</div>
+          <textarea id="sub-hor-${insight.id}" class="submission-textarea" readonly>${submissionHorizon}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-hor-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">7. Estimated Cost</div>
+          <textarea id="sub-cost-${insight.id}" class="submission-textarea" readonly>${submissionCost}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-cost-${insight.id}')">Copy</button>
+        </div>
+
+        <div class="submission-field">
+          <div class="submission-label">8. Security Concerns</div>
+          <textarea id="sub-sec-${insight.id}" class="submission-textarea" readonly>${submissionSecurity}</textarea>
+          <button class="copy-btn" onclick="copyFromTextarea('sub-sec-${insight.id}')">Copy</button>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;font-size:11px;color:var(--text-dim);">Tip: click each Copy button and paste into the matching Microsoft Forms box.</div>
+    </div>
+
     <!-- Comments Section -->
     <div class="comments-section">
       <h4>💬 Comments</h4>
@@ -1916,6 +2056,52 @@ async function addComment(insightId) {
   
   // Re-render the modal content to show the new comment
   openAIInsightModal(insightId);
+}
+
+
+
+// Clipboard helpers
+async function copyTextToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) {
+    // fall through
+  }
+  // Fallback
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.top = '-1000px';
+  ta.style.left = '-1000px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+
+async function copyFromTextarea(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const text = el.value || el.textContent || '';
+  const ok = await copyTextToClipboard(text);
+  // lightweight feedback
+  if (ok) {
+    try {
+      el.classList.add('copied-flash');
+      setTimeout(() => el.classList.remove('copied-flash'), 450);
+    } catch (e) {}
+  }
+}
+
+function bullets(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return '';
+  return arr.map(x => `- ${x}`).join('\n');
 }
 
 // ========== TRADING JAVASCRIPT START ==========
