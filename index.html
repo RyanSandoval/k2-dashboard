@@ -5654,6 +5654,13 @@ window._tiptapLoaded = true;
 if (window._pendingTodayInit) {
   window._createTodayEditor(window._pendingTodayInit);
 }
+// Init any previous-day editors that were open before TipTap loaded
+if (window._openDocDays) {
+  window._openDocDays.forEach(date => {
+    const el = document.getElementById('doc-editor-' + date);
+    if (el) window._createReadonlyEditor(date, el);
+  });
+}
 </script>
 </body>
 </html>
