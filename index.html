@@ -4377,7 +4377,7 @@ function debouncedSaveDailyDoc() {
     // Convert HTML to plain text and extract tasks
     const plainText = convertHTMLToText(html);
     if (plainText) {
-      const taskCount = extractAndCreateTasks(plainText, null); // No specific project for jots
+      const taskCount = extractAndCreateTasks(plainText, null, { sourceDate: today }); // sync-replace, not accumulate
       if (taskCount > 0) {
         console.log(`Created ${taskCount} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
@@ -4468,8 +4468,17 @@ function richInputKeydown(event) {
   else if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectRichAutocomplete(window._acIdx); }
   else if (event.key === 'Escape') { hideRichAutocomplete(); }
 }
-function extractAndCreateTasks(text, projectId) {
+function extractAndCreateTasks(text, projectId, options) {
   if (!text) return 0;
+  options = options || {};
+
+  // If sourceDate given, remove undone previously-extracted tasks from that date first
+  // This prevents duplicates as the user edits (replace, not accumulate)
+  if (options.sourceDate) {
+    DATA.tasks = DATA.tasks.filter(t =>
+      !(t.source === 'jot' && t.sourceDate === options.sourceDate && !t.done)
+    );
+  }
   
   // Match both unchecked [] and checked [x] tasks  
   const taskMatches = text.match(/\[[x\s]*\][^\n]*/gi) || [];
@@ -4477,15 +4486,22 @@ function extractAndCreateTasks(text, projectId) {
   
   taskMatches.forEach(match => {
     const isChecked = /\[x\]/i.test(match);
-    const taskText = match.replace(/\[[x\s]*\]/gi, '').replace(/(#\w+)/g, '').replace(/@[^\s]+/g, '').trim();
+    let taskText = match
+      .replace(/\[[x\s]*\]/gi, '')   // strip checkbox
+      .replace(/https?:\/\/\S+/g, '') // strip URLs
+      .replace(/(#\w+)/g, '')         // strip hashtags
+      .replace(/@[^\s]+/g, '')        // strip @mentions
+      .trim();
     
     if (!taskText) return;
     
-    // Check if this exact task already exists to avoid duplicates
-    const existingTask = DATA.tasks.find(t => t.text === taskText);
-    if (existingTask) {
-      console.log('Task already exists, skipping:', taskText);
-      return;
+    // Check if this exact task already exists (for non-jot sources)
+    if (!options.sourceDate) {
+      const existingTask = DATA.tasks.find(t => t.text === taskText);
+      if (existingTask) {
+        console.log('Task already exists, skipping:', taskText);
+        return;
+      }
     }
     
     const now = new Date();
@@ -4498,7 +4514,9 @@ function extractAndCreateTasks(text, projectId) {
       project: projectId || '', 
       owner: 'ryan', 
       created: dateStr, 
-      done: isChecked
+      done: isChecked,
+      source: options.sourceDate ? 'jot' : undefined,
+      sourceDate: options.sourceDate || undefined,
     };
     
     DATA.tasks.push(newTask);
