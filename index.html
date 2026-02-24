@@ -1612,17 +1612,12 @@ async function saveData() {
 }
 
 function renderAll() {
-  renderDashboard();
-  renderProjects();
-  renderTasks();
-  renderDiscussions();
-  renderDecisions();
-  renderNotes();
-  migrateJotsToDailyDocs();
-  renderDailyDocs();
-  renderAIInsights();
-  renderTrading();
-  renderGrowth();
+  const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
+               renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
+               renderAIInsights, renderTrading, renderGrowth];
+  for (const fn of fns) {
+    try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
+  }
 }
 
 // Navigation
