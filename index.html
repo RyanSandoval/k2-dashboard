@@ -4403,7 +4403,7 @@ function debouncedSaveDailyDoc() {
     // Convert HTML to plain text and extract tasks
     const plainText = convertHTMLToText(html);
     if (plainText) {
-      const taskCount = extractAndCreateTasks(plainText, null, { sourceDate: today }); // sync-replace, not accumulate
+      const taskCount = extractAndCreateTasks(plainText, null);
       if (taskCount > 0) {
         console.log(`Created ${taskCount} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
@@ -4498,14 +4498,6 @@ function extractAndCreateTasks(text, projectId, options) {
   if (!text) return 0;
   options = options || {};
 
-  // If sourceDate given, remove undone previously-extracted tasks from that date first
-  // This prevents duplicates as the user edits (replace, not accumulate)
-  if (options.sourceDate) {
-    DATA.tasks = DATA.tasks.filter(t =>
-      !(t.source === 'jot' && t.sourceDate === options.sourceDate && !t.done)
-    );
-  }
-  
   // Match both unchecked [] and checked [x] tasks  
   const taskMatches = text.match(/\[[x\s]*\][^\n]*/gi) || [];
   let createdCount = 0;
@@ -4521,14 +4513,9 @@ function extractAndCreateTasks(text, projectId, options) {
     
     if (!taskText) return;
     
-    // Check if this exact task already exists (for non-jot sources)
-    if (!options.sourceDate) {
-      const existingTask = DATA.tasks.find(t => t.text === taskText);
-      if (existingTask) {
-        console.log('Task already exists, skipping:', taskText);
-        return;
-      }
-    }
+    // Tasks are permanent — never overwrite or delete existing ones
+    const existingTask = DATA.tasks.find(t => t.text === taskText);
+    if (existingTask) return;
     
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
@@ -4541,13 +4528,11 @@ function extractAndCreateTasks(text, projectId, options) {
       owner: 'ryan', 
       created: dateStr, 
       done: isChecked,
-      source: options.sourceDate ? 'jot' : undefined,
-      sourceDate: options.sourceDate || undefined,
+      source: 'jot',
     };
     
     DATA.tasks.push(newTask);
     createdCount++;
-    console.log(`Created task from note: "${taskText}" (done: ${isChecked})`);
   });
   
   return createdCount;
