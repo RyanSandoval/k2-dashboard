@@ -4328,7 +4328,7 @@ function renderPreviousDays(today) {
           ${!isOpen ? `<span style="color:var(--text-dim);font-size:11px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${previewText}</span>` : ''}
         </div>
         <div class="jot-day-entries" id="doc-day-${date}" style="${isOpen ? '' : 'display:none;'}">
-          <div class="daily-doc-editor readonly" id="doc-editor-${date}"></div>
+          <div class="daily-doc-editor" id="doc-editor-${date}"></div>
         </div>
       </div>
     `;
@@ -4359,18 +4359,33 @@ function toggleDocDay(element) {
 }
 
 function initPreviousDayEditor(date) {
+  if (window._previousEditors[date]) return;
   const el = document.getElementById('doc-editor-' + date);
   if (!el) return;
-  // If data isn't loaded yet, retry
-  if (!window._dataLoaded) {
+  // Wait for both TipTap and data to be ready
+  if (!window._tiptapLoaded || !window._dataLoaded) {
     setTimeout(() => initPreviousDayEditor(date), 200);
     return;
   }
   const doc = DATA?.dailyDocs?.[date];
-  if (!doc) return;
-  // Render as plain HTML — no TipTap needed for read-only display
-  el.innerHTML = `<div class="ProseMirror" style="pointer-events:none;user-select:text;">${doc.content || '<p style="color:var(--text-dim);font-style:italic;">No content</p>'}</div>`;
-  el.setAttribute('data-rendered', 'true');
+  if (!doc) {
+    DATA.dailyDocs[date] = { content: '<p></p>', updatedAt: new Date().toISOString() };
+  }
+  window._previousEditors[date] = window._createDayEditor(date, el);
+}
+
+function debouncedSavePreviousDoc(date) {
+  if (!window._prevDocSaveTimers) window._prevDocSaveTimers = {};
+  if (window._prevDocSaveTimers[date]) clearTimeout(window._prevDocSaveTimers[date]);
+  window._prevDocSaveTimers[date] = setTimeout(async () => {
+    const editor = window._previousEditors[date];
+    if (!editor) return;
+    if (!DATA.dailyDocs) DATA.dailyDocs = {};
+    if (!DATA.dailyDocs[date]) DATA.dailyDocs[date] = {};
+    DATA.dailyDocs[date].content = editor.getHTML();
+    DATA.dailyDocs[date].updatedAt = new Date().toISOString();
+    await saveData();
+  }, 1500);
 }
 
 function debouncedSaveDailyDoc() {
@@ -5667,16 +5682,18 @@ window._createTodayEditor = function(today) {
   setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 100);
 };
 
-// Initialize read-only editor for previous day
-window._createReadonlyEditor = function(date, el) {
-  if (window._previousEditors[date]) return;
+// Initialize editable editor for a previous day
+window._createDayEditor = function(date, el) {
   const doc = window.DATA?.dailyDocs?.[date];
-  if (!doc) return;
-  
-  window._previousEditors[date] = createEditor(el, doc.content || '<p></p>', {
-    editable: false,
+  const content = doc?.content || '<p></p>';
+  return createEditor(el, content, {
+    editable: true,
+    onUpdate: () => window.debouncedSavePreviousDoc(date),
   });
 };
+
+// Keep for backward compat (no longer used for previous days)
+window._createReadonlyEditor = window._createDayEditor;
 
 // Mark TipTap as loaded and init pending editor
 window._tiptapLoaded = true;
