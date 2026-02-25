@@ -1575,6 +1575,7 @@ async function loadData() {
       DATA.trading = { paper: { books: DATA.trading.books }, live: { books: [] } };
     }
     DATA.growth = d.growth || null;
+    window._dataLoaded = true;
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -4356,7 +4357,11 @@ function toggleDocDay(element) {
 
 function initPreviousDayEditor(date) {
   if (window._previousEditors[date]) return;
-  if (!window._tiptapLoaded) return;
+  // If either TipTap or data isn't ready yet, retry until both are loaded
+  if (!window._tiptapLoaded || !window._dataLoaded) {
+    setTimeout(() => initPreviousDayEditor(date), 200);
+    return;
+  }
   const el = document.getElementById('doc-editor-' + date);
   if (!el) return;
   window._createReadonlyEditor(date, el);
