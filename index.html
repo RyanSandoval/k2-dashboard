@@ -4308,6 +4308,13 @@ function renderPreviousDays(today) {
     return;
   }
 
+  // Destroy all stale previous-day editors before rebuilding DOM
+  // (renderDailyDocs replaces container.innerHTML, so old editor nodes get detached)
+  Object.keys(window._previousEditors || {}).forEach(date => {
+    try { window._previousEditors[date].destroy(); } catch(e) {}
+    delete window._previousEditors[date];
+  });
+
   container.innerHTML = filteredDates.map(date => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
