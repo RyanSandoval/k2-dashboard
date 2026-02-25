@@ -1523,6 +1523,7 @@ function setMobileActive(el) {
 // ============================================================
 
 let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null };
+window.DATA = DATA; // keep module scripts in sync
 
 // ============================================================
 // APP LOGIC
@@ -1576,6 +1577,7 @@ async function loadData() {
     }
     DATA.growth = d.growth || null;
     window._dataLoaded = true;
+    window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
   } catch(e) {
@@ -4364,7 +4366,7 @@ function initPreviousDayEditor(date) {
     setTimeout(() => initPreviousDayEditor(date), 200);
     return;
   }
-  const doc = window.DATA?.dailyDocs?.[date];
+  const doc = DATA?.dailyDocs?.[date];
   if (!doc) return;
   // Render as plain HTML — no TipTap needed for read-only display
   el.innerHTML = `<div class="ProseMirror" style="pointer-events:none;user-select:text;">${doc.content || '<p style="color:var(--text-dim);font-style:italic;">No content</p>'}</div>`;
