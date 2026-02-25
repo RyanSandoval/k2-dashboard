@@ -4403,7 +4403,7 @@ function debouncedSaveDailyDoc() {
     // Convert HTML to plain text and extract tasks
     const plainText = convertHTMLToText(html);
     if (plainText) {
-      const taskCount = extractAndCreateTasks(plainText, null);
+      const taskCount = extractAndCreateTasks(plainText, null, { sourceDate: today });
       if (taskCount > 0) {
         console.log(`Created ${taskCount} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
@@ -4513,9 +4513,35 @@ function extractAndCreateTasks(text, projectId, options) {
     
     if (!taskText) return;
     
-    // Tasks are permanent — never overwrite or delete existing ones
-    const existingTask = DATA.tasks.find(t => t.text === taskText);
-    if (existingTask) return;
+    // Exact match — already exists, skip
+    const existingExact = DATA.tasks.find(t => t.text === taskText);
+    if (existingExact) return;
+    
+    // If we have a sourceDate (called from debouncedSaveDailyDoc), check for
+    // in-progress tasks from today that are a prefix of the new text.
+    // This prevents creating multiple versions of the same task as the user types.
+    if (options.sourceDate) {
+      const partialMatch = DATA.tasks.find(t =>
+        t.source === 'jot' &&
+        t.sourceDate === options.sourceDate &&
+        taskText.startsWith(t.text) &&
+        t.text.length < taskText.length
+      );
+      if (partialMatch) {
+        // User kept typing — update the existing task in place
+        partialMatch.text = taskText;
+        if (isChecked) partialMatch.done = true;
+        return;
+      }
+      // If current text is a prefix of an existing task, skip (user deleted chars)
+      const longerMatch = DATA.tasks.find(t =>
+        t.source === 'jot' &&
+        t.sourceDate === options.sourceDate &&
+        t.text.startsWith(taskText) &&
+        t.text.length > taskText.length
+      );
+      if (longerMatch) return;
+    }
     
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
@@ -4529,6 +4555,7 @@ function extractAndCreateTasks(text, projectId, options) {
       created: dateStr, 
       done: isChecked,
       source: 'jot',
+      sourceDate: options.sourceDate || dateStr,
     };
     
     DATA.tasks.push(newTask);
