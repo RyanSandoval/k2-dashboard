@@ -4308,12 +4308,8 @@ function renderPreviousDays(today) {
     return;
   }
 
-  // Destroy all stale previous-day editors before rebuilding DOM
-  // (renderDailyDocs replaces container.innerHTML, so old editor nodes get detached)
-  Object.keys(window._previousEditors || {}).forEach(date => {
-    try { window._previousEditors[date].destroy(); } catch(e) {}
-    delete window._previousEditors[date];
-  });
+  // Clear stale editor state before rebuilding DOM
+  window._previousEditors = {};
 
   container.innerHTML = filteredDates.map(date => {
     const dow = getDayName(date);
@@ -4349,29 +4345,30 @@ function toggleDocDay(element) {
   if (window._openDocDays.has(date)) {
     window._openDocDays.delete(date);
     element.classList.remove('open');
-    // Destroy editor
-    if (window._previousEditors[date]) {
-      window._previousEditors[date].destroy();
-      delete window._previousEditors[date];
-    }
+    const entries = document.getElementById('doc-day-' + date);
+    if (entries) entries.style.display = 'none';
   } else {
     window._openDocDays.add(date);
     element.classList.add('open');
-    // Re-render to create editor container, then init
-    setTimeout(() => initPreviousDayEditor(date), 50);
+    const entries = document.getElementById('doc-day-' + date);
+    if (entries) entries.style.display = 'block';
+    initPreviousDayEditor(date);
   }
 }
 
 function initPreviousDayEditor(date) {
-  if (window._previousEditors[date]) return;
-  // If either TipTap or data isn't ready yet, retry until both are loaded
-  if (!window._tiptapLoaded || !window._dataLoaded) {
+  const el = document.getElementById('doc-editor-' + date);
+  if (!el) return;
+  // If data isn't loaded yet, retry
+  if (!window._dataLoaded) {
     setTimeout(() => initPreviousDayEditor(date), 200);
     return;
   }
-  const el = document.getElementById('doc-editor-' + date);
-  if (!el) return;
-  window._createReadonlyEditor(date, el);
+  const doc = window.DATA?.dailyDocs?.[date];
+  if (!doc) return;
+  // Render as plain HTML — no TipTap needed for read-only display
+  el.innerHTML = `<div class="ProseMirror" style="pointer-events:none;user-select:text;">${doc.content || '<p style="color:var(--text-dim);font-style:italic;">No content</p>'}</div>`;
+  el.setAttribute('data-rendered', 'true');
 }
 
 function debouncedSaveDailyDoc() {
