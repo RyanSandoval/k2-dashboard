@@ -3114,6 +3114,28 @@ async function onDrop(event, newStatus) {
 }
 
 // Render Tasks
+function formatTaskTextDisplay(text) {
+  if (!text) return '';
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  // Split on URLs, HTML-escape plain parts, linkify URL parts
+  const parts = text.split(/(https?:\/\/[^\s<>"]+)/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      // URL part
+      let label = part;
+      try {
+        const u = new URL(part);
+        const path = u.pathname.length > 1 ? u.pathname.replace(/\/$/, '').split('/').pop() || '' : '';
+        label = u.hostname + (path ? '/…/' + path.substring(0, 20) : '');
+      } catch (e) {
+        label = part.length > 40 ? part.substring(0, 40) + '…' : part;
+      }
+      return `<a href="${esc(part)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);font-size:11px;text-decoration:underline;" title="${esc(part)}">${esc(label)}</a>`;
+    }
+    return esc(part);
+  }).join('');
+}
+
 function renderTasks() {
   const taskContainer = document.getElementById('task-list');
   if (!taskContainer) return;
@@ -3161,7 +3183,7 @@ function renderTasks() {
     const project = DATA.projects.find(p => p.id === task.project);
     const projectName = project ? project.name : 'General';
 
-    const taskText = task.text || task.title || 'Untitled';
+    const taskText = formatTaskTextDisplay(task.text || task.title || 'Untitled');
     const taskId = typeof task.id === 'string' ? "'" + task.id.replace(/'/g,"\\'") + "'" : task.id;
     const isK2 = task.owner === 'k2';
     const ownerBadge = isK2 ? '🤖' : '👤';
