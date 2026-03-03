@@ -735,11 +735,11 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     cursor: pointer; white-space: nowrap;
   }
   .mention-note {
-    display: inline; background: rgba(74,158,255,0.15); color: var(--accent);
+    display: inline; background: rgba(52,211,153,0.15); color: #34d399;
     padding: 1px 6px; border-radius: 6px; font-size: 12px; font-weight: 600;
     cursor: pointer; white-space: nowrap;
   }
-  .mention-project:hover, .mention-note:hover { opacity: 0.8; }
+  .mention-project:hover, .mention-note:hover { opacity: 0.8; cursor:pointer; }
   /* Inline timestamp */
   .jot-time-inline { font-size: 11px; color: var(--text-dim); margin-right: 6px; }
   /* Slash command menu */
@@ -1420,6 +1420,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
         <div style="margin-top:16px;text-align:center;">
           <button onclick="requestK2TakeFromEditor()" id="note-k2-btn" style="padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🤖 Get K-2's Take</button>
+        </div>
+        <div id="note-backlinks" style="display:none;margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px;">Referenced in</div>
+          <div id="note-backlinks-list"></div>
         </div>
       </div>
     </div>
@@ -3542,7 +3546,8 @@ function renderNotes() {
       const noteId = note.id;
       const hasResponse = note.k2Response;
       const isPending = note.k2Status === 'pending';
-      const title = note.title || note.text.split('\n')[0].slice(0, 60) || 'Untitled';
+      const rawText = (note.text || '').replace(/<[^>]*>/g, '');
+      const title = note.title || rawText.split('\n')[0].slice(0, 60) || 'Untitled';
       const projectLabel = note.projectId ? (DATA.projects.find(p => p.id === note.projectId)||{}).name || '' : '';
 
       return `
@@ -3598,6 +3603,71 @@ function renderNotes() {
   }
 }
 
+function getBacklinks(noteId) {
+  const refs = [];
+  // Scan dailyDocs for noteMention nodes referencing this note
+  for (const [date, doc] of Object.entries(DATA.dailyDocs || {})) {
+    if (!doc.content) continue;
+    // Check linkedNotes array first (fast path)
+    if (doc.linkedNotes && doc.linkedNotes.includes(noteId)) {
+      refs.push({ type: 'jot', date, label: date });
+      continue;
+    }
+    // Fallback: scan HTML for mention-note with data-id
+    if (doc.content.includes && doc.content.includes(noteId)) {
+      refs.push({ type: 'jot', date, label: date });
+    }
+  }
+  // Scan other notes for noteMention nodes referencing this note
+  for (const note of DATA.notes || []) {
+    if (note.id === noteId) continue;
+    // Check inline editors for TipTap JSON
+    if (window._noteEditors?.[note.id]?.editor) {
+      const json = window._noteEditors[note.id].editor.getJSON();
+      if (jsonContainsNoteMention(json, noteId)) {
+        refs.push({ type: 'note', id: note.id, label: note.title || 'Untitled' });
+        continue;
+      }
+    }
+    // Fallback: scan stored text/html for the note ID
+    if (note.text && note.text.includes(noteId)) {
+      refs.push({ type: 'note', id: note.id, label: note.title || 'Untitled' });
+    }
+  }
+  return refs;
+}
+
+function jsonContainsNoteMention(node, noteId) {
+  if (!node) return false;
+  if (node.type === 'noteMention' && node.attrs?.id === noteId) return true;
+  if (node.content) return node.content.some(c => jsonContainsNoteMention(c, noteId));
+  return false;
+}
+
+function renderBacklinks(noteId) {
+  const container = document.getElementById('note-backlinks');
+  const list = document.getElementById('note-backlinks-list');
+  if (!container || !list) return;
+
+  const refs = getBacklinks(noteId);
+  if (refs.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  list.innerHTML = refs.map(ref => {
+    if (ref.type === 'jot') {
+      return `<div style="padding:6px 8px;border-radius:6px;margin-bottom:4px;background:var(--surface);cursor:pointer;font-size:13px;" onclick="navigateToJotSource('${ref.date}');">
+        <span style="color:var(--accent);margin-right:6px;">📅</span><span style="color:var(--text);">Daily: ${ref.label}</span>
+      </div>`;
+    }
+    return `<div style="padding:6px 8px;border-radius:6px;margin-bottom:4px;background:var(--surface);cursor:pointer;font-size:13px;" onclick="openNoteEditor('${ref.id}');">
+      <span style="color:#34d399;margin-right:6px;">📄</span><span style="color:var(--text);">${ref.label}</span>
+    </div>`;
+  }).join('');
+}
+
 function openNoteEditor(noteId) {
   let note;
   if (noteId) {
@@ -3626,6 +3696,9 @@ function openNoteEditor(noteId) {
   const sel = document.getElementById('note-project-link');
   sel.innerHTML = '<option value="">No project</option>' + DATA.projects.map(p => '<option value="' + p.id + '"' + (note.projectId === p.id ? ' selected' : '') + '>' + p.name + '</option>').join('');
 
+  // Backlinks
+  renderBacklinks(note.id);
+
   // K-2 response
   const k2Block = document.getElementById('note-k2-response');
   if (note.k2Response) {
@@ -3647,27 +3720,26 @@ function openNoteEditor(noteId) {
     statusEl.textContent = 'Saving...';
     noteAutoSaveTimer = setTimeout(async () => {
       note.title = titleInput.value.trim();
-      
+
       // Get content from TipTap editor or fallback textarea
       if (fullScreenEditor) {
         const html = fullScreenEditor.getHTML();
-        note.text = convertHTMLToText(html);
+        note.text = html; // Store HTML to preserve mentions
       } else {
-        // Fallback: try to get from textarea
         const textarea = document.querySelector('#note-body-input textarea');
         if (textarea) {
           note.text = textarea.value.trim();
         }
       }
-      
+
       // Extract and create tasks from note content
-      const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
+      const plainText = convertHTMLToText(note.text);
+      const { created: taskCount } = extractAndCreateTasks(plainText, note.projectId);
       if (taskCount > 0) {
-        console.log(`Created ${taskCount} tasks from note:`, note.id);
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
-        renderTasks(); // Refresh tasks view
+        renderTasks();
       }
-      
+
       await saveData();
       statusEl.textContent = 'Saved ✓';
     }, 1500);
@@ -3694,26 +3766,21 @@ function openNoteEditor(noteId) {
       e.preventDefault();
       clearTimeout(noteAutoSaveTimer);
       note.title = titleInput.value.trim();
-      
-      // Get content from TipTap editor or fallback textarea
+
       if (fullScreenEditor) {
-        const html = fullScreenEditor.getHTML();
-        note.text = convertHTMLToText(html);
+        note.text = fullScreenEditor.getHTML(); // Store HTML to preserve mentions
       } else {
-        // Fallback: try to get from textarea
         const textarea = document.querySelector('#note-body-input textarea');
-        if (textarea) {
-          note.text = textarea.value.trim();
-        }
+        if (textarea) { note.text = textarea.value.trim(); }
       }
-      
-      // Extract and create tasks from note content
-      const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
+
+      const plainText = convertHTMLToText(note.text);
+      const { created: taskCount } = extractAndCreateTasks(plainText, note.projectId);
       if (taskCount > 0) {
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
-        renderTasks(); // Refresh tasks view
+        renderTasks();
       }
-      
+
       saveData().then(() => { statusEl.textContent = 'Saved ✓'; });
     }
   };
@@ -3737,13 +3804,10 @@ async function closeNoteEditor() {
     if (note) {
       clearTimeout(noteAutoSaveTimer);
       note.title = document.getElementById('note-title-input').value.trim();
-      
-      // Get content from TipTap editor or fallback textarea
+
       if (fullScreenEditor) {
-        const html = fullScreenEditor.getHTML();
-        note.text = convertHTMLToText(html);
+        note.text = fullScreenEditor.getHTML(); // Store HTML to preserve mentions
       } else {
-        // Fallback: try to get from textarea
         const textarea = document.querySelector('#note-body-input textarea');
         if (textarea) {
           note.text = textarea.value.trim();
@@ -3751,18 +3815,19 @@ async function closeNoteEditor() {
           note.text = document.getElementById('note-body-input').textContent || '';
         }
       }
-      
+
       // Extract and create tasks from note content
       if (note.text) {
-        const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
+        const plainText = convertHTMLToText(note.text);
+        const { created: taskCount } = extractAndCreateTasks(plainText, note.projectId);
         if (taskCount > 0) {
-          console.log(`Created ${taskCount} tasks from note when closing editor:`, note.id);
           showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
         }
       }
-      
+
       // Remove empty untitled notes
-      if (!note.title && !note.text) {
+      const noteIsEmpty = !note.title && (!note.text || note.text === '<p></p>');
+      if (noteIsEmpty) {
         DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
       }
       await saveData();
@@ -3814,14 +3879,17 @@ async function requestK2TakeFromEditor() {
   if (!note) return;
   // Save current text first
   note.title = document.getElementById('note-title-input').value.trim();
-  note.text = document.getElementById('note-body-input').value.trim();
+  if (fullScreenEditor) {
+    note.text = fullScreenEditor.getHTML();
+  }
   note.k2Status = 'pending';
+  const noteTextPlain = convertHTMLToText(note.text || '');
   DATA.commands = DATA.commands || [];
   DATA.commands.push({
     id: 'cmd-' + Date.now(),
     type: 'analyze-note',
     noteId: note.id,
-    noteText: (note.title ? note.title + '\n\n' : '') + note.text,
+    noteText: (note.title ? note.title + '\n\n' : '') + noteTextPlain,
     status: 'pending',
     created: new Date().toISOString()
   });
@@ -3864,52 +3932,34 @@ function initNoteInlineEditor(noteId) {
   
   console.log('Initializing inline editor for note:', noteId, note);
 
-  // Import TipTap if available, otherwise use simple textarea  
-  if (window.Editor && window.StarterKit && window.TaskList && window.TaskItem) {
-    console.log('Creating TipTap editor for note:', noteId, 'with content:', note.text);
+  // Use full createEditor (with mention nodes + input plugin) if available
+  if (window.createEditor) {
     const htmlContent = convertTextToHTML(note.text || '');
-    console.log('Converted HTML content:', htmlContent);
-    
-    const editor = new window.Editor({
-      element: container,
-      extensions: [
-        window.StarterKit,
-        window.TaskList.configure({ nested: true }),
-        window.TaskItem.configure({ nested: true })
-      ],
-      content: htmlContent,
+    window._noteEditors[noteId] = { editor: null, saveTimer: null };
+
+    const editor = window.createEditor(container, htmlContent, {
       onUpdate: ({ editor }) => {
         clearTimeout(window._noteEditors[noteId].saveTimer);
         window._noteEditors[noteId].saveTimer = setTimeout(async () => {
           const updatedNote = DATA.notes.find(n => n.id === noteId);
           if (updatedNote) {
-            // Convert HTML back to markdown-like plain text for storage
             const html = editor.getHTML();
+            updatedNote.text = html; // Store HTML to preserve mentions
+
             const plainText = convertHTMLToText(html);
-            updatedNote.text = plainText;
-            
-            // Extract and create tasks from note content
             const { created: taskCount } = extractAndCreateTasks(plainText, updatedNote.projectId);
             if (taskCount > 0) {
-              console.log(`Created ${taskCount} tasks from note:`, noteId);
               showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
-              renderTasks(); // Refresh tasks view if it's visible
+              renderTasks();
             }
-            
+
             await saveData();
-            console.log('Saved note content via inline editor:', noteId);
           }
         }, 1500);
       },
-      editorProps: {
-        attributes: {
-          style: 'outline: none; min-height: 80px; padding: 8px;'
-        }
-      }
     });
 
-    window._noteEditors[noteId] = { editor, saveTimer: null };
-    console.log('TipTap editor created for note:', noteId);
+    window._noteEditors[noteId].editor = editor;
   } else {
     // Fallback to textarea - also check why TipTap failed
     console.log('Using textarea fallback for note:', noteId);
@@ -4134,57 +4184,36 @@ function initFullScreenEditor(noteId, content) {
   // Clear container
   container.innerHTML = '';
   
-  if (window.Editor && window.StarterKit && window.TaskList && window.TaskItem) {
-    console.log('Creating full-screen TipTap editor for note:', noteId);
+  if (window.createEditor) {
     const htmlContent = convertTextToHTML(content);
-    console.log('Full-screen editor content:', htmlContent);
-    
-    fullScreenEditor = new window.Editor({
-      element: container,
-      extensions: [
-        window.StarterKit,
-        window.TaskList.configure({ nested: true }),
-        window.TaskItem.configure({ nested: true })
-      ],
-      content: htmlContent,
+
+    fullScreenEditor = window.createEditor(container, htmlContent, {
+      placeholder: 'Start writing... Type / for commands, @ for projects, # for notes...',
       onUpdate: ({ editor }) => {
         clearTimeout(noteAutoSaveTimer);
         const statusEl = document.getElementById('note-save-status');
         if (statusEl) statusEl.textContent = 'Saving...';
-        
+
         noteAutoSaveTimer = setTimeout(async () => {
           const updatedNote = DATA.notes.find(n => n.id === noteId);
           if (updatedNote) {
             const html = editor.getHTML();
+            updatedNote.text = html; // Store HTML to preserve mentions
+
             const plainText = convertHTMLToText(html);
-            updatedNote.text = plainText;
-            
-            // Extract and create tasks from note content
             const { created: taskCount } = extractAndCreateTasks(plainText, updatedNote.projectId);
             if (taskCount > 0) {
-              console.log(`Created ${taskCount} tasks from note:`, noteId);
               showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
             }
-            
+
             await saveData();
             if (statusEl) statusEl.textContent = 'Saved ✓';
-            console.log('Auto-saved full-screen note:', noteId);
           }
         }, 1500);
       },
-      editorProps: {
-        attributes: {
-          style: 'outline: none; min-height: 40vh; padding: 16px; font-size: 15px; line-height: 1.8;'
-        }
-      }
     });
-    
-    console.log('Full-screen TipTap editor created');
-    
-    // Focus the editor
-    setTimeout(() => {
-      fullScreenEditor.commands.focus('end');
-    }, 100);
+
+    setTimeout(() => fullScreenEditor.commands.focus('end'), 100);
   } else {
     console.warn('TipTap not available for full-screen editor, using fallback');
     container.innerHTML = `<textarea placeholder="Start writing... (Rich editor loading...)" style="width:100%;min-height:40vh;padding:16px;background:none;border:none;color:var(--text);font-size:15px;line-height:1.8;resize:none;outline:none;font-family:inherit;">${content}</textarea>`;
@@ -4219,7 +4248,7 @@ async function requestK2TakeFromNote(noteId) {
     id: 'cmd-' + Date.now(),
     type: 'analyze-note',
     noteId: note.id,
-    noteText: (note.title ? note.title + '\n\n' : '') + note.text,
+    noteText: (note.title ? note.title + '\n\n' : '') + convertHTMLToText(note.text || ''),
     status: 'pending',
     created: new Date().toISOString()
   });
@@ -4532,7 +4561,7 @@ function richInputCheck(textarea) {
     showRichAutocomplete(textarea, items, 'project', pos - atMatch[0].length);
   } else if (hashMatch) {
     const query = hashMatch[1].toLowerCase();
-    const items = (DATA.notes||[]).map(n => ({id: n.id, label: n.title || (n.text||'').slice(0,40) || n.created, icon: '📝', type: 'note'}))
+    const items = (DATA.notes||[]).map(n => ({id: n.id, label: n.title || (n.text||'').replace(/<[^>]*>/g,'').slice(0,40) || n.created, icon: '📝', type: 'note'}))
       .filter(i => i.label.toLowerCase().includes(query));
     if (items.length > 0) showRichAutocomplete(textarea, items, 'note', pos - hashMatch[0].length);
     else hideRichAutocomplete();
@@ -5292,6 +5321,21 @@ async function saveJotLinks() {}
 void function legacyJotStub() {
 }();
 
+// Click-to-navigate for note mention chips
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('.mention-note');
+  if (!chip) return;
+  const noteId = chip.getAttribute('data-id');
+  if (!noteId) return;
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (note) {
+    e.preventDefault();
+    e.stopPropagation();
+    navigateTo('notes');
+    setTimeout(() => openNoteEditor(noteId), 150);
+  }
+});
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
@@ -5376,7 +5420,7 @@ const NoteMention = Node.create({
     return ['span', mergeAttributes(HTMLAttributes, {
       class: 'mention-note',
       'data-id': node.attrs.id,
-    }), `#${node.attrs.label}`];
+    }), `📄 ${node.attrs.label}`];
   },
 });
 
@@ -5478,12 +5522,18 @@ function showSuggestion(editor, type, coords, items, triggerPos) {
     document.body.appendChild(suggestionEl);
   }
   
-  suggestionEl.innerHTML = items.map((item, i) =>
-    `<div class="suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
-      <span>${type === 'project' ? '📁' : '📝'}</span>
+  suggestionEl.innerHTML = items.map((item, i) => {
+    if (item._create) {
+      return `<div class="suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}" style="border-top:1px solid var(--border);color:#34d399;">
+        <span>➕</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Create note: ${item.label}</span>
+      </div>`;
+    }
+    return `<div class="suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
+      <span>${type === 'project' ? '📁' : '📄'}</span>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.label}</span>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
   
   suggestionEl.style.left = coords.left + 'px';
   suggestionEl.style.top = (coords.bottom + 4) + 'px';
@@ -5505,21 +5555,35 @@ function hideSuggestion() {
 function selectSuggestion(idx) {
   const item = suggestionItems[idx];
   if (!item || !suggestionEditor) { hideSuggestion(); return; }
-  
+
+  let insertId = item.id;
+  let insertLabel = item.label;
+
+  // Create new note if this is a "create" item
+  if (item._create) {
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
+    const newNote = { id: 'note-' + Date.now(), title: item.label, text: '', created: dateStr };
+    window.DATA.notes.push(newNote);
+    window.saveData();
+    insertId = newNote.id;
+    insertLabel = newNote.title;
+  }
+
   const { from } = suggestionEditor.state.selection;
   const deleteFrom = suggestionTriggerPos;
-  
+
   const nodeType = suggestionType === 'project' ? 'projectMention' : 'noteMention';
-  
+
   suggestionEditor.chain()
     .focus()
     .deleteRange({ from: deleteFrom, to: from })
     .insertContent([
-      { type: nodeType, attrs: { id: item.id, label: item.label } },
+      { type: nodeType, attrs: { id: insertId, label: insertLabel } },
       { type: 'text', text: ' ' },
     ])
     .run();
-  
+
   hideSuggestion();
 }
 
@@ -5702,8 +5766,15 @@ function handleEditorUpdate(editor) {
   if (hashMatch) {
     const query = hashMatch[1].toLowerCase();
     const items = (window.DATA?.notes || [])
-      .map(n => ({ id: n.id || '', label: n.title || (n.text || '').slice(0, 40) || n.created || 'note' }))
+      .map(n => ({ id: n.id || '', label: n.title || (n.text || '').replace(/<[^>]*>/g,'').slice(0, 40) || n.created || 'note' }))
       .filter(i => i.label.toLowerCase().includes(query));
+    // Add "Create new note" option when query is non-empty
+    if (query.length > 0) {
+      const exactMatch = items.some(i => i.label.toLowerCase() === query);
+      if (!exactMatch) {
+        items.push({ id: '__create__', label: hashMatch[1], _create: true });
+      }
+    }
     const triggerPos = from - hashMatch[0].length;
     const coords = getCursorCoords(editor);
     showSuggestion(editor, 'note', coords, items, triggerPos);
@@ -5769,6 +5840,7 @@ function createEditor(element, content, options = {}) {
   
   return editor;
 }
+window.createEditor = createEditor;
 
 // Initialize today's editor
 window._createTodayEditor = function(today) {
