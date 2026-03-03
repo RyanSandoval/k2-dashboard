@@ -4551,15 +4551,27 @@ async function runDailyDocSave() {
     
     // Convert HTML to plain text and extract/sync tasks
     const plainText = convertHTMLToText(html);
-    if (plainText) {
-      const { created, updated } = extractAndCreateTasks(plainText, null, { sourceDate: today });
-      if (created > 0) {
-        console.log(`Created ${created} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
-        showToast(`${created} task${created > 1 ? 's' : ''} created from jot`);
-      }
-      if (created > 0 || updated > 0) {
-        renderTasks(); // Refresh tasks tab whenever tasks changed or synced
-      }
+    const { created, updated } = extractAndCreateTasks(plainText || '', null, { sourceDate: today });
+    if (created > 0) {
+      showToast(`${created} task${created > 1 ? 's' : ''} created from jot`);
+    }
+
+    // Remove tasks from this jot that no longer exist in the jot text
+    // Only removes tasks with source==='jot' and sourceDate===today (user-typed jot tasks)
+    const currentTaskTexts = new Set(
+      (plainText || '').match(/\[[x\s]*\][^\n]*/gi)?.map(m =>
+        m.replace(/\[[x\s]*\]/gi, '').replace(/https?:\/\/\S+/g, '').replace(/(#\w+)/g, '').replace(/@[^\s]+/g, '').trim()
+      ).filter(Boolean) || []
+    );
+    const before = DATA.tasks.length;
+    DATA.tasks = DATA.tasks.filter(t => {
+      if (t.source !== 'jot' || t.sourceDate !== today) return true; // keep non-jot tasks
+      return currentTaskTexts.has(t.text); // keep if still in jot
+    });
+    const removed = before - DATA.tasks.length;
+
+    if (created > 0 || updated > 0 || removed > 0) {
+      renderTasks();
     }
     
     // Extract linked projects/notes from mentions
