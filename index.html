@@ -5946,6 +5946,25 @@ function handleEditorUpdate(editor) {
     return;
   }
   
+  // [[ double-bracket mentions (check before # to avoid conflicts)
+  const bracketMatch = textBefore.match(/\[\[([^\]\[#@]*)$/);
+  if (bracketMatch) {
+    const query = bracketMatch[1].toLowerCase();
+    const items = (window.DATA?.notes || [])
+      .map(n => ({ id: n.id || '', label: n.title || (n.text || '').replace(/<[^>]*>/g,'').slice(0, 40) || n.created || 'note' }))
+      .filter(i => i.label.toLowerCase().includes(query));
+    if (query.length > 0) {
+      const exactMatch = items.some(i => i.label.toLowerCase() === query);
+      if (!exactMatch) {
+        items.push({ id: '__create__', label: bracketMatch[1], _create: true });
+      }
+    }
+    const triggerPos = from - bracketMatch[0].length;
+    const coords = getCursorCoords(editor);
+    showSuggestion(editor, 'note', coords, items, triggerPos);
+    return;
+  }
+
   // # mentions
   const hashMatch = textBefore.match(/#([^\s@#]*)$/);
   if (hashMatch) {
