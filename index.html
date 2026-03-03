@@ -1223,7 +1223,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-bottom:6px;font-weight:700;color:var(--text);column-span:all;">⌨️ Keyboard Shortcuts</div>
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘B</kbd> Bold</div>
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘I</kbd> Italic</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘K</kbd> Add link</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧K</kbd> Add link</div>
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧H</kbd> Heading cycle</div>
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧U</kbd> Task checkbox</div>
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧B</kbd> Blockquote</div>
@@ -5944,8 +5944,8 @@ function createInputPlugin() {
         // ─── Keyboard shortcuts ───────────────────────────────────────────
         const mod = event.metaKey || event.ctrlKey;
         if (mod) {
-          // Cmd+K → link popover
-          if (event.key === 'k' || event.key === 'K') {
+          // Cmd+Shift+K → link popover (Cmd+K is global search)
+          if (event.shiftKey && (event.key === 'k' || event.key === 'K')) {
             event.preventDefault();
             const ed = window._floatToolbarEditor || window._todayEditor;
             if (ed) showLinkPopover(ed);
