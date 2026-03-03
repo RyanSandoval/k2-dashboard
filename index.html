@@ -4709,7 +4709,7 @@ function computeTaskScore(task) {
 }
 
 function extractAndCreateTasks(text, projectId, options) {
-  if (!text) return 0;
+  if (!text) return { created: 0, updated: 0 };
   options = options || {};
 
   // Match both unchecked [] and checked [x] tasks  
@@ -5704,6 +5704,63 @@ function selectSuggestion(idx) {
 // Floating toolbar
 let floatToolbarEl = null;
 
+let _linkPopoverEl = null;
+let _linkPopoverEditor = null;
+
+function showLinkPopover(editor) {
+  _linkPopoverEditor = editor;
+  if (!_linkPopoverEl) {
+    _linkPopoverEl = document.createElement('div');
+    _linkPopoverEl.style.cssText = 'position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;box-shadow:0 4px 24px rgba(0,0,0,0.4);display:flex;gap:8px;align-items:center;min-width:260px;';
+    _linkPopoverEl.innerHTML = `
+      <input id="link-popover-input" type="url" placeholder="https://..." autocomplete="off" autocorrect="off" autocapitalize="off"
+        style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:14px;outline:none;min-width:0;">
+      <button id="link-popover-set" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Set</button>
+      <button id="link-popover-remove" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;cursor:pointer;" title="Remove link">✕</button>
+    `;
+    document.body.appendChild(_linkPopoverEl);
+
+    document.getElementById('link-popover-set').addEventListener('click', () => {
+      const url = document.getElementById('link-popover-input').value.trim();
+      if (_linkPopoverEditor && url) {
+        const href = url.startsWith('http') ? url : 'https://' + url;
+        _linkPopoverEditor.chain().focus().setLink({ href }).run();
+      }
+      hideLinkPopover();
+    });
+    document.getElementById('link-popover-remove').addEventListener('click', () => {
+      if (_linkPopoverEditor) _linkPopoverEditor.chain().focus().unsetLink().run();
+      hideLinkPopover();
+    });
+    document.getElementById('link-popover-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('link-popover-set').click();
+      if (e.key === 'Escape') hideLinkPopover();
+    });
+  }
+
+  // Pre-fill if already a link
+  const existing = editor.isActive('link') ? editor.getAttributes('link').href || '' : '';
+  const input = document.getElementById('link-popover-input');
+  input.value = existing;
+  _linkPopoverEl.style.display = 'flex';
+
+  // Position: below toolbar, clamped to viewport
+  const toolbar = floatToolbarEl;
+  const tr = toolbar ? toolbar.getBoundingClientRect() : { left: window.innerWidth/2 - 140, bottom: 60 };
+  const popW = 290;
+  let left = Math.min(tr.left, window.innerWidth - popW - 8);
+  left = Math.max(8, left);
+  _linkPopoverEl.style.left = left + 'px';
+  _linkPopoverEl.style.top = (tr.bottom + 4) + 'px';
+
+  setTimeout(() => input.focus(), 50);
+}
+
+function hideLinkPopover() {
+  if (_linkPopoverEl) _linkPopoverEl.style.display = 'none';
+  _linkPopoverEditor = null;
+}
+
 function createFloatingToolbar() {
   if (floatToolbarEl) return floatToolbarEl;
   floatToolbarEl = document.createElement('div');
@@ -5718,12 +5775,22 @@ function createFloatingToolbar() {
     <button class="eft-btn" data-cmd="link" title="Link">🔗</button>
   `;
   document.body.appendChild(floatToolbarEl);
-  
+
+  // Close link popover when clicking outside
+  document.addEventListener('pointerdown', (e) => {
+    if (_linkPopoverEl && _linkPopoverEl.style.display !== 'none' &&
+        !_linkPopoverEl.contains(e.target) && !floatToolbarEl?.contains(e.target)) {
+      hideLinkPopover();
+    }
+  });
+
   floatToolbarEl.querySelectorAll('.eft-btn').forEach(btn => {
-    btn.addEventListener('mousedown', (e) => {
+    // Use pointerdown so it fires on both mouse and touch
+    btn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       const cmd = btn.dataset.cmd;
-      const editor = window._todayEditor;
+      // Find the active editor (today or a note editor)
+      const editor = window._floatToolbarEditor || window._todayEditor;
       if (!editor) return;
       switch(cmd) {
         case 'bold': editor.chain().focus().toggleBold().run(); break;
@@ -5732,14 +5799,13 @@ function createFloatingToolbar() {
         case 'code': editor.chain().focus().toggleCode().run(); break;
         case 'h2': editor.chain().focus().toggleHeading({ level: 2 }).run(); break;
         case 'link':
-          const url = prompt('URL:');
-          if (url) editor.chain().focus().setLink({ href: url }).run();
-          break;
+          showLinkPopover(editor);
+          return; // Don't hide toolbar
       }
       updateFloatingToolbar(editor);
     });
   });
-  
+
   return floatToolbarEl;
 }
 
@@ -5764,15 +5830,20 @@ function showFloatingToolbar(editor) {
   const toolbar = createFloatingToolbar();
   const { from, to } = editor.state.selection;
   if (from === to) { hideFloatingToolbar(); return; }
-  
+
+  window._floatToolbarEditor = editor;
   const coords = editor.view.coordsAtPos(from);
-  toolbar.style.left = coords.left + 'px';
-  toolbar.style.top = (coords.top - 44) + 'px';
+  const toolbarW = 220;
+  const left = Math.max(8, Math.min(coords.left, window.innerWidth - toolbarW - 8));
+  const top = coords.top > 60 ? coords.top - 44 : coords.bottom + 4;
+  toolbar.style.left = left + 'px';
+  toolbar.style.top = top + 'px';
   toolbar.classList.add('visible');
   updateFloatingToolbar(editor);
 }
 
 function hideFloatingToolbar() {
+  hideLinkPopover();
   if (floatToolbarEl) floatToolbarEl.classList.remove('visible');
 }
 
