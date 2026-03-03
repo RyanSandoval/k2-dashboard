@@ -5759,6 +5759,8 @@ function showLinkPopover(editor) {
 function hideLinkPopover() {
   if (_linkPopoverEl) _linkPopoverEl.style.display = 'none';
   _linkPopoverEditor = null;
+  // Now safe to hide the toolbar too
+  if (floatToolbarEl) floatToolbarEl.classList.remove('visible');
 }
 
 function createFloatingToolbar() {
@@ -5843,7 +5845,8 @@ function showFloatingToolbar(editor) {
 }
 
 function hideFloatingToolbar() {
-  hideLinkPopover();
+  // Don't hide if link popover is open — it stole focus intentionally
+  if (_linkPopoverEl && _linkPopoverEl.style.display !== 'none') return;
   if (floatToolbarEl) floatToolbarEl.classList.remove('visible');
 }
 
@@ -6036,8 +6039,11 @@ function createEditor(element, content, options = {}) {
       }
     },
     onBlur() {
-      // Delay hiding to allow toolbar clicks
-      setTimeout(() => hideFloatingToolbar(), 200);
+      // Delay hiding to allow toolbar clicks — but not if link popover is open
+      setTimeout(() => {
+        if (_linkPopoverEl && _linkPopoverEl.style.display !== 'none') return;
+        hideFloatingToolbar();
+      }, 200);
     },
   });
   
