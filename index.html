@@ -1214,10 +1214,26 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="page active" id="page-jots" style="max-width:900px;margin:0 auto;">
       <div class="page-header">
         <div class="jots-date-header" id="jots-today-date"></div>
-        <p>Daily notes — just start typing. Use markdown shortcuts, / for commands</p>
+        <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span onclick="toggleShortcutsPanel()" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
       </div>
       <div style="margin-bottom:12px;">
         <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div id="shortcuts-panel" style="display:none;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--text-dim);column-count:2;column-gap:24px;">
+        <div style="margin-bottom:6px;font-weight:700;color:var(--text);column-span:all;">⌨️ Keyboard Shortcuts</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘B</kbd> Bold</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘I</kbd> Italic</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘K</kbd> Add link</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧H</kbd> Heading cycle</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧U</kbd> Task checkbox</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧B</kbd> Blockquote</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘Z</kbd> Undo</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧Z</kbd> Redo</div>
+        <div style="column-span:all;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-weight:600;color:var(--text);">Editor triggers</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">/</kbd> Slash commands</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">@</kbd> Mention project</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">#</kbd> Link note</div>
+        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">[[</kbd> Link note (alt)</div>
       </div>
       <div id="daily-doc-today" class="daily-doc-container">
         <div id="daily-doc-today-editor" class="daily-doc-editor"></div>
@@ -4403,6 +4419,10 @@ function migrateJotsToDailyDocs() {
 }
 
 function renderJots() { renderDailyDocs(); }
+function toggleShortcutsPanel() {
+  const p = document.getElementById('shortcuts-panel');
+  if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
 
 function renderDailyDocs() {
   const today = getTodayStr();
@@ -5592,12 +5612,17 @@ function showSlashMenu(editor, coords, filterText) {
     </div>`
   ).join('');
   
-  slashMenuEl.style.left = coords.left + 'px';
-  slashMenuEl.style.top = (coords.bottom + 4) + 'px';
+  // Clamp position to viewport
+  const menuW = 240;
+  const left = Math.max(8, Math.min(coords.left, window.innerWidth - menuW - 8));
+  const top = (coords.bottom + 4) + window.scrollY;
+  slashMenuEl.style.position = 'fixed';
+  slashMenuEl.style.left = left + 'px';
+  slashMenuEl.style.top = Math.min(coords.bottom + 4, window.innerHeight - 300) + 'px';
   slashMenuEl.style.display = 'block';
-  
+
   slashMenuEl.querySelectorAll('.slash-menu-item').forEach(item => {
-    item.addEventListener('mousedown', (e) => {
+    item.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       const idx = parseInt(item.dataset.idx);
       selectSlashCommand(filtered[idx]);
@@ -5913,6 +5938,43 @@ function createInputPlugin() {
           }
           if (event.key === 'Escape') {
             hideSuggestion();
+            return true;
+          }
+        }
+        // ─── Keyboard shortcuts ───────────────────────────────────────────
+        const mod = event.metaKey || event.ctrlKey;
+        if (mod) {
+          // Cmd+K → link popover
+          if (event.key === 'k' || event.key === 'K') {
+            event.preventDefault();
+            const ed = window._floatToolbarEditor || window._todayEditor;
+            if (ed) showLinkPopover(ed);
+            return true;
+          }
+          // Cmd+Shift+H → cycle headings H1→H2→H3→paragraph
+          if (event.shiftKey && (event.key === 'h' || event.key === 'H')) {
+            event.preventDefault();
+            const ed = window._floatToolbarEditor || window._todayEditor;
+            if (ed) {
+              if (ed.isActive('heading', { level: 1 })) ed.chain().focus().toggleHeading({ level: 2 }).run();
+              else if (ed.isActive('heading', { level: 2 })) ed.chain().focus().toggleHeading({ level: 3 }).run();
+              else if (ed.isActive('heading', { level: 3 })) ed.chain().focus().setParagraph().run();
+              else ed.chain().focus().toggleHeading({ level: 1 }).run();
+            }
+            return true;
+          }
+          // Cmd+Shift+U → task list (checkbox)
+          if (event.shiftKey && (event.key === 'u' || event.key === 'U')) {
+            event.preventDefault();
+            const ed = window._floatToolbarEditor || window._todayEditor;
+            if (ed) ed.chain().focus().toggleTaskList().run();
+            return true;
+          }
+          // Cmd+Shift+B → blockquote
+          if (event.shiftKey && (event.key === 'b' || event.key === 'B')) {
+            event.preventDefault();
+            const ed = window._floatToolbarEditor || window._todayEditor;
+            if (ed) ed.chain().focus().toggleBlockquote().run();
             return true;
           }
         }
