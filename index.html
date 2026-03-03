@@ -428,14 +428,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .task-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
   .task-priority {
     font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 700;
     flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.3px;
   }
-  .priority-high { background: rgba(248,113,113,0.15); color: var(--red); }
-  .priority-medium { background: rgba(251,191,36,0.15); color: var(--yellow); }
-  .priority-low { background: rgba(74,158,255,0.15); color: var(--accent); }
+  .task-priority:hover { opacity: 0.75; transform: scale(1.05); }
+  .task-priority:active { transform: scale(0.95); }
+  .priority-high { background: rgba(248,113,113,0.2); color: var(--red); border: 1px solid rgba(248,113,113,0.35); }
+  .priority-medium { background: rgba(251,191,36,0.2); color: var(--yellow); border: 1px solid rgba(251,191,36,0.35); }
+  .priority-low { background: rgba(74,158,255,0.15); color: var(--accent); border: 1px solid rgba(74,158,255,0.3); }
 
   /* Quick Add */
   .quick-add {
@@ -3333,7 +3339,7 @@ function renderTasks() {
           </div>
         </div>
         ${actionBtns}
-        <div class="task-priority priority-${task.priority}">${task.priority}</div>
+        <div class="task-priority priority-${task.priority}" onclick="event.stopPropagation();cycleTaskPriority(${taskId},false)" title="Click to change priority">${task.priority === 'high' ? '🔴 high' : task.priority === 'medium' ? '🟡 medium' : '🔵 low'}</div>
       </li>
     `;
   }).join('');
@@ -3465,14 +3471,14 @@ async function cycleTaskOwner(taskId) {
   openTaskModal(taskId);
 }
 
-async function cycleTaskPriority(taskId) {
+async function cycleTaskPriority(taskId, openModal = true) {
   const task = DATA.tasks.find(t => t.id == taskId);
   if (!task) return;
   const cycle = { high: 'medium', medium: 'low', low: 'high' };
   task.priority = cycle[task.priority] || 'high';
   await saveData();
   renderTasks();
-  openTaskModal(taskId);
+  if (openModal && activeTaskId == taskId) openTaskModal(taskId);
 }
 
 async function setTaskDueDate(taskId, dateStr) {
