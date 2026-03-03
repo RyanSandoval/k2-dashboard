@@ -4693,22 +4693,20 @@ async function runDailyDocSave() {
     
     // Convert HTML to plain text and extract/sync tasks
     const plainText = convertHTMLToText(html);
-    const { created, updated } = extractAndCreateTasks(plainText || '', null, { sourceDate: today });
+    const { created, updated, activeTexts } = extractAndCreateTasks(plainText || '', null, { sourceDate: today });
     if (created > 0) {
       showToast(`${created} task${created > 1 ? 's' : ''} created from jot`);
     }
 
-    // Remove tasks from this jot that no longer exist in the jot text
-    // Only removes tasks with source==='jot' and sourceDate===today (user-typed jot tasks)
-    const currentTaskTexts = new Set(
-      (plainText || '').match(/\[[x\s]*\][^\n]*/gi)?.map(m =>
-        m.replace(/\[[x\s]*\]/gi, '').replace(/https?:\/\/\S+/g, '').replace(/(#\w+)/g, '').replace(/@[^\s]+/g, '').trim()
-      ).filter(Boolean) || []
-    );
+    // Remove tasks from today's jot that are no longer in the jot text.
+    // Uses the same canonical text set returned by extractAndCreateTasks (correct pipeline incl. parseDueDateFromText).
+    // Falls back to t.created if t.sourceDate is missing (tasks created before sourceDate was added).
     const before = DATA.tasks.length;
     DATA.tasks = DATA.tasks.filter(t => {
-      if (t.source !== 'jot' || t.sourceDate !== today) return true; // keep non-jot tasks
-      return currentTaskTexts.has(t.text); // keep if still in jot
+      if (t.source !== 'jot') return true; // not a jot task
+      const taskDay = t.sourceDate || t.created;
+      if (taskDay !== today) return true; // different day's jot
+      return activeTexts.has(t.text); // keep if still present in today's jot
     });
     const removed = before - DATA.tasks.length;
 
@@ -4892,13 +4890,14 @@ function scoreLabel(task) {
 }
 
 function extractAndCreateTasks(text, projectId, options) {
-  if (!text) return { created: 0, updated: 0 };
+  if (!text) return { created: 0, updated: 0, activeTexts: new Set() };
   options = options || {};
 
   // Match both unchecked [] and checked [x] tasks  
   const taskMatches = text.match(/\[[x\s]*\][^\n]*/gi) || [];
   let createdCount = 0;
   let updatedCount = 0;
+  const activeTexts = new Set(); // canonical task texts present in this text
   
   taskMatches.forEach(match => {
     const isChecked = /\[x\]/i.test(match);
@@ -4919,7 +4918,8 @@ function extractAndCreateTasks(text, projectId, options) {
       .trim();
 
     if (!taskText) return;
-    
+    activeTexts.add(taskText); // track canonical text for deletion check
+
     // Exact match — already exists, sync done state and due date, then skip
     const existingExact = DATA.tasks.find(t => t.text === taskText);
     if (existingExact) {
@@ -4979,7 +4979,7 @@ function extractAndCreateTasks(text, projectId, options) {
     createdCount++;
   });
   
-  return { created: createdCount, updated: updatedCount };
+  return { created: createdCount, updated: updatedCount, activeTexts };
 }
 function jotAutocompleteCheck(textarea) { richInputCheck(textarea); }
 function jotAutocompleteKeydown(event) { richInputKeydown(event); }
