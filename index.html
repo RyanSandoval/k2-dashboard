@@ -3615,7 +3615,7 @@ function openNoteEditor(noteId) {
       }
       
       // Extract and create tasks from note content
-      const taskCount = extractAndCreateTasks(note.text, note.projectId);
+      const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
       if (taskCount > 0) {
         console.log(`Created ${taskCount} tasks from note:`, note.id);
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
@@ -3662,7 +3662,7 @@ function openNoteEditor(noteId) {
       }
       
       // Extract and create tasks from note content
-      const taskCount = extractAndCreateTasks(note.text, note.projectId);
+      const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
       if (taskCount > 0) {
         showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
         renderTasks(); // Refresh tasks view
@@ -3708,7 +3708,7 @@ async function closeNoteEditor() {
       
       // Extract and create tasks from note content
       if (note.text) {
-        const taskCount = extractAndCreateTasks(note.text, note.projectId);
+        const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
         if (taskCount > 0) {
           console.log(`Created ${taskCount} tasks from note when closing editor:`, note.id);
           showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
@@ -3843,7 +3843,7 @@ function initNoteInlineEditor(noteId) {
             updatedNote.text = plainText;
             
             // Extract and create tasks from note content
-            const taskCount = extractAndCreateTasks(plainText, updatedNote.projectId);
+            const { created: taskCount } = extractAndCreateTasks(plainText, updatedNote.projectId);
             if (taskCount > 0) {
               console.log(`Created ${taskCount} tasks from note:`, noteId);
               showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
@@ -3896,7 +3896,7 @@ async function updateNoteText(noteId, newText) {
   note.text = newText.trim();
   
   // Extract and create tasks from note content
-  const taskCount = extractAndCreateTasks(note.text, note.projectId);
+  const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
   if (taskCount > 0) {
     console.log(`Created ${taskCount} tasks from note via textarea:`, noteId);
     showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
@@ -4114,7 +4114,7 @@ function initFullScreenEditor(noteId, content) {
             updatedNote.text = plainText;
             
             // Extract and create tasks from note content
-            const taskCount = extractAndCreateTasks(plainText, updatedNote.projectId);
+            const { created: taskCount } = extractAndCreateTasks(plainText, updatedNote.projectId);
             if (taskCount > 0) {
               console.log(`Created ${taskCount} tasks from note:`, noteId);
               showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
@@ -4266,7 +4266,7 @@ function migrateJotsToDailyDocs() {
     // Extract tasks from migrated jots content
     const plainText = (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     if (plainText) {
-      const taskCount = extractAndCreateTasks(plainText, null);
+      const { created: taskCount } = extractAndCreateTasks(plainText, null);
       if (taskCount > 0) {
         console.log(`Created ${taskCount} tasks during jots migration for ${date}`);
       }
@@ -4418,9 +4418,7 @@ function debouncedSavePreviousDoc(date) {
   }, 1500);
 }
 
-function debouncedSaveDailyDoc() {
-  if (window._dailyDocSaveTimer) clearTimeout(window._dailyDocSaveTimer);
-  window._dailyDocSaveTimer = setTimeout(async () => {
+async function runDailyDocSave() {
     if (!window._todayEditor) return;
     const today = getTodayStr();
     const html = window._todayEditor.getHTML();
@@ -4430,14 +4428,16 @@ function debouncedSaveDailyDoc() {
     DATA.dailyDocs[today].content = html;
     DATA.dailyDocs[today].updatedAt = new Date().toISOString();
     
-    // Convert HTML to plain text and extract tasks
+    // Convert HTML to plain text and extract/sync tasks
     const plainText = convertHTMLToText(html);
     if (plainText) {
-      const taskCount = extractAndCreateTasks(plainText, null, { sourceDate: today });
-      if (taskCount > 0) {
-        console.log(`Created ${taskCount} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
-        showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
-        renderTasks(); // Refresh tasks view if visible
+      const { created, updated } = extractAndCreateTasks(plainText, null, { sourceDate: today });
+      if (created > 0) {
+        console.log(`Created ${created} tasks from daily jot (${today}):`, plainText.substring(0, 100) + '...');
+        showToast(`${created} task${created > 1 ? 's' : ''} created from jot`);
+      }
+      if (created > 0 || updated > 0) {
+        renderTasks(); // Refresh tasks tab whenever tasks changed or synced
       }
     }
     
@@ -4458,7 +4458,12 @@ function debouncedSaveDailyDoc() {
     DATA.dailyDocs[today].linkedNotes = [...notes];
     
     await saveData();
-  }, 1500);
+}
+
+function debouncedSaveDailyDoc(immediate) {
+  if (window._dailyDocSaveTimer) clearTimeout(window._dailyDocSaveTimer);
+  const delay = immediate ? 100 : 1500;
+  window._dailyDocSaveTimer = setTimeout(runDailyDocSave, delay);
 }
 
 // ═══ Universal Rich Text System ═══
@@ -4531,6 +4536,7 @@ function extractAndCreateTasks(text, projectId, options) {
   // Match both unchecked [] and checked [x] tasks  
   const taskMatches = text.match(/\[[x\s]*\][^\n]*/gi) || [];
   let createdCount = 0;
+  let updatedCount = 0;
   
   taskMatches.forEach(match => {
     const isChecked = /\[x\]/i.test(match);
@@ -4543,9 +4549,15 @@ function extractAndCreateTasks(text, projectId, options) {
     
     if (!taskText) return;
     
-    // Exact match — already exists, skip
+    // Exact match — already exists, sync done state and skip
     const existingExact = DATA.tasks.find(t => t.text === taskText);
-    if (existingExact) return;
+    if (existingExact) {
+      if (isChecked !== existingExact.done) {
+        existingExact.done = isChecked;
+        updatedCount++;
+      }
+      return;
+    }
     
     // If we have a sourceDate (called from debouncedSaveDailyDoc), check for
     // in-progress tasks from today that are a prefix of the new text.
@@ -4560,7 +4572,10 @@ function extractAndCreateTasks(text, projectId, options) {
       if (partialMatch) {
         // User kept typing — update the existing task in place
         partialMatch.text = taskText;
-        if (isChecked) partialMatch.done = true;
+        if (isChecked !== partialMatch.done) {
+          partialMatch.done = isChecked;
+          updatedCount++;
+        }
         return;
       }
       // If current text is a prefix of an existing task, skip (user deleted chars)
@@ -4592,7 +4607,7 @@ function extractAndCreateTasks(text, projectId, options) {
     createdCount++;
   });
   
-  return createdCount;
+  return { created: createdCount, updated: updatedCount };
 }
 function jotAutocompleteCheck(textarea) { richInputCheck(textarea); }
 function jotAutocompleteKeydown(event) { richInputKeydown(event); }
@@ -4994,7 +5009,7 @@ async function selectionFormat(wrapper) {
   jot.text = jot.text.replace(text, wrapped);
 
   // Extract and create tasks from updated jot (legacy system)
-  const taskCount = extractAndCreateTasks(jot.text, jot.projectId);
+  const { created: taskCount } = extractAndCreateTasks(jot.text, jot.projectId);
   if (taskCount > 0) {
     console.log(`Created ${taskCount} tasks from legacy jot:`, jot.id);
     showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
@@ -5684,10 +5699,10 @@ function createEditor(element, content, options = {}) {
         editor.view.updateState(newState);
       }
     },
-    onUpdate({ editor }) {
+    onUpdate({ editor, transaction }) {
       if (options.editable === false) return;
       handleEditorUpdate(editor);
-      if (options.onUpdate) options.onUpdate(editor);
+      if (options.onUpdate) options.onUpdate({ editor, transaction });
     },
     onSelectionUpdate({ editor }) {
       if (options.editable === false) return;
@@ -5717,7 +5732,12 @@ window._createTodayEditor = function(today) {
   
   window._todayEditor = createEditor(el, content, {
     placeholder: "What's on your mind? Type / for commands, @ for projects, # for notes...",
-    onUpdate: () => window.debouncedSaveDailyDoc(),
+    onUpdate: ({ transaction }) => {
+      // Detect checkbox toggle (attribute-only step — no content inserted/deleted)
+      const isCheckboxToggle = transaction?.steps?.length > 0 &&
+        transaction.steps.every(s => s.slice == null || s.slice.size === 0);
+      window.debouncedSaveDailyDoc(isCheckboxToggle);
+    },
   });
   
   // Focus
