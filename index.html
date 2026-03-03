@@ -2845,11 +2845,11 @@ function openTaskModal(taskId) {
       <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Priority Score — ${scoreLabel(task)} = ${(task.urgency||2)*(task.importance||2)}</div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;">
         <div>
-          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">⚡ Urgency</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">⚡ Urgency <span style="font-size:10px;opacity:0.6;">(4 = most urgent)</span></div>
           <div class="ui-step">${[1,2,3,4].map(n=>`<button onclick="setTaskUrgency(${safeId(task.id)},${n})" class="${(task.urgency||2)==n?'active':''}">${n}</button>`).join('')}</div>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">⭐ Importance</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">⭐ Importance <span style="font-size:10px;opacity:0.6;">(4 = most important)</span></div>
           <div class="ui-step">${[1,2,3,4].map(n=>`<button onclick="setTaskImportance(${safeId(task.id)},${n})" class="${(task.importance||2)==n?'active':''}">${n}</button>`).join('')}</div>
         </div>
       </div>
@@ -3515,6 +3515,20 @@ async function cycleTaskPriority(taskId, openModal = true) {
   if (openModal && activeTaskId == taskId) openTaskModal(taskId);
 }
 
+async function matrixDrop(event, urgency, importance) {
+  event.preventDefault();
+  const taskId = event.dataTransfer.getData('taskId');
+  if (!taskId) return;
+  const task = DATA.tasks.find(t => String(t.id) === String(taskId));
+  if (!task) return;
+  task.urgency = urgency;
+  task.importance = importance;
+  task.priority = urgency >= 3 ? 'high' : urgency >= 2 ? 'medium' : 'low';
+  await saveData();
+  renderTasks();
+  renderEisenhowerMatrix();
+}
+
 async function setTaskUrgency(taskId, value) {
   const task = DATA.tasks.find(t => t.id == taskId);
   if (!task) return;
@@ -3555,21 +3569,30 @@ function renderEisenhowerMatrix() {
 
   // Quadrants: [highU+highI, lowU+highI, highU+lowI, lowU+lowI]
   const quads = [
-    { label: 'Do First', sub: 'Urgent + Important', color: '#f87171', bg: 'rgba(248,113,113,0.1)', tasks: tasks.filter(t => t.urgency >= 3 && t.importance >= 3) },
-    { label: 'Schedule', sub: 'Not Urgent + Important', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', tasks: tasks.filter(t => t.urgency < 3 && t.importance >= 3) },
-    { label: 'Delegate', sub: 'Urgent + Not Important', color: '#fb923c', bg: 'rgba(251,146,60,0.1)', tasks: tasks.filter(t => t.urgency >= 3 && t.importance < 3) },
-    { label: 'Eliminate', sub: 'Not Urgent + Not Important', color: '#6b7280', bg: 'rgba(107,114,128,0.08)', tasks: tasks.filter(t => t.urgency < 3 && t.importance < 3) },
+    { label: 'Do First',  sub: 'Urgent + Important',         color: '#f87171', bg: 'rgba(248,113,113,0.1)', dropU: 4, dropI: 4, tasks: tasks.filter(t => t.urgency >= 3 && t.importance >= 3) },
+    { label: 'Schedule',  sub: 'Not Urgent + Important',     color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  dropU: 2, dropI: 4, tasks: tasks.filter(t => t.urgency < 3  && t.importance >= 3) },
+    { label: 'Delegate',  sub: 'Urgent + Not Important',     color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  dropU: 4, dropI: 2, tasks: tasks.filter(t => t.urgency >= 3 && t.importance < 3) },
+    { label: 'Eliminate', sub: 'Not Urgent + Not Important', color: '#6b7280', bg: 'rgba(107,114,128,0.08)',dropU: 1, dropI: 1, tasks: tasks.filter(t => t.urgency < 3  && t.importance < 3) },
   ];
 
-  el.innerHTML = quads.map(q => `
-    <div class="matrix-quad" style="background:${q.bg};border:1px solid color-mix(in srgb,${q.color} 30%,transparent);">
+  el.innerHTML = quads.map((q, qi) => `
+    <div class="matrix-quad" data-quad="${qi}"
+         style="background:${q.bg};border:1px solid color-mix(in srgb,${q.color} 30%,transparent);"
+         ondragover="event.preventDefault();this.style.outline='2px solid ${q.color}'"
+         ondragleave="this.style.outline=''"
+         ondrop="matrixDrop(event,${q.dropU},${q.dropI});this.style.outline=''">
       <div class="matrix-quad-title" style="color:${q.color};">${q.label} <span style="font-weight:400;opacity:0.7;font-size:10px;text-transform:none;">${q.sub}</span></div>
-      ${q.tasks.length === 0 ? '<div style="font-size:11px;color:var(--text-dim);font-style:italic;">No tasks</div>' : ''}
-      ${q.tasks.map(t => `
-        <div class="matrix-chip" onclick="openTaskModal(${typeof t.id==='string'?"'"+t.id.replace(/'/g,"\\'")+"'":t.id})" title="U${t.urgency}·I${t.importance} — click to open">
-          ${t.text?.slice(0,60) || 'Untitled'}${t.text?.length > 60 ? '…' : ''}
+      ${q.tasks.length === 0 ? '<div style="font-size:11px;color:var(--text-dim);font-style:italic;padding:4px 0;">Drop tasks here</div>' : ''}
+      ${q.tasks.map(t => {
+        const tid = typeof t.id==='string'?"'"+t.id.replace(/'/g,"\\'")+"'":t.id;
+        return `<div class="matrix-chip" draggable="true"
+          ondragstart="event.dataTransfer.setData('taskId','${t.id}');event.currentTarget.style.opacity='0.4'"
+          ondragend="event.currentTarget.style.opacity='1'"
+          onclick="openTaskModal(${tid})" title="U${t.urgency}·I${t.importance} — drag to move, click to edit">
+          ${(t.text||'Untitled').slice(0,55)}${(t.text||'').length > 55 ? '…' : ''}
           ${t.dueDate ? `<span style="font-size:9px;color:${formatDueDate(t.dueDate)?.overdue?'var(--red)':'var(--text-dim)'};">&nbsp;· ${formatDueDate(t.dueDate)?.text}</span>` : ''}
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>
   `).join('');
 }
