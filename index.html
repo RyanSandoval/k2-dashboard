@@ -5321,6 +5321,7 @@ import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2.11.5';
 import TaskList from 'https://esm.sh/@tiptap/extension-task-list@2.11.5';
 import TaskItem from 'https://esm.sh/@tiptap/extension-task-item@2.11.5';
 import Link from 'https://esm.sh/@tiptap/extension-link@2.11.5';
+import Autolink from 'https://esm.sh/@tiptap/extension-autolink@2.11.5';
 import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.11.5';
 import Typography from 'https://esm.sh/@tiptap/extension-typography@2.11.5';
 import { Node, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.11.5';
@@ -5720,7 +5721,8 @@ function createEditor(element, content, options = {}) {
     }),
     TaskList,
     TaskItem.configure({ nested: true }),
-    Link.configure({ openOnClick: true, HTMLAttributes: { class: '' } }),
+    Link.configure({ openOnClick: true, autolink: false, HTMLAttributes: { class: 'note-link', style: 'color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all;' } }),
+    Autolink.configure({ openOnClick: true }),
     Placeholder.configure({ placeholder: options.placeholder || 'Start typing...' }),
     Typography,
     ProjectMention,
