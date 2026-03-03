@@ -2781,6 +2781,8 @@ function openTaskModal(taskId) {
           <span class="tag tag-blue">${projectName}</span>
           <span class="task-priority priority-${task.priority}" style="cursor:pointer;" onclick="cycleTaskPriority(${safeId(task.id)})" title="Click to cycle priority">${task.priority}</span>
           <span class="tag tag-purple">${task.created}</span>
+          ${task.source === 'jot' && task.sourceDate ? `<span onclick="navigateToJotSource('${task.sourceDate}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent2) 15%,transparent);border:1px solid color-mix(in srgb,var(--accent2) 40%,transparent);color:var(--accent2);font-weight:600;" title="Jump to source jot">📝 ${task.sourceDate === getTodayStr() ? 'Today\'s Jot' : 'Jot · ' + task.sourceDate} ↗</span>` : ''}
+          ${task.source === 'note' && task.linkedNoteId ? `<span onclick="navigateToNoteSource('${task.linkedNoteId}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--green) 15%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);font-weight:600;" title="Jump to source note">📄 Source Note ↗</span>` : ''}
         </div>
       </div>
     </div>
@@ -2876,6 +2878,50 @@ function closeTaskModal() {
   document.getElementById('task-modal').style.display = 'none';
   document.body.style.overflow = '';
   activeTaskId = null;
+}
+
+function navigateToJotSource(date) {
+  closeTaskModal();
+  navigateTo('jots');
+  setTimeout(() => {
+    const today = getTodayStr();
+    if (date === today) {
+      const el = document.getElementById('daily-doc-today');
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    } else {
+      // Previous day — find its container and scroll to it
+      let el = document.getElementById('doc-editor-' + date);
+      if (!el) {
+        // Try the parent container
+        const prev = document.getElementById('daily-doc-previous');
+        if (prev) {
+          const headers = prev.querySelectorAll('[data-date]');
+          headers.forEach(h => { if (h.dataset.date === date) el = h; });
+        }
+      }
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Flash highlight
+        el.style.transition = 'box-shadow 0.3s';
+        el.style.boxShadow = '0 0 0 2px var(--accent2)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 1500);
+      }
+    }
+  }, 300);
+}
+
+function navigateToNoteSource(noteId) {
+  closeTaskModal();
+  navigateTo('notes');
+  setTimeout(() => {
+    const el = document.getElementById('note-' + noteId) || document.querySelector(`[data-note-id="${noteId}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow 0.3s';
+      el.style.boxShadow = '0 0 0 2px var(--accent2)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 1500);
+    }
+  }, 300);
 }
 
 async function sendTaskMessage() {
