@@ -1267,6 +1267,12 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <button class="filter-btn" data-filter="k2" data-group="tasks">🤖 K-2's Tasks</button>
         <button class="filter-btn" data-filter="all" data-group="tasks">All</button>
         <button class="filter-btn" data-filter="done" data-group="tasks">Done</button>
+        <select id="task-sort" onchange="renderTasks()" style="margin-left:auto;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;">
+          <option value="smart">Smart Sort</option>
+          <option value="priority">Priority</option>
+          <option value="created">Created</option>
+          <option value="due">Due Date</option>
+        </select>
       </div>
       <div class="card">
         <ul class="task-list" id="task-list">
@@ -2770,6 +2776,13 @@ function openTaskModal(taskId) {
   const activity = task.activity || [];
   const activityActionIcons = { started: '🔨', completed: '✅', queued: '🚀', rework: '🔄', accepted: '👍', created: '📝' };
 
+  const modalDueInfo = formatDueDate(task.dueDate);
+  const dueDateDisplay = task.dueDate
+    ? (modalDueInfo.overdue
+        ? `<span style="color:var(--red);font-weight:600;">${modalDueInfo.text}</span>`
+        : `<span style="color:var(--text-dim);">${modalDueInfo.text}</span>`)
+    : '<span style="color:var(--text-dim);">No due date</span>';
+
   document.getElementById('task-modal-content').innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
       ${leftElModal}
@@ -2785,6 +2798,13 @@ function openTaskModal(taskId) {
           ${task.source === 'note' && task.linkedNoteId ? `<span onclick="navigateToNoteSource('${task.linkedNoteId}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--green) 15%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);font-weight:600;" title="Jump to source note">📄 Source Note ↗</span>` : ''}
         </div>
       </div>
+    </div>
+
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${modalDueInfo && modalDueInfo.overdue ? 'border-left:3px solid var(--red);' : ''}">
+      <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Due Date</span>
+      <input type="date" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
+      ${dueDateDisplay}
+      ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date">✕</span>` : ''}
     </div>
 
     ${task.context ? `
@@ -3227,10 +3247,23 @@ function renderTasks() {
     filteredTasks = DATA.tasks.filter(t => t.done || t.status === 'done');
   }
   
-  console.log('Filtered tasks:', {
-    filter: activeFilter,
-    beforeFiltering: DATA.tasks.length,
-    afterFiltering: filteredTasks.length
+  // Sort tasks
+  const sortMode = document.getElementById('task-sort')?.value || 'smart';
+  const priorityVal = { high: 3, medium: 2, low: 1 };
+  filteredTasks = [...filteredTasks].sort((a, b) => {
+    if (sortMode === 'smart') {
+      const sa = computeTaskScore(a), sb = computeTaskScore(b);
+      if (sb !== sa) return sb - sa;
+      if ((priorityVal[b.priority]||0) !== (priorityVal[a.priority]||0)) return (priorityVal[b.priority]||0) - (priorityVal[a.priority]||0);
+      return (b.created || '').localeCompare(a.created || '');
+    } else if (sortMode === 'priority') {
+      return (priorityVal[b.priority]||0) - (priorityVal[a.priority]||0);
+    } else if (sortMode === 'due') {
+      const da = a.dueDate || '9999', db = b.dueDate || '9999';
+      return da.localeCompare(db);
+    } else { // created
+      return (b.created || '').localeCompare(a.created || '');
+    }
   });
 
   taskContainer.innerHTML = filteredTasks.map(task => {
@@ -3261,14 +3294,18 @@ function renderTasks() {
       leftEl = `<div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${taskId})"></div>`;
     }
 
+    const dueInfo = formatDueDate(task.dueDate);
+    const overdueStyle = dueInfo && dueInfo.overdue && !task.done ? 'border-left:3px solid var(--red);background:color-mix(in srgb, var(--red) 5%, var(--surface2));' : '';
+
     return `
-      <li class="task-item" onclick="openTaskModal(${taskId})">
+      <li class="task-item" onclick="openTaskModal(${taskId})" style="${overdueStyle}">
         ${leftEl}
         <div class="task-content ${task.done ? 'done' : ''}">
-          <div style="display:flex;align-items:center;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span title="${isK2 ? 'K-2' : 'Ryan'}">${ownerBadge}</span>
             <span>${taskText}</span>
             ${isK2 ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.label}</span>` : ''}
+            ${dueInfo ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${dueInfo.overdue ? 'var(--red)' : 'var(--text-dim)'};background:color-mix(in srgb, ${dueInfo.overdue ? 'var(--red)' : 'var(--accent)'} 12%, transparent);">${dueInfo.text}</span>` : ''}
           </div>
           ${task.context ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic;opacity:0.8;">${task.context}</div>` : ''}
           <div class="task-meta">
@@ -3413,6 +3450,15 @@ async function cycleTaskPriority(taskId) {
   if (!task) return;
   const cycle = { high: 'medium', medium: 'low', low: 'high' };
   task.priority = cycle[task.priority] || 'high';
+  await saveData();
+  renderTasks();
+  openTaskModal(taskId);
+}
+
+async function setTaskDueDate(taskId, dateStr) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  task.dueDate = dateStr || null;
   await saveData();
   renderTasks();
   openTaskModal(taskId);
@@ -4575,6 +4621,64 @@ function richInputKeydown(event) {
   else if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); selectRichAutocomplete(window._acIdx); }
   else if (event.key === 'Escape') { hideRichAutocomplete(); }
 }
+// ═══ Due Date Helpers ═══
+function parseDueDateFromText(text) {
+  // Match "(due Mon DD)" or "(due Month DD)" — e.g. (due Mar 5), (due March 15)
+  const dueMatch = text.match(/\(due\s+([A-Za-z]+)\s+(\d{1,2})\)/i);
+  if (dueMatch) {
+    const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,
+      january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+    const mon = months[dueMatch[1].toLowerCase()];
+    if (mon !== undefined) {
+      const day = parseInt(dueMatch[2]);
+      const now = new Date();
+      let year = now.getFullYear();
+      const candidate = new Date(year, mon, day);
+      // If the date is >6 months in the past, assume next year
+      if (candidate < new Date(now.getTime() - 180*86400000)) year++;
+      const iso = year + '-' + String(mon+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+      return { dueDate: iso, cleaned: text.replace(/\(due\s+[A-Za-z]+\s+\d{1,2}\)/i, '').trim() };
+    }
+  }
+  // Match @YYYY-MM-DD
+  const atMatch = text.match(/@(\d{4}-\d{2}-\d{2})/);
+  if (atMatch) {
+    return { dueDate: atMatch[1], cleaned: text.replace(/@\d{4}-\d{2}-\d{2}/, '').trim() };
+  }
+  return null;
+}
+
+function formatDueDate(dueDateStr) {
+  if (!dueDateStr) return null;
+  const due = new Date(dueDateStr + 'T00:00:00');
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffMs = due.getTime() - today.getTime();
+  const diffDays = Math.round(diffMs / 86400000);
+  if (diffDays < 0) {
+    return { text: 'Overdue ' + Math.abs(diffDays) + 'd', overdue: true };
+  } else if (diffDays === 0) {
+    return { text: 'Due today', overdue: false };
+  } else if (diffDays === 1) {
+    return { text: 'Due tomorrow', overdue: false };
+  } else {
+    const m = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return { text: 'Due ' + m, overdue: false };
+  }
+}
+
+function computeTaskScore(task) {
+  const importanceMap = { high: 3, medium: 2, low: 1 };
+  const importance = importanceMap[task.priority] || 1;
+  if (!task.dueDate) return 0;
+  const due = new Date(task.dueDate + 'T00:00:00');
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysUntilDue = Math.round((due.getTime() - today.getTime()) / 86400000);
+  const urgencyScore = Math.max(0, Math.min(10, 10 - daysUntilDue));
+  return urgencyScore * importance;
+}
+
 function extractAndCreateTasks(text, projectId, options) {
   if (!text) return 0;
   options = options || {};
@@ -4586,22 +4690,31 @@ function extractAndCreateTasks(text, projectId, options) {
   
   taskMatches.forEach(match => {
     const isChecked = /\[x\]/i.test(match);
-    let taskText = match
-      .replace(/\[[x\s]*\]/gi, '')   // strip checkbox
+    let rawText = match.replace(/\[[x\s]*\]/gi, '').trim();
+
+    // Parse due date before stripping @mentions (which would eat @YYYY-MM-DD)
+    const dueDateParsed = parseDueDateFromText(rawText);
+    let parsedDueDate = null;
+    if (dueDateParsed) {
+      parsedDueDate = dueDateParsed.dueDate;
+      rawText = dueDateParsed.cleaned;
+    }
+
+    let taskText = rawText
       .replace(/https?:\/\/\S+/g, '') // strip URLs
       .replace(/(#\w+)/g, '')         // strip hashtags
       .replace(/@[^\s]+/g, '')        // strip @mentions
       .trim();
-    
+
     if (!taskText) return;
     
-    // Exact match — already exists, sync done state and skip
+    // Exact match — already exists, sync done state and due date, then skip
     const existingExact = DATA.tasks.find(t => t.text === taskText);
     if (existingExact) {
-      if (isChecked !== existingExact.done) {
-        existingExact.done = isChecked;
-        updatedCount++;
-      }
+      let changed = false;
+      if (isChecked !== existingExact.done) { existingExact.done = isChecked; changed = true; }
+      if (parsedDueDate && existingExact.dueDate !== parsedDueDate) { existingExact.dueDate = parsedDueDate; changed = true; }
+      if (changed) updatedCount++;
       return;
     }
     
@@ -4638,16 +4751,17 @@ function extractAndCreateTasks(text, projectId, options) {
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
     
     const newTask = {
-      id: Date.now() + Math.floor(Math.random()*1000), 
-      text: taskText, 
-      priority: 'medium', 
-      project: projectId || '', 
-      owner: 'ryan', 
-      created: dateStr, 
+      id: Date.now() + Math.floor(Math.random()*1000),
+      text: taskText,
+      priority: 'medium',
+      project: projectId || '',
+      owner: 'ryan',
+      created: dateStr,
       done: isChecked,
       source: 'jot',
       sourceDate: options.sourceDate || dateStr,
     };
+    if (parsedDueDate) newTask.dueDate = parsedDueDate;
     
     DATA.tasks.push(newTask);
     createdCount++;
