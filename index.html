@@ -3735,28 +3735,12 @@ function renderTasks() {
 
   const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'my';
   let filteredTasks = DATA.tasks;
-  
-    totalTasks: DATA.tasks.length,
-    activeFilter: activeFilter,
-    recentTasks: DATA.tasks.slice(-3).map(t => ({id: t.id, text: t.text.substring(0, 30), owner: t.owner, done: t.done}))
-  });
 
   if (activeFilter === 'my') {
     filteredTasks = DATA.tasks.filter(t => {
       const notDone = (!t.done && t.status !== 'done');
       const isMyTask = (t.owner === 'ryan' || !t.owner);
-      const passes = notDone && isMyTask;
-      if (!passes && (t.id > 1771000000000)) { // Debug recent tasks
-          id: t.id, 
-          text: t.text.substring(0, 30), 
-          done: t.done, 
-          status: t.status, 
-          owner: t.owner,
-          notDone: notDone,
-          isMyTask: isMyTask
-        });
-      }
-      return passes;
+      return notDone && isMyTask;
     });
   } else if (activeFilter === 'k2') {
     filteredTasks = DATA.tasks.filter(t => (!t.done && t.status !== 'done') && t.owner === 'k2');
@@ -4602,12 +4586,7 @@ function initNoteInlineEditor(noteId) {
 
     window._noteEditors[noteId].editor = editor;
   } else {
-    // Fallback to textarea - also check why TipTap failed
-      Editor: !!window.Editor,
-      StarterKit: !!window.StarterKit,
-      TaskList: !!window.TaskList,
-      TaskItem: !!window.TaskItem
-    });
+    // Fallback to textarea
     
     const textContent = note.text || '';
     
