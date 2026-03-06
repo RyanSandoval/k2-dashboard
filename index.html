@@ -3299,8 +3299,19 @@ function openTaskModal(taskId) {
           <span class="tag tag-blue">${projectName}</span>
           <span class="task-priority ${scoreClass(task.urgency * task.importance)}" title="Score: ${task.urgency * task.importance}">${scoreLabel(task)}</span>
           <span class="tag tag-purple">${task.created}</span>
-          ${task.source === 'jot' && task.sourceDate ? `<span onclick="navigateToJotSource('${task.sourceDate}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent2) 15%,transparent);border:1px solid color-mix(in srgb,var(--accent2) 40%,transparent);color:var(--accent2);font-weight:600;" title="Jump to source jot">📝 ${task.sourceDate === getTodayStr() ? 'Today\'s Jot' : 'Jot · ' + task.sourceDate} ↗</span>` : ''}
-          ${task.source === 'note' && task.linkedNoteId ? `<span onclick="navigateToNoteSource('${task.linkedNoteId}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--green) 15%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);font-weight:600;" title="Jump to source note">📄 Source Note ↗</span>` : ''}
+          ${(() => {
+            const jotDate = task.sourceDate || (task.source === 'jot' ? task.created : null);
+            if (task.source === 'jot' && jotDate) {
+              const label = jotDate === getTodayStr() ? "Today's Jot" : 'Jot · ' + jotDate;
+              return `<span onclick="navigateToJotSource('${jotDate}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);font-weight:600;" title="Go to source jot">📝 ${label} ↗</span>`;
+            } else if (task.source === 'note' && task.linkedNoteId) {
+              const srcNote = DATA.notes.find(n => n.id == task.linkedNoteId);
+              const noteLabel = srcNote ? (srcNote.title || 'Note') : 'Note';
+              return `<span onclick="navigateToNoteSource('${task.linkedNoteId}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--green) 15%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);font-weight:600;" title="Go to source note">📄 ${noteLabel} ↗</span>`;
+            } else {
+              return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);">✏️ Added manually</span>`;
+            }
+          })()}
         </div>
       </div>
     </div>
