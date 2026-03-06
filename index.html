@@ -4543,7 +4543,7 @@ if (!window._noteEditors) {
 // Full-screen editor instance
 let fullScreenEditor = null;
 
-function initNoteInlineEditor(noteId) {
+window.initNoteInlineEditor = function initNoteInlineEditor(noteId) {
   // Clean up existing editor first
   if (window._noteEditors && window._noteEditors[noteId]) {
     if (window._noteEditors[noteId].editor && window._noteEditors[noteId].editor.destroy) {
@@ -4597,14 +4597,33 @@ function initNoteInlineEditor(noteId) {
 
     window._noteEditors[noteId].editor = editor;
   } else {
-    // Fallback to textarea
-    
-    const textContent = note.text || '';
-    
-    container.innerHTML = `<div style="padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;">
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">Rich editor loading... Using plain text fallback.</div>
-      <textarea style="width:100%;height:80px;background:none;border:none;color:var(--text);outline:none;resize:vertical;font-family:inherit;" onchange="updateNoteText('${noteId}', this.value)" placeholder="Start writing...">${textContent}</textarea>
+    // TipTap not ready yet — show plain text fallback and queue retry
+    const plainText = convertHTMLToText ? convertHTMLToText(note.text || '') : (note.text || '').replace(/<[^>]+>/g, '');
+    container.innerHTML = `<div data-note-fallback="${noteId}" style="padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">⏳ Editor loading…</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;">${plainText}</div>
     </div>`;
+    // Retry once TipTap is available
+    const retryInterval = setInterval(() => {
+      if (window.createEditor) {
+        clearInterval(retryInterval);
+        initNoteInlineEditor(noteId);
+      }
+    }, 300);
+    // Give up after 10s
+    setTimeout(() => {
+      clearInterval(retryInterval);
+      const fb = container.querySelector(`[data-note-fallback="${noteId}"]`);
+      if (fb) {
+        // Replace with editable textarea as last resort
+        const ta = document.createElement('textarea');
+        ta.style.cssText = 'width:100%;min-height:80px;background:none;border:none;color:var(--text);outline:none;resize:vertical;font-family:inherit;font-size:13px;line-height:1.6;';
+        ta.value = plainText;
+        ta.onchange = () => updateNoteText(noteId, ta.value);
+        container.innerHTML = '';
+        container.appendChild(ta);
+      }
+    }, 10000);
   }
 }
 
@@ -4839,8 +4858,9 @@ function initFullScreenEditor(noteId, content) {
 
     setTimeout(() => fullScreenEditor.commands.focus('end'), 100);
   } else {
-    console.warn('TipTap not available for full-screen editor, using fallback');
-    container.innerHTML = `<textarea placeholder="Start writing... (Rich editor loading...)" style="width:100%;min-height:40vh;padding:16px;background:none;border:none;color:var(--text);font-size:15px;line-height:1.8;resize:none;outline:none;font-family:inherit;">${content}</textarea>`;
+    // TipTap not ready — show plain text, retry when available
+    const plainContent = convertHTMLToText ? convertHTMLToText(content) : content.replace(/<[^>]+>/g, '');
+    container.innerHTML = `<textarea placeholder="Start writing…" style="width:100%;min-height:40vh;padding:16px;background:none;border:none;color:var(--text);font-size:15px;line-height:1.8;resize:none;outline:none;font-family:inherit;">${plainContent}</textarea>`;
   }
 }
 
@@ -6776,6 +6796,12 @@ if (window._openDocDays) {
     if (el) window._createReadonlyEditor(date, el);
   });
 }
+// Re-initialize any note editors that fell back to plain text
+document.querySelectorAll('[data-note-fallback]').forEach(el => {
+  const noteId = el.dataset.noteFallback;
+  if (noteId && window.initNoteInlineEditor) window.initNoteInlineEditor(noteId);
+});
+
 // Rescue pass: if data loaded before TipTap, today's editor may have been created
 // with empty content. Re-sync after a short delay to ensure content is loaded.
 setTimeout(() => {
