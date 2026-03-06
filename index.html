@@ -850,7 +850,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   @media (max-width: 768px) {
     .daily-doc-editor { padding: 12px 14px; }
     .ProseMirror { font-size: 15px; }
+    #dash-grid { grid-template-columns: 1fr !important; }
+    #dash-bottom-grid { grid-template-columns: 1fr !important; }
   }
+  .dash-task-row:hover { background: var(--surface2); border-radius: 6px; }
 
   /* Mobile Nav */
   .mobile-nav {
@@ -1166,6 +1169,12 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Reference</div>
+      <div class="nav-item" data-page="memory">
+        <span class="icon">🧠</span> Memory
+      </div>
+      <div class="nav-item" data-page="mission">
+        <span class="icon">🎯</span> Mission
+      </div>
       <div class="nav-item" data-page="decisions">
         <span class="icon">⚖️</span> Decisions
       </div>
@@ -1187,42 +1196,68 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <!-- Dashboard Page -->
     <div class="page" id="page-dashboard">
-      <div class="page-header">
-        <h2>Dashboard</h2>
-        <p>Overview of active work and recent activity</p>
+      <!-- Greeting + Mission -->
+      <div id="dash-greeting" style="margin-bottom:20px;"></div>
+
+      <!-- Morning Brief -->
+      <div class="card" style="margin-bottom:20px;border-left:3px solid var(--accent);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:700;">☀️ Morning Brief</div>
+          <button onclick="renderDashboard()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--text-dim);cursor:pointer;">↺ Refresh</button>
+        </div>
+        <div id="morning-brief-content"></div>
       </div>
 
-      <div class="stat-row" id="stats-row">
-        <!-- Populated by JS -->
-      </div>
-
-      <h3 style="font-size:16px; margin-bottom:12px;">Active Projects</h3>
-      <div class="card-grid" id="dashboard-projects">
-        <!-- Populated by JS -->
-      </div>
-
-      <div id="inbox-alert" style="display:none;background:rgba(74,158,255,0.1);border:1px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:24px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:20px;">📨</span>
-          <div>
-            <div style="font-size:14px;font-weight:600;">Pending messages for K-2</div>
-            <div id="inbox-count" style="font-size:12px;color:var(--text-dim);"></div>
+      <!-- Command Grid: Top Tasks + Today's Jot -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;" id="dash-grid">
+        <div class="card" style="cursor:default;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+            🔥 Top Tasks
+            <span onclick="navigateTo('tasks')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All tasks →</span>
           </div>
+          <div id="dash-top-tasks"></div>
+        </div>
+        <div class="card" style="cursor:pointer;" onclick="navigateTo('jots')">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+            ✏️ Today's Jot
+            <span style="font-size:11px;color:var(--accent);font-weight:500;">Open →</span>
+          </div>
+          <div id="dash-jot-preview" style="font-size:12px;color:var(--text-dim);line-height:1.6;"></div>
         </div>
       </div>
 
-      <div id="dashboard-jots-card" class="card" style="margin-bottom:24px;display:none;cursor:pointer;" onclick="navigateTo('jots')">
-        <div class="card-header">
-          <span class="card-title">✏️ Today's Jots</span>
-          <span style="font-size:12px;color:var(--accent);font-weight:500;">View all →</span>
-        </div>
-        <div class="card-body" id="dashboard-jots-entries"></div>
+      <!-- Quick Actions -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+        <button onclick="navigateTo('tasks')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">✅ + Task</button>
+        <button onclick="navigateTo('jots')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">✏️ Open Jot</button>
+        <button onclick="navigateTo('notes')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">📄 New Note</button>
+        <button onclick="openSearch()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">🔍 Search</button>
+        <button onclick="navigateTo('mission')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">🎯 Mission</button>
       </div>
 
-      <h3 style="font-size:16px; margin-bottom:12px;">Recent Activity</h3>
-      <div class="timeline" id="dashboard-timeline">
-        <!-- Populated by JS -->
+      <!-- Stat Row -->
+      <div class="stat-row" id="stats-row" style="margin-bottom:20px;"><!-- Populated by JS --></div>
+
+      <!-- Projects + Activity -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dash-bottom-grid">
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;">
+            🚀 Active Projects
+            <span onclick="navigateTo('projects')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All →</span>
+          </div>
+          <div id="dashboard-projects"></div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 Recent Activity</div>
+          <div class="timeline" id="dashboard-timeline"></div>
+        </div>
       </div>
+
+      <!-- inbox alert (keep for compat) -->
+      <div id="inbox-alert" style="display:none;"></div>
+      <div id="dashboard-jots-card" style="display:none;"></div>
+      <div id="dashboard-jots-entries" style="display:none;"></div>
+      <div id="inbox-count" style="display:none;"></div>
     </div>
 
     <!-- Jots / Daily Docs Page -->
@@ -1502,6 +1537,72 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="growth-content"></div>
     </div>
 
+    <!-- Memory Page -->
+    <div class="page" id="page-memory" style="max-width:800px;margin:0 auto;">
+      <div class="page-header">
+        <h2>🧠 K-2 Memory</h2>
+        <p>Daily logs and long-term memory — your digital journal</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button id="mem-tab-daily" onclick="switchMemTab('daily')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">📅 Daily</button>
+        <button id="mem-tab-longterm" onclick="switchMemTab('longterm')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">🔖 Long-term</button>
+      </div>
+
+      <div id="mem-daily-panel">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;" id="mem-quick-dates"></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <input type="date" id="mem-date-input" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;flex:1;">
+          <button onclick="loadMemoryFile()" style="background:var(--accent);border:none;border-radius:8px;padding:6px 16px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Load</button>
+        </div>
+        <div id="mem-daily-content" class="card" style="min-height:200px;font-size:13px;line-height:1.7;"></div>
+      </div>
+
+      <div id="mem-longterm-panel" style="display:none;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+          <button onclick="loadLongtermMemory()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--text-dim);cursor:pointer;">↺ Reload</button>
+        </div>
+        <div id="mem-longterm-content" class="card" style="min-height:200px;font-size:13px;line-height:1.7;"></div>
+      </div>
+    </div>
+
+    <!-- Mission & Team Page -->
+    <div class="page" id="page-mission">
+      <div class="page-header">
+        <h2>🎯 Mission & Team</h2>
+        <p>Your north star and agent roster</p>
+      </div>
+
+      <!-- Mission Statement -->
+      <div class="card" style="margin-bottom:20px;border-left:3px solid var(--accent);">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Mission Statement</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">Use this for reverse prompting — ask K-2 "what should we do right now to advance our mission?"</div>
+        <textarea id="mission-input" rows="3" placeholder="e.g. Build a system where AI agents handle my routine work so I can focus on high-leverage decisions..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:13px;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
+        <button onclick="saveMission()" style="margin-top:8px;background:var(--accent);border:none;border-radius:8px;padding:8px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Save Mission</button>
+      </div>
+
+      <!-- K-2 Team Card -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🤖 Agent Roster</div>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="mission-team-list">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+            <div style="font-size:28px;">🤖</div>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:13px;">K-2</div>
+              <div style="font-size:11px;color:var(--text-dim);">Chief of Staff · Claude Sonnet · Main session</div>
+            </div>
+            <div style="font-size:10px;padding:3px 8px;background:rgba(74,222,128,0.15);color:#4ade80;border-radius:6px;font-weight:600;border:1px solid rgba(74,222,128,0.3);">● Active</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scheduled Jobs -->
+      <div class="card">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">⏰ Scheduled Jobs</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">K-2 can write to DATA.cronJobs to populate this list</div>
+        <div id="mission-cron-list"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- AI Insight Detail Modal -->
@@ -1630,6 +1731,9 @@ async function loadData() {
       DATA.trading = { paper: { books: DATA.trading.books }, live: { books: [] } };
     }
     DATA.growth = d.growth || null;
+    DATA.mission = d.mission || '';
+    DATA.cronJobs = d.cronJobs || [];
+    DATA.docs = d.docs || [];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -1694,6 +1798,8 @@ function navigateTo(page) {
   if (page === 'jots') {
     setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 200);
   }
+  if (page === 'memory') renderMemoryPage();
+  if (page === 'mission') renderMissionPage();
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -1701,64 +1807,248 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // Render Dashboard
-function renderDashboard() {
-  console.log('[K2 Debug] renderDashboard called, DATA.projects:', DATA.projects.length, 'items, statuses:', DATA.projects.map(p=>p.status));
-  const pendingTasks = DATA.tasks.filter(t => !t.done).length;
-  const activeProjects = DATA.projects.filter(p => p.status === 'active').length;
-  console.log('[K2 Debug] activeProjects:', activeProjects);
-  const totalDecisions = DATA.decisions.length;
-  const openQuestions = DATA.discussions.reduce((n, d) => n + (d.openQuestions || []).length, 0);
+// ═══ Memory Page ═══
+let _memTab = 'daily';
+function switchMemTab(tab) {
+  _memTab = tab;
+  document.getElementById('mem-daily-panel').style.display = tab === 'daily' ? '' : 'none';
+  document.getElementById('mem-longterm-panel').style.display = tab === 'longterm' ? '' : 'none';
+  document.getElementById('mem-tab-daily').style.background = tab === 'daily' ? 'var(--accent)' : 'var(--surface2)';
+  document.getElementById('mem-tab-daily').style.color = tab === 'daily' ? '#fff' : 'var(--text-dim)';
+  document.getElementById('mem-tab-longterm').style.background = tab === 'longterm' ? 'var(--accent)' : 'var(--surface2)';
+  document.getElementById('mem-tab-longterm').style.color = tab === 'longterm' ? '#fff' : 'var(--text-dim)';
+  if (tab === 'longterm') loadLongtermMemory();
+}
 
-  document.getElementById('stats-row').innerHTML = `
-    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('projects')">
-      <div class="label">Active Projects</div>
-      <div class="value" style="color:var(--accent)">${activeProjects}</div>
-    </div>
-    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('tasks')">
-      <div class="label">Pending Tasks</div>
-      <div class="value" style="color:var(--yellow)">${pendingTasks}</div>
-    </div>
-    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('decisions')">
-      <div class="label">Decisions Made</div>
-      <div class="value" style="color:var(--green)">${totalDecisions}</div>
-    </div>
-    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('discussions')">
-      <div class="label">Open Questions</div>
-      <div class="value" style="color:var(--orange)">${openQuestions}</div>
-    </div>
-  `;
+function renderMemoryPage() {
+  const today = getTodayStr();
+  const input = document.getElementById('mem-date-input');
+  if (input && !input.value) input.value = today;
 
-  document.getElementById('dashboard-projects').innerHTML = DATA.projects.map(p => `
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">${p.name}</span>
-        <span class="status-dot status-${p.status}"></span>
-      </div>
-      <div class="card-body">${p.description}</div>
-      <div class="card-footer">
-        ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
-      </div>
-    </div>
-  `).join('');
-
-  const sortedTimeline = [...(DATA.timeline || [])].sort((a, b) => b.date.localeCompare(a.date));
-  document.getElementById('dashboard-timeline').innerHTML = sortedTimeline.slice(0, 8).map(t => `
-    <div class="timeline-item">
-      <div class="timeline-date">${t.date}</div>
-      <div class="timeline-content">${t.event}</div>
-    </div>
-  `).join('');
-
-  // Inbox alert
-  const inbox = (DATA.inbox || []).filter(m => !m.read);
-  const inboxAlert = document.getElementById('inbox-alert');
-  if (inboxAlert) {
-    if (inbox.length > 0) {
-      inboxAlert.style.display = 'block';
-      document.getElementById('inbox-count').textContent = `${inbox.length} message${inbox.length > 1 ? 's' : ''} waiting`;
-    } else {
-      inboxAlert.style.display = 'none';
+  // Quick-jump links for last 7 days
+  const quickDates = document.getElementById('mem-quick-dates');
+  if (quickDates) {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      days.push(`<button onclick="document.getElementById('mem-date-input').value='${ds}';loadMemoryFile()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">${label}</button>`);
     }
+    quickDates.innerHTML = days.join('');
+  }
+  loadMemoryFile();
+}
+
+async function loadMemoryFile() {
+  const date = document.getElementById('mem-date-input')?.value || getTodayStr();
+  const el = document.getElementById('mem-daily-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;">Loading...</div>';
+  try {
+    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/memory/${date}.md`, { headers: ghHeaders() });
+    if (res.status === 404) { el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;font-style:italic;">No memory entry for this date yet.</div>'; return; }
+    if (!res.ok) throw new Error(res.status);
+    const file = await res.json();
+    const md = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g,'')), c=>c.charCodeAt(0)));
+    el.innerHTML = `<div style="white-space:pre-wrap;font-family:inherit;">${renderMarkdown(md)}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);font-size:12px;">Error loading memory: ${e.message}</div>`;
+  }
+}
+
+async function loadLongtermMemory() {
+  const el = document.getElementById('mem-longterm-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;">Loading...</div>';
+  try {
+    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/MEMORY.md`, { headers: ghHeaders() });
+    if (res.status === 404) { el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;font-style:italic;">MEMORY.md not found in k2-data repo.</div>'; return; }
+    if (!res.ok) throw new Error(res.status);
+    const file = await res.json();
+    const md = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g,'')), c=>c.charCodeAt(0)));
+    el.innerHTML = `<div style="white-space:pre-wrap;font-family:inherit;">${renderMarkdown(md)}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);font-size:12px;">Error: ${e.message}</div>`;
+  }
+}
+
+// ═══ Mission Page ═══
+function renderMissionPage() {
+  const input = document.getElementById('mission-input');
+  if (input) input.value = DATA.mission || '';
+
+  // Cron jobs
+  const cronEl = document.getElementById('mission-cron-list');
+  if (cronEl) {
+    const jobs = DATA.cronJobs || [];
+    if (jobs.length === 0) {
+      cronEl.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No scheduled jobs yet — ask K-2 to populate DATA.cronJobs with your active cron schedule.</div>';
+    } else {
+      cronEl.innerHTML = jobs.map(j => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:16px;">⏰</span>
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:600;">${j.name}</div>
+            <div style="font-size:11px;color:var(--text-dim);">${j.schedule} ${j.description ? '· '+j.description : ''}</div>
+            ${j.lastRun ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Last run: ${j.lastRun}</div>` : ''}
+          </div>
+        </div>`).join('');
+    }
+  }
+}
+
+async function saveMission() {
+  DATA.mission = document.getElementById('mission-input')?.value?.trim() || '';
+  await saveData();
+  showToast('Mission saved ✓');
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const today = getTodayStr();
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const dayStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  // Greeting + mission
+  const mission = DATA.mission || '';
+  document.getElementById('dash-greeting').innerHTML = `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:22px;font-weight:800;">${greeting}, Ryan 👋</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:2px;">${dayStr}</div>
+      </div>
+      ${mission ? `<div style="font-size:11px;padding:5px 12px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:20px;color:var(--accent);max-width:320px;text-align:right;line-height:1.4;cursor:pointer;" onclick="navigateTo('mission')" title="Click to edit mission">🎯 ${mission}</div>` :
+      `<div onclick="navigateTo('mission')" style="font-size:12px;color:var(--text-dim);cursor:pointer;border:1px dashed var(--border);border-radius:8px;padding:6px 12px;">Set your mission →</div>`}
+    </div>`;
+
+  // Morning Brief
+  renderMorningBrief(today);
+
+  // Top Tasks
+  const pending = DATA.tasks.filter(t => !t.done);
+  pending.forEach(migrateTaskPriority);
+  const topTasks = [...pending].sort((a,b) => taskScoreRaw(b) - taskScoreRaw(a)).slice(0, 6);
+  const dashTasks = document.getElementById('dash-top-tasks');
+  if (dashTasks) {
+    if (topTasks.length === 0) {
+      dashTasks.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No pending tasks — nice!</div>';
+    } else {
+      dashTasks.innerHTML = topTasks.map(t => {
+        const tid = typeof t.id === 'string' ? `'${t.id.replace(/'/g,"\\\'")}'` : t.id;
+        const dueInfo = formatDueDate(t.dueDate);
+        const scoreC = scoreClass(taskScoreRaw(t));
+        return `<div onclick="openTaskModal(${tid})" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" class="dash-task-row">
+          <div class="task-check ${t.done?'done':''}" style="flex-shrink:0;pointer-events:none;"></div>
+          <div style="flex:1;font-size:12px;line-height:1.4;">${(t.text||'').slice(0,55)}${(t.text||'').length>55?'…':''}</div>
+          <span class="task-priority ${scoreC}" style="font-size:9px;padding:2px 5px;">${scoreLabel(t)}</span>
+          ${dueInfo ? `<span style="font-size:9px;color:${dueInfo.overdue?'var(--red)':'var(--text-dim)'};">${dueInfo.text}</span>` : ''}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Today's Jot preview
+  const jotDoc = DATA.dailyDocs?.[today];
+  const jotPreview = document.getElementById('dash-jot-preview');
+  if (jotPreview) {
+    if (jotDoc?.content) {
+      const plain = convertHTMLToText(jotDoc.content).slice(0, 220);
+      jotPreview.textContent = plain || 'No content yet — click to open';
+    } else {
+      jotPreview.innerHTML = '<span style="font-style:italic;">Nothing yet today — click to start writing</span>';
+    }
+  }
+
+  // Stats row
+  const pendingCount = DATA.tasks.filter(t=>!t.done).length;
+  const activeProjects = DATA.projects.filter(p=>p.status==='active').length;
+  const totalDecisions = DATA.decisions.length;
+  const openQuestions = DATA.discussions.reduce((n,d)=>n+(d.openQuestions||[]).length,0);
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('projects')"><div class="label">Active Projects</div><div class="value" style="color:var(--accent)">${activeProjects}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('tasks')"><div class="label">Pending Tasks</div><div class="value" style="color:var(--yellow)">${pendingCount}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('decisions')"><div class="label">Decisions</div><div class="value" style="color:var(--green)">${totalDecisions}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('discussions')"><div class="label">Open Questions</div><div class="value" style="color:var(--orange)">${openQuestions}</div></div>`;
+
+  // Active projects (compact)
+  const projEl = document.getElementById('dashboard-projects');
+  if (projEl) {
+    const active = DATA.projects.filter(p=>p.status==='active').slice(0,4);
+    projEl.innerHTML = active.length === 0
+      ? '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No active projects</div>'
+      : active.map(p=>`<div onclick="navigateTo('projects')" style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+          <div style="font-size:12px;font-weight:600;">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${(p.description||'').slice(0,60)}</div>
+        </div>`).join('');
+  }
+
+  // Activity timeline
+  const sortedTimeline = [...(DATA.timeline||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('dashboard-timeline').innerHTML = sortedTimeline.slice(0,6).map(t=>`
+    <div class="timeline-item"><div class="timeline-date">${t.date}</div><div class="timeline-content">${t.event}</div></div>`).join('') || '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No activity yet</div>';
+}
+
+function renderMorningBrief(today) {
+  const el = document.getElementById('morning-brief-content');
+  if (!el) return;
+  const yesterday = (()=>{ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })();
+
+  const sections = [];
+
+  // 1. Overdue tasks
+  const overdue = DATA.tasks.filter(t => !t.done && t.dueDate && t.dueDate < today);
+  if (overdue.length > 0) {
+    sections.push(`<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🚨 Overdue (${overdue.length})</div>
+      ${overdue.slice(0,3).map(t=>`<div style="font-size:12px;padding:3px 0;color:var(--text-dim);">· ${(t.text||'').slice(0,60)} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
+      ${overdue.length>3?`<div style="font-size:11px;color:var(--red);">+ ${overdue.length-3} more</div>`:''}
+    </div>`);
+  }
+
+  // 2. Due today
+  const dueToday = DATA.tasks.filter(t => !t.done && t.dueDate === today);
+  if (dueToday.length > 0) {
+    sections.push(`<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">📅 Due Today (${dueToday.length})</div>
+      ${dueToday.slice(0,3).map(t=>`<div style="font-size:12px;padding:3px 0;color:var(--text-dim);">· ${(t.text||'').slice(0,60)}</div>`).join('')}
+    </div>`);
+  }
+
+  // 3. Top priorities (by score, excluding overdue/due-today already shown)
+  const shown = new Set([...overdue,...dueToday].map(t=>t.id));
+  const pending = DATA.tasks.filter(t=>!t.done && !shown.has(t.id));
+  pending.forEach(migrateTaskPriority);
+  const topPriority = [...pending].sort((a,b)=>taskScoreRaw(b)-taskScoreRaw(a)).slice(0,3);
+  if (topPriority.length > 0) {
+    sections.push(`<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🔥 Top Priority</div>
+      ${topPriority.map(t=>`<div style="font-size:12px;padding:3px 0;color:var(--text-dim);">· ${(t.text||'').slice(0,60)} <span class="task-priority ${scoreClass(taskScoreRaw(t))}" style="font-size:9px;padding:1px 4px;">${scoreLabel(t)}</span></div>`).join('')}
+    </div>`);
+  }
+
+  // 4. Added recently (today + yesterday from jots/notes)
+  const recent = DATA.tasks.filter(t => !t.done && (t.created === today || t.created === yesterday)).sort((a,b)=>b.id-a.id).slice(0,3);
+  if (recent.length > 0) {
+    sections.push(`<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">✨ Recently Added</div>
+      ${recent.map(t=>`<div style="font-size:12px;padding:3px 0;color:var(--text-dim);">· ${(t.text||'').slice(0,60)} <span style="font-size:10px;color:var(--text-dim);">${t.source==='jot'?'📝 jot':t.source==='note'?'📄 note':'manual'}</span></div>`).join('')}
+    </div>`);
+  }
+
+  // 5. K-2 mission nudge
+  if (DATA.mission) {
+    sections.push(`<div style="padding:8px 10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:6px;font-size:11px;color:var(--text-dim);border-left:2px solid var(--accent);">
+      <strong>Reverse prompt idea:</strong> "K-2, what's one task we can do right now that brings us closer to our mission?"
+    </div>`);
+  }
+
+  if (sections.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">All clear — no overdue tasks, nothing urgent. Good shape!</div>';
+  } else {
+    el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">${sections.map(s=>`<div>${s}</div>`).join('')}</div>`;
   }
 }
 
