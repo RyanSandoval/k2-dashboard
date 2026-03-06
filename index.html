@@ -5002,11 +5002,15 @@ function renderDailyDocs() {
   if (!window._todayEditor) {
     initTodayEditor(today);
   } else {
-    // Update content if loaded from server
+    // Sync content: always update on date change, and rescue if editor is blank but data has content
     const doc = DATA.dailyDocs[today];
-    if (doc && window._todayEditorDate !== today) {
-      window._todayEditor.commands.setContent(doc.content || '<p></p>');
-      window._todayEditorDate = today;
+    if (doc) {
+      const editorHTML = window._todayEditor.getHTML();
+      const isEmpty = !editorHTML || editorHTML === '<p></p>' || editorHTML === '<p><br></p>';
+      if (window._todayEditorDate !== today || (isEmpty && doc.content && doc.content !== '<p></p>')) {
+        window._todayEditor.commands.setContent(doc.content || '<p></p>');
+        window._todayEditorDate = today;
+      }
     }
   }
 
@@ -5091,7 +5095,6 @@ function toggleDocDay(element) {
 }
 
 function initPreviousDayEditor(date) {
-  if (window._previousEditors[date]) return;
   const el = document.getElementById('doc-editor-' + date);
   if (!el) return;
   // Wait for both TipTap and data to be ready
@@ -5102,6 +5105,15 @@ function initPreviousDayEditor(date) {
   const doc = DATA?.dailyDocs?.[date];
   if (!doc) {
     DATA.dailyDocs[date] = { content: '<p></p>', updatedAt: new Date().toISOString() };
+  }
+  // If editor already exists but is blank, rescue content
+  if (window._previousEditors[date]) {
+    const current = window._previousEditors[date].getHTML?.();
+    const isEmpty = !current || current === '<p></p>' || current === '<p><br></p>';
+    if (isEmpty && doc?.content && doc.content !== '<p></p>') {
+      window._previousEditors[date].commands.setContent(doc.content);
+    }
+    return;
   }
   window._previousEditors[date] = window._createDayEditor(date, el);
 }
@@ -6764,6 +6776,21 @@ if (window._openDocDays) {
     if (el) window._createReadonlyEditor(date, el);
   });
 }
+// Rescue pass: if data loaded before TipTap, today's editor may have been created
+// with empty content. Re-sync after a short delay to ensure content is loaded.
+setTimeout(() => {
+  if (window._todayEditor && window.DATA) {
+    const today = window._pendingTodayInit || Object.keys(window.DATA.dailyDocs||{}).sort().reverse()[0];
+    if (!today) return;
+    const doc = window.DATA.dailyDocs?.[today];
+    if (doc && doc.content && doc.content !== '<p></p>') {
+      const current = window._todayEditor.getHTML();
+      if (!current || current === '<p></p>' || current === '<p><br></p>') {
+        window._todayEditor.commands.setContent(doc.content);
+      }
+    }
+  }
+}, 500);
 </script>
 </body>
 </html>
