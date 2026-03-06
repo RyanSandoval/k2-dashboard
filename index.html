@@ -5741,9 +5741,10 @@ let slashMenuEditor = null;
 let slashMenuPos = 0;
 let slashFilterText = '';
 
-function showSlashMenu(editor, coords, filterText) {
+function showSlashMenu(editor, coords, filterText, triggerPos) {
   slashMenuEditor = editor;
   slashFilterText = filterText;
+  if (triggerPos !== undefined) slashMenuPos = triggerPos;
   const filtered = slashCommands.filter(c => c.label.toLowerCase().includes(filterText.toLowerCase()));
   if (filtered.length === 0) { hideSlashMenu(); return; }
   
@@ -5788,13 +5789,14 @@ function hideSlashMenu() {
 
 function selectSlashCommand(cmd) {
   if (!cmd || !slashMenuEditor) return;
-  // Delete the slash and filter text
   const { from } = slashMenuEditor.state.selection;
-  const textBefore = slashMenuEditor.state.doc.textBetween(Math.max(0, from - 20), from);
-  const slashIdx = textBefore.lastIndexOf('/');
-  if (slashIdx >= 0) {
-    const deleteFrom = from - (textBefore.length - slashIdx);
+  // slashMenuPos = document position of the '/' character when menu opened
+  // Delete from '/' up to current cursor (removes '/filtertext')
+  const deleteFrom = slashMenuPos >= 0 ? slashMenuPos : from - slashFilterText.length - 1;
+  if (deleteFrom >= 0 && deleteFrom < from) {
     slashMenuEditor.chain().focus().deleteRange({ from: deleteFrom, to: from }).run();
+  } else {
+    slashMenuEditor.chain().focus().run(); // just focus if nothing to delete
   }
   cmd.action(slashMenuEditor);
   hideSlashMenu();
@@ -6154,8 +6156,9 @@ function handleEditorUpdate(editor) {
   const slashMatch = textBefore.match(/(?:^|\n)\/?([a-zA-Z]*)$/);
   if (textBefore.match(/(?:^|\n)\/([a-zA-Z]*)$/)) {
     const filter = slashMatch ? slashMatch[1] : '';
+    const triggerPos = from - filter.length - 1; // document position of the '/'
     const coords = getCursorCoords(editor);
-    showSlashMenu(editor, coords, filter);
+    showSlashMenu(editor, coords, filter, triggerPos);
     return;
   } else {
     hideSlashMenu();
