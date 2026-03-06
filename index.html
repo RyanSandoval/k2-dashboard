@@ -14,6 +14,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; connect-src 'self' api.github.com esm.sh *.esm.sh us.i.posthog.com; img-src 'self' data: blob: *; font-src 'self' data:; frame-src 'none'; object-src 'none';">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K-2 Command Center</title>
 <!-- Force GitHub Pages refresh: 2026-02-17T13:26 -->
@@ -3735,7 +3736,6 @@ function renderTasks() {
   const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'my';
   let filteredTasks = DATA.tasks;
   
-  console.log('renderTasks() called:', {
     totalTasks: DATA.tasks.length,
     activeFilter: activeFilter,
     recentTasks: DATA.tasks.slice(-3).map(t => ({id: t.id, text: t.text.substring(0, 30), owner: t.owner, done: t.done}))
@@ -3747,7 +3747,6 @@ function renderTasks() {
       const isMyTask = (t.owner === 'ryan' || !t.owner);
       const passes = notDone && isMyTask;
       if (!passes && (t.id > 1771000000000)) { // Debug recent tasks
-        console.log('Task filtered out:', {
           id: t.id, 
           text: t.text.substring(0, 30), 
           done: t.done, 
@@ -4242,7 +4241,6 @@ function renderNotes() {
       // If TipTap isn't ready, retry after a short delay
       if (!window.Editor || !window.StarterKit) {
         setTimeout(() => {
-          console.log('Retrying TipTap initialization for note:', note.id);
           initNoteInlineEditor(note.id);
         }, 500);
       }
@@ -4439,10 +4437,7 @@ function openNoteEditor(noteId) {
     }
   }, 100);
   
-  // Debug logging
-  console.log('Opening note editor for:', note.id);
-  console.log('Note title:', note.title);
-  console.log('Note text:', note.text);
+  // (debug logging removed for privacy)
 }
 
 async function closeNoteEditor() {
@@ -4577,7 +4572,6 @@ function initNoteInlineEditor(noteId) {
   // Clear container
   container.innerHTML = '';
   
-  console.log('Initializing inline editor for note:', noteId, note);
 
   // Use full createEditor (with mention nodes + input plugin) if available
   if (window.createEditor) {
@@ -4609,8 +4603,6 @@ function initNoteInlineEditor(noteId) {
     window._noteEditors[noteId].editor = editor;
   } else {
     // Fallback to textarea - also check why TipTap failed
-    console.log('Using textarea fallback for note:', noteId);
-    console.log('TipTap availability check:', {
       Editor: !!window.Editor,
       StarterKit: !!window.StarterKit,
       TaskList: !!window.TaskList,
@@ -4641,20 +4633,15 @@ async function updateNoteText(noteId, newText) {
   // Extract and create tasks from note content
   const { created: taskCount } = extractAndCreateTasks(note.text, note.projectId);
   if (taskCount > 0) {
-    console.log(`Created ${taskCount} tasks from note via textarea:`, noteId);
     showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from note`);
     renderTasks(); // Refresh tasks view
   }
   
   await saveData();
-  console.log('Updated note text via textarea fallback:', noteId);
 }
 
 // Debug function to check editor status
 function debugNoteEditors() {
-  console.log('Active note editors:', window._noteEditors);
-  console.log('TipTap available:', !!window.Editor);
-  console.log('StarterKit available:', !!window.StarterKit);
 }
 
 // Convert plain text to basic HTML for TipTap display (safe conversion)
@@ -4990,7 +4977,6 @@ function migrateJotsToDailyDocs() {
     if (plainText) {
       const { created: taskCount } = extractAndCreateTasks(plainText, null);
       if (taskCount > 0) {
-        console.log(`Created ${taskCount} tasks during jots migration for ${date}`);
       }
     }
     
@@ -5846,7 +5832,6 @@ async function selectionFormat(wrapper) {
   // Extract and create tasks from updated jot (legacy system)
   const { created: taskCount } = extractAndCreateTasks(jot.text, jot.projectId);
   if (taskCount > 0) {
-    console.log(`Created ${taskCount} tasks from legacy jot:`, jot.id);
     showToast(`${taskCount} task${taskCount > 1 ? 's' : ''} created from jot`);
     renderTasks();
   }
