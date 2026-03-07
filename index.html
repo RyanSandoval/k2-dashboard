@@ -1425,8 +1425,15 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <!-- Decisions Page -->
     <div class="page" id="page-decisions">
       <div class="page-header">
-        <h2>Decisions</h2>
-        <p>Choices made and their rationale</p>
+        <h2>⚖️ K-2 Decisions</h2>
+        <p>Architectural and strategic choices K-2 has made — and why</p>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;" id="decision-filter-pills">
+        <button onclick="setDecisionFilter('all')" data-filter="all" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--accent);color:#fff;">All</button>
+        <button onclick="setDecisionFilter('dashboard')" data-filter="dashboard" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Dashboard</button>
+        <button onclick="setDecisionFilter('trading')" data-filter="trading" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Trading</button>
+        <button onclick="setDecisionFilter('automation')" data-filter="automation" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Automation</button>
+        <button onclick="setDecisionFilter('security')" data-filter="security" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Security</button>
       </div>
       <div id="decisions-timeline" class="timeline">
         <!-- Populated by JS -->
@@ -4259,22 +4266,48 @@ function toggleThread(element) {
 }
 
 // Render Decisions
+let _decisionFilter = 'all';
+
+function setDecisionFilter(cat) {
+  _decisionFilter = cat;
+  document.querySelectorAll('#decision-filter-pills [data-filter]').forEach(b => {
+    const active = b.dataset.filter === cat;
+    b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
+    b.style.color = active ? '#fff' : 'var(--text-dim)';
+  });
+  renderDecisions();
+}
+
 function renderDecisions() {
   const container = document.getElementById('decisions-timeline');
   if (!container) return;
 
-  const sortedDecisions = [...DATA.decisions].sort((a, b) => b.date.localeCompare(a.date));
+  const catColors = { dashboard:'var(--accent)', trading:'var(--green)', automation:'var(--yellow)', security:'var(--red)', other:'var(--text-dim)' };
 
-  container.innerHTML = sortedDecisions.map(decision => `
+  let sorted = [...DATA.decisions].sort((a, b) => b.date.localeCompare(a.date));
+  if (_decisionFilter !== 'all') sorted = sorted.filter(d => (d.category||'other') === _decisionFilter);
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-dim);font-style:italic;padding:20px 0;">No decisions logged yet in this category.</div>';
+    return;
+  }
+
+  container.innerHTML = sorted.map(decision => {
+    const cat = decision.category || 'other';
+    const color = catColors[cat] || 'var(--text-dim)';
+    return `
     <div class="timeline-item">
       <div class="timeline-date">${decision.date}</div>
       <div class="timeline-content">
-        <div style="font-weight:600;margin-bottom:4px;">${decision.decision}</div>
-        <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">${decision.rationale}</div>
-        ${decision.project ? `<span class="tag tag-blue">${DATA.projects.find(p => p.id === decision.project)?.name || 'Unknown Project'}</span>` : ''}
+        <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <div style="font-weight:600;flex:1;">${decision.decision}</div>
+          <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,${color} 15%,transparent);color:${color};border:1px solid color-mix(in srgb,${color} 30%,transparent);white-space:nowrap;font-weight:600;">${cat}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">${decision.rationale}</div>
+        ${decision.project ? `<span class="tag tag-blue" style="margin-top:6px;display:inline-block;">${DATA.projects.find(p => p.id === decision.project)?.name || ''}</span>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // Render Notes
