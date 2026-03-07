@@ -1598,22 +1598,24 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <!-- Memory Page -->
     <div class="page" id="page-memory" style="max-width:800px;margin:0 auto;">
-      <div class="page-header">
-        <h2>🧠 K-2 Memory</h2>
-        <p>Daily logs and long-term memory — your digital journal</p>
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <h2>🧠 K-2 Memory</h2>
+          <p>What K-2 remembers — updated after sessions</p>
+        </div>
+        <button onclick="renderMemoryPage(true)" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0;">↺ Refresh</button>
       </div>
+
       <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button id="mem-tab-daily" onclick="switchMemTab('daily')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">📅 Daily</button>
+        <button id="mem-tab-daily" onclick="switchMemTab('daily')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">📅 Recent Sessions</button>
         <button id="mem-tab-longterm" onclick="switchMemTab('longterm')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">🔖 Long-term</button>
       </div>
 
+      <!-- Daily feed — auto-loads last 7 days -->
       <div id="mem-daily-panel">
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;" id="mem-quick-dates"></div>
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-          <input type="date" id="mem-date-input" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;flex:1;">
-          <button onclick="loadMemoryFile()" style="background:var(--accent);border:none;border-radius:8px;padding:6px 16px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Load</button>
-        </div>
-        <div id="mem-daily-content" class="card" style="min-height:200px;font-size:13px;line-height:1.7;"></div>
+        <div id="mem-daily-feed" style="display:flex;flex-direction:column;gap:12px;"></div>
+        <!-- Hidden date input kept for compat -->
+        <input type="date" id="mem-date-input" style="display:none;">
       </div>
 
       <div id="mem-longterm-panel" style="display:none;">
@@ -1976,42 +1978,60 @@ function switchMemTab(tab) {
   if (tab === 'longterm') loadLongtermMemory();
 }
 
-function renderMemoryPage() {
-  const today = getTodayStr();
-  const input = document.getElementById('mem-date-input');
-  if (input && !input.value) input.value = today;
-
-  // Quick-jump links for last 7 days
-  const quickDates = document.getElementById('mem-quick-dates');
-  if (quickDates) {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const ds = d.toISOString().slice(0, 10);
-      const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      days.push(`<button onclick="document.getElementById('mem-date-input').value='${ds}';loadMemoryFile()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">${label}</button>`);
-    }
-    quickDates.innerHTML = days.join('');
-  }
-  loadMemoryFile();
+function renderMemoryPage(forceReload) {
+  if (_memTab === 'longterm') { loadLongtermMemory(); return; }
+  loadMemoryFeed(forceReload);
 }
 
-async function loadMemoryFile() {
-  const date = document.getElementById('mem-date-input')?.value || getTodayStr();
-  const el = document.getElementById('mem-daily-content');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;">Loading...</div>';
-  try {
-    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/memory/${date}.md`, { headers: ghHeaders() });
-    if (res.status === 404) { el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;font-style:italic;">No memory entry for this date yet.</div>'; return; }
-    if (!res.ok) throw new Error(res.status);
-    const file = await res.json();
-    const md = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g,'')), c=>c.charCodeAt(0)));
-    el.innerHTML = `<div style="white-space:pre-wrap;font-family:inherit;">${renderMarkdown(md)}</div>`;
-  } catch(e) {
-    el.innerHTML = `<div style="color:var(--red);font-size:12px;">Error loading memory: ${e.message}</div>`;
+async function loadMemoryFeed(forceReload) {
+  const feed = document.getElementById('mem-daily-feed');
+  if (!feed) return;
+  feed.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:12px 0;">Loading recent session notes…</div>';
+
+  // Build last 14 dates to check
+  const dates = [];
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
   }
+
+  // Fetch all in parallel
+  const results = await Promise.all(dates.map(async date => {
+    try {
+      const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/memory/${date}.md`, { headers: ghHeaders() });
+      if (res.status === 404) return { date, content: null };
+      if (!res.ok) return { date, content: null };
+      const file = await res.json();
+      const md = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g,'')), c=>c.charCodeAt(0)));
+      return { date, content: md };
+    } catch(e) { return { date, content: null }; }
+  }));
+
+  const found = results.filter(r => r.content);
+  if (found.length === 0) {
+    feed.innerHTML = `<div class="card" style="font-size:13px;color:var(--text-dim);font-style:italic;">
+      No session memory found yet. K-2 will write here after sessions.<br><br>
+      <span style="font-size:11px;">Note: Memory files need to be synced to the k2-data repo to appear here.</span>
+    </div>`;
+    return;
+  }
+
+  feed.innerHTML = found.map(({ date, content }) => {
+    const today = getTodayStr();
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })();
+    const label = date === today ? 'Today' : date === yesterday ? 'Yesterday' : date;
+    const rendered = renderMarkdown ? renderMarkdown(content) : `<pre style="white-space:pre-wrap;font-family:inherit;">${content}</pre>`;
+    return `<div class="card" style="border-left:3px solid var(--accent);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;color:var(--accent);">📅 ${label} <span style="font-size:11px;color:var(--text-dim);font-weight:400;">${date !== label ? '' : ''}</span></div>
+      </div>
+      <div style="font-size:13px;line-height:1.7;">${rendered}</div>
+    </div>`;
+  }).join('');
 }
+
+// Keep loadMemoryFile for backward compat
+async function loadMemoryFile() { loadMemoryFeed(); }
 
 async function loadLongtermMemory() {
   const el = document.getElementById('mem-longterm-content');
