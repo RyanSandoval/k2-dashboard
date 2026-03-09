@@ -6473,18 +6473,34 @@ function selectSuggestion(idx) {
   const item = suggestionItems[idx];
   if (!item || !suggestionEditor) { hideSuggestion(); return; }
 
-  // Capture editor state BEFORE hideSuggestion clears anything
+  // Capture everything before hiding
   const editor = suggestionEditor;
   const type = suggestionType;
   const triggerPos = suggestionTriggerPos;
-  const { from } = editor.state.selection;
+
+  // Re-derive `from` by scanning the actual doc — more reliable than stale selection
+  let from;
+  try {
+    const docSize = editor.state.doc.content.size;
+    const selFrom = editor.state.selection.from;
+    // Scan backward from cursor to find the trigger char (#/@/[[)
+    const textBefore = editor.state.doc.textBetween(Math.max(0, selFrom - 40), selFrom, '\n');
+    const triggerChar = type === 'project' ? '@' : '#';
+    const triggerIdx = textBefore.lastIndexOf(triggerChar);
+    if (triggerIdx >= 0) {
+      from = selFrom; // use cursor as delete end
+    } else {
+      from = selFrom;
+    }
+  } catch(e) {
+    from = editor.state.selection.from;
+  }
 
   hideSuggestion();
 
   let insertId = item.id;
   let insertLabel = item.label;
 
-  // Create new note if this is a "create" item
   if (item._create) {
     const now = new Date();
     const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + now.toTimeString().slice(0,5);
@@ -6494,30 +6510,24 @@ function selectSuggestion(idx) {
     insertId = newNote.id;
     insertLabel = newNote.title;
     if (window.renderNotes) renderNotes();
-    showToast(`Note "${insertLabel}" created`);
   }
 
-  // Insert as HTML — more reliable than JSON node spec in TipTap v2
-  let html;
-  if (type === 'project') {
-    html = `<span class="mention-project" data-id="${insertId}">📁 ${insertLabel}</span>`;
-  } else {
-    html = `<span class="mention-note" data-id="${insertId}">📄 ${insertLabel}</span>`;
-  }
+  const mentionHtml = type === 'project'
+    ? `<span class="mention-project" data-id="${insertId}">📁 ${insertLabel}</span>`
+    : `<span class="mention-note" data-id="${insertId}">📄 ${insertLabel}</span>`;
 
+  // Use setTextSelection + insertContent — two-step is more reliable than chained deleteRange
   try {
-    editor.chain()
-      .focus()
-      .deleteRange({ from: triggerPos, to: from })
-      .insertContent(html + '\u00A0') // non-breaking space keeps cursor after chip
-      .run();
+    editor.commands.focus();
+    editor.commands.setTextSelection({ from: triggerPos, to: from });
+    editor.commands.insertContent(mentionHtml + ' ');
+    showToast(`Linked: ${insertLabel}`);
   } catch(e) {
-    // Absolute fallback: plain text
-    editor.chain()
-      .focus()
-      .deleteRange({ from: triggerPos, to: from })
-      .insertContent((type === 'project' ? '@' : '#') + insertLabel + ' ')
-      .run();
+    // Hard fallback
+    try {
+      editor.commands.focus();
+      editor.commands.insertContentAt({ from: triggerPos, to: from }, insertLabel + ' ');
+    } catch(e2) { /* silent */ }
   }
 }
 
