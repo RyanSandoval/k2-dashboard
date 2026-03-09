@@ -751,11 +751,14 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     cursor: pointer; white-space: nowrap;
   }
   .mention-note {
-    display: inline; background: rgba(52,211,153,0.15); color: #34d399;
-    padding: 1px 6px; border-radius: 6px; font-size: 12px; font-weight: 600;
-    cursor: pointer; white-space: nowrap;
+    display: inline-block; background: rgba(52,211,153,0.15); color: #34d399;
+    padding: 1px 7px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; border: 1px solid rgba(52,211,153,0.3);
+    transition: background 0.15s, transform 0.1s;
+    text-decoration: none; user-select: none;
   }
-  .mention-project:hover, .mention-note:hover { opacity: 0.8; cursor:pointer; }
+  .mention-project:hover { opacity: 0.85; cursor: pointer; }
+  .mention-note:hover { background: rgba(52,211,153,0.28); transform: translateY(-1px); }
   /* Inline timestamp */
   .jot-time-inline { font-size: 11px; color: var(--text-dim); margin-right: 6px; }
   /* Slash command menu */
@@ -6470,6 +6473,14 @@ function selectSuggestion(idx) {
   const item = suggestionItems[idx];
   if (!item || !suggestionEditor) { hideSuggestion(); return; }
 
+  // Capture editor state BEFORE hideSuggestion clears anything
+  const editor = suggestionEditor;
+  const type = suggestionType;
+  const triggerPos = suggestionTriggerPos;
+  const { from } = editor.state.selection;
+
+  hideSuggestion();
+
   let insertId = item.id;
   let insertLabel = item.label;
 
@@ -6482,23 +6493,32 @@ function selectSuggestion(idx) {
     window.saveData();
     insertId = newNote.id;
     insertLabel = newNote.title;
+    if (window.renderNotes) renderNotes();
+    showToast(`Note "${insertLabel}" created`);
   }
 
-  const { from } = suggestionEditor.state.selection;
-  const deleteFrom = suggestionTriggerPos;
+  // Insert as HTML — more reliable than JSON node spec in TipTap v2
+  let html;
+  if (type === 'project') {
+    html = `<span class="mention-project" data-id="${insertId}">📁 ${insertLabel}</span>`;
+  } else {
+    html = `<span class="mention-note" data-id="${insertId}">📄 ${insertLabel}</span>`;
+  }
 
-  const nodeType = suggestionType === 'project' ? 'projectMention' : 'noteMention';
-
-  suggestionEditor.chain()
-    .focus()
-    .deleteRange({ from: deleteFrom, to: from })
-    .insertContent([
-      { type: nodeType, attrs: { id: insertId, label: insertLabel } },
-      { type: 'text', text: ' ' },
-    ])
-    .run();
-
-  hideSuggestion();
+  try {
+    editor.chain()
+      .focus()
+      .deleteRange({ from: triggerPos, to: from })
+      .insertContent(html + '\u00A0') // non-breaking space keeps cursor after chip
+      .run();
+  } catch(e) {
+    // Absolute fallback: plain text
+    editor.chain()
+      .focus()
+      .deleteRange({ from: triggerPos, to: from })
+      .insertContent((type === 'project' ? '@' : '#') + insertLabel + ' ')
+      .run();
+  }
 }
 
 // Floating toolbar
