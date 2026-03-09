@@ -6319,18 +6319,26 @@ const NoteMention = Node.create({
   atom: true,
   addAttributes() {
     return {
-      id: { default: null },
-      label: { default: null },
+      id: {
+        default: null,
+        parseHTML: el => el.getAttribute('data-id') || el.getAttribute('id'),
+      },
+      label: {
+        default: null,
+        parseHTML: el => el.getAttribute('data-label') || el.textContent.replace(/^📄\s*/, '').trim(),
+      },
     };
   },
   parseHTML() {
-    return [{ tag: 'span.mention-note' }];
+    return [{ tag: 'span[data-type="noteMention"], span.mention-note' }];
   },
-  renderHTML({ node, HTMLAttributes }) {
-    return ['span', mergeAttributes(HTMLAttributes, {
+  renderHTML({ node }) {
+    return ['span', {
       class: 'mention-note',
+      'data-type': 'noteMention',
       'data-id': node.attrs.id,
-    }), `📄 ${node.attrs.label}`];
+      'data-label': node.attrs.label,
+    }, `📄 ${node.attrs.label || ''}`];
   },
 });
 
@@ -6473,28 +6481,10 @@ function selectSuggestion(idx) {
   const item = suggestionItems[idx];
   if (!item || !suggestionEditor) { hideSuggestion(); return; }
 
-  // Capture everything before hiding
   const editor = suggestionEditor;
   const type = suggestionType;
   const triggerPos = suggestionTriggerPos;
-
-  // Re-derive `from` by scanning the actual doc — more reliable than stale selection
-  let from;
-  try {
-    const docSize = editor.state.doc.content.size;
-    const selFrom = editor.state.selection.from;
-    // Scan backward from cursor to find the trigger char (#/@/[[)
-    const textBefore = editor.state.doc.textBetween(Math.max(0, selFrom - 40), selFrom, '\n');
-    const triggerChar = type === 'project' ? '@' : '#';
-    const triggerIdx = textBefore.lastIndexOf(triggerChar);
-    if (triggerIdx >= 0) {
-      from = selFrom; // use cursor as delete end
-    } else {
-      from = selFrom;
-    }
-  } catch(e) {
-    from = editor.state.selection.from;
-  }
+  const from = editor.state.selection.from;
 
   hideSuggestion();
 
@@ -6510,24 +6500,26 @@ function selectSuggestion(idx) {
     insertId = newNote.id;
     insertLabel = newNote.title;
     if (window.renderNotes) renderNotes();
+    showToast(`Note "${insertLabel}" created`);
   }
 
-  const mentionHtml = type === 'project'
-    ? `<span class="mention-project" data-id="${insertId}">📁 ${insertLabel}</span>`
-    : `<span class="mention-note" data-id="${insertId}">📄 ${insertLabel}</span>`;
+  const nodeType = type === 'project' ? 'projectMention' : 'noteMention';
 
-  // Use setTextSelection + insertContent — two-step is more reliable than chained deleteRange
-  try {
-    editor.commands.focus();
+  // Use JSON node spec directly — avoids HTML parsing attribute loss
+  // setTextSelection selects the trigger text (#label or @label), insertContent replaces it
+  editor.commands.focus();
+  editor.commands.setTextSelection({ from: triggerPos, to: from });
+  const ok = editor.commands.insertContent({
+    type: nodeType,
+    attrs: { id: String(insertId), label: insertLabel }
+  });
+  // Insert a trailing space so cursor lands after the chip
+  if (ok) editor.commands.insertContent(' ');
+
+  if (!ok) {
+    // Fallback: insert as plain text with the label
     editor.commands.setTextSelection({ from: triggerPos, to: from });
-    editor.commands.insertContent(mentionHtml + ' ');
-    showToast(`Linked: ${insertLabel}`);
-  } catch(e) {
-    // Hard fallback
-    try {
-      editor.commands.focus();
-      editor.commands.insertContentAt({ from: triggerPos, to: from }, insertLabel + ' ');
-    } catch(e2) { /* silent */ }
+    editor.commands.insertContent(`${type === 'project' ? '@' : '#'}${insertLabel} `);
   }
 }
 
@@ -6703,7 +6695,8 @@ function createInputPlugin() {
           if (event.key === 'Enter') {
             event.preventDefault();
             const filtered = slashCommands.filter(c => c.label.toLowerCase().includes(slashFilterText.toLowerCase()));
-            selectSlashCommand(filtered[slashMenuIdx]);
+            const capturedCmd = filtered[slashMenuIdx];
+            setTimeout(() => selectSlashCommand(capturedCmd), 0);
             return true;
           }
           if (event.key === 'Escape') {
@@ -6726,7 +6719,8 @@ function createInputPlugin() {
           }
           if (event.key === 'Enter' || event.key === 'Tab') {
             event.preventDefault();
-            selectSuggestion(suggestionIdx);
+            const capturedIdx = suggestionIdx;
+            setTimeout(() => selectSuggestion(capturedIdx), 0);
             return true;
           }
           if (event.key === 'Escape') {
