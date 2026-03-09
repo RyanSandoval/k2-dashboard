@@ -6514,12 +6514,14 @@ function selectSuggestion(idx) {
     attrs: { id: String(insertId), label: insertLabel }
   });
   // Insert a trailing space so cursor lands after the chip
-  if (ok) editor.commands.insertContent(' ');
-
-  if (!ok) {
+  if (ok) {
+    editor.commands.insertContent(' ');
+    showToast(`🔗 Linked: ${insertLabel}`);
+  } else {
     // Fallback: insert as plain text with the label
     editor.commands.setTextSelection({ from: triggerPos, to: from });
     editor.commands.insertContent(`${type === 'project' ? '@' : '#'}${insertLabel} `);
+    showToast(`↩ Inserted: ${insertLabel} (plain)`);
   }
 }
 
@@ -6878,10 +6880,10 @@ function createEditor(element, content, options = {}) {
     },
     onCreate({ editor }) {
       if (options.editable !== false) {
-        // Register the plugin
+        // Register FIRST so our handleKeyDown intercepts Enter before StarterKit does
         const { state } = editor;
         const newState = state.reconfigure({
-          plugins: [...state.plugins, createInputPlugin()],
+          plugins: [createInputPlugin(), ...state.plugins],
         });
         editor.view.updateState(newState);
       }
