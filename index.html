@@ -3406,10 +3406,10 @@ function openTaskModal(taskId) {
     : '<span style="color:var(--text-dim);">No due date</span>';
 
   document.getElementById('task-modal-content').innerHTML = `
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;min-width:0;">
       ${leftElModal}
-      <div style="flex:1;">
-        <h3 style="font-size:16px;font-weight:700;cursor:pointer;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${safeId(task.id)},'text',this)" title="Click to edit">${task.text || task.title || 'Untitled'}</h3>
+      <div style="flex:1;min-width:0;overflow:hidden;">
+        <h3 style="font-size:16px;font-weight:700;cursor:pointer;word-break:break-word;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0 0 4px 0;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${safeId(task.id)},'text',this)" title="${(task.text || task.title || 'Untitled').replace(/"/g,'&quot;')}">${task.text || task.title || 'Untitled'}</h3>
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
           <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${safeId(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
           ${isK2 ? `<span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.icon} ${statusInfo.label}</span>` : ''}
