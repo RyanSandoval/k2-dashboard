@@ -826,6 +826,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
     text-decoration: line-through; color: var(--text-muted);
   }
+  /* Restore bullets for nested lists inside task items */
+  .ProseMirror ul[data-type="taskList"] ul:not([data-type="taskList"]) {
+    list-style: disc; padding-left: 20px; margin: 4px 0;
+  }
+  .ProseMirror ul[data-type="taskList"] ol {
+    list-style: decimal; padding-left: 20px; margin: 4px 0;
+  }
   .ProseMirror p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     float: left; color: var(--text-muted); pointer-events: none; height: 0;
