@@ -7157,6 +7157,16 @@ async function deleteSomedayItem(id) {
 }
 
 // ═══ GTD Waiting For ═══
+function formatWaitingText(text) {
+  // Replace URLs with compact clickable links
+  const urlRe = /https?:\/\/[^\s]+/g;
+  return escapeHtml(text).replace(urlRe, (url) => {
+    let label;
+    try { label = new URL(url).hostname.replace(/^www\./, ''); } catch(e) { label = 'link'; }
+    return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;text-decoration:underline;word-break:break-all;">${escapeHtml(label)} ↗</a>`;
+  });
+}
+
 function renderWaitingFor() {
   const list = document.getElementById('waiting-list');
   const badge = document.getElementById('waiting-badge');
@@ -7182,8 +7192,8 @@ function renderWaitingFor() {
     const ageStr = days === 0 ? 'today' : days === 1 ? '1 day' : `${days} days`;
     return `<div style="padding:14px 16px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;color:var(--text);margin-bottom:4px;">${escapeHtml(item.text)}</div>
+        <div style="flex:1;min-width:0;overflow:hidden;">
+          <div style="font-size:14px;color:var(--text);margin-bottom:4px;word-break:break-word;overflow-wrap:anywhere;">${formatWaitingText(item.text)}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
             ${item.waitingOn ? `<span style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:var(--accent-surface);color:var(--accent);font-weight:600;">→ ${escapeHtml(item.waitingOn)}</span>` : ''}
             <span style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:${ageBg};color:${ageColor};font-weight:600;">Since ${sinceStr} · ${ageStr}</span>
