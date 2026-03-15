@@ -4096,14 +4096,119 @@ function renderTasks() {
   }
 }
 
+function parseNaturalLanguageTask(rawText) {
+  var text = rawText;
+  var dueDate = null;
+  var urgency = null;
+  var importance = null;
+
+  function toYMD(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function today() { return new Date(); }
+
+  function nextWeekday(targetDow) {
+    var d = new Date();
+    var diff = (targetDow - d.getDay() + 7) % 7;
+    if (diff === 0) diff = 7; // always "next" occurrence
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+
+  var DAYS = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, wednesday:3, wed:3, thursday:4, thu:4, friday:5, fri:5, saturday:6, sat:6 };
+  var MONTHS = { jan:0, january:0, feb:1, february:1, mar:2, march:2, apr:3, april:3, may:4, jun:5, june:5, jul:6, july:6, aug:7, august:7, sep:8, september:8, oct:9, october:9, nov:10, november:10, dec:11, december:11 };
+
+  // Due date patterns — order matters (most specific first)
+  var dueParsers = [
+    // "by friday", "by monday", etc.
+    { re: /\bby\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\b/i, fn: function(m) {
+      return nextWeekday(DAYS[m[1].toLowerCase()]);
+    }},
+    // "next week"
+    { re: /\bnext\s+week\b/i, fn: function() { return nextWeekday(1); }},
+    // "this week"
+    { re: /\bthis\s+week\b/i, fn: function() { return nextWeekday(5); }},
+    // "next monday/tuesday/..." 
+    { re: /\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\b/i, fn: function(m) {
+      return nextWeekday(DAYS[m[1].toLowerCase()]);
+    }},
+    // "tomorrow"
+    { re: /\btomorrow\b/i, fn: function() { var d = today(); d.setDate(d.getDate()+1); return d; }},
+    // "today"
+    { re: /\btoday\b/i, fn: function() { return today(); }},
+    // bare weekday name
+    { re: /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)\b/i, fn: function(m) {
+      return nextWeekday(DAYS[m[1].toLowerCase()]);
+    }},
+    // "jan 15", "march 3rd", "feb 28th"
+    { re: /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b/i, fn: function(m) {
+      var mo = MONTHS[m[1].toLowerCase().slice(0,3)];
+      var dy = parseInt(m[2]);
+      var d = new Date();
+      d.setMonth(mo); d.setDate(dy);
+      if (d < today()) d.setFullYear(d.getFullYear()+1);
+      return d;
+    }}
+  ];
+
+  for (var i = 0; i < dueParsers.length; i++) {
+    var match = text.match(dueParsers[i].re);
+    if (match) {
+      dueDate = toYMD(dueParsers[i].fn(match));
+      text = text.replace(dueParsers[i].re, ' ');
+      break;
+    }
+  }
+
+  // Urgency patterns (highest value wins)
+  var urgencyParsers = [
+    { re: /\b(urgent|asap|immediately|critical)\b/i, val: 4 },
+    { re: /\b(high[\s-]priority|important)\b/i, val: 3 },
+    { re: /\b(low[\s-]priority|someday|eventually)\b/i, val: 1 }
+  ];
+  for (var j = 0; j < urgencyParsers.length; j++) {
+    if (urgencyParsers[j].re.test(text)) {
+      if (urgency === null || urgencyParsers[j].val > urgency) {
+        urgency = urgencyParsers[j].val;
+      }
+      text = text.replace(urgencyParsers[j].re, ' ');
+    }
+  }
+
+  // Importance patterns
+  var importanceParsers = [
+    { re: /\b(important|critical|must)\b/i, val: 4 },
+    { re: /\b(low[\s-]priority|minor|nice[\s-]to[\s-]have)\b/i, val: 1 }
+  ];
+  for (var k = 0; k < importanceParsers.length; k++) {
+    if (importanceParsers[k].re.test(text)) {
+      if (importance === null || importanceParsers[k].val > importance) {
+        importance = importanceParsers[k].val;
+      }
+      text = text.replace(importanceParsers[k].re, ' ');
+    }
+  }
+
+  // Cleanup: remove leading/trailing colons, commas, extra whitespace
+  text = text.replace(/^[\s:,·\-]+|[\s:,·\-]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+
+  return { text: text, dueDate: dueDate, urgency: urgency, importance: importance };
+}
+
 async function addTask() {
   const input = document.getElementById('new-task-input');
-  const urgency = parseInt(document.getElementById('new-task-urgency')?.value || '2');
-  const importance = parseInt(document.getElementById('new-task-importance')?.value || '2');
+  const uiUrgency = parseInt(document.getElementById('new-task-urgency')?.value || '2');
+  const uiImportance = parseInt(document.getElementById('new-task-importance')?.value || '2');
   const project = document.getElementById('new-task-project').value;
 
-  const text = input.value.trim();
-  if (!text) return;
+  const rawText = input.value.trim();
+  if (!rawText) return;
+
+  const parsed = parseNaturalLanguageTask(rawText);
+  const text = parsed.text || rawText;
+  const urgency = parsed.urgency !== null ? parsed.urgency : uiUrgency;
+  const importance = parsed.importance !== null ? parsed.importance : uiImportance;
 
   const newTask = {
     id: Date.now(),
@@ -4114,12 +4219,26 @@ async function addTask() {
     project: project,
     owner: 'ryan',
     done: false,
+    dueDate: parsed.dueDate || undefined,
     created: (function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})(),
     messages: []
   };
 
   DATA.tasks.push(newTask);
   input.value = '';
+
+  // Build toast summary
+  var toastParts = ['Task added'];
+  if (parsed.dueDate) {
+    var today0 = new Date(); var t0 = today0.getFullYear()+'-'+String(today0.getMonth()+1).padStart(2,'0')+'-'+String(today0.getDate()).padStart(2,'0');
+    var tom0 = new Date(); tom0.setDate(tom0.getDate()+1); var t1 = tom0.getFullYear()+'-'+String(tom0.getMonth()+1).padStart(2,'0')+'-'+String(tom0.getDate()).padStart(2,'0');
+    if (parsed.dueDate === t0) toastParts.push('due today');
+    else if (parsed.dueDate === t1) toastParts.push('due tomorrow');
+    else toastParts.push('due ' + parsed.dueDate);
+  }
+  if (parsed.urgency !== null) toastParts.push('urgency ' + parsed.urgency);
+  if (parsed.importance !== null) toastParts.push('importance ' + parsed.importance);
+  showToast(toastParts.join(' · '));
 
   await saveData();
   renderTasks();
