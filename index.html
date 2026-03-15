@@ -1328,6 +1328,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-item" data-page="someday">
         <span class="icon">💤</span> Someday
       </div>
+      <div class="nav-item" data-page="review">
+        <span class="icon">🔄</span> Weekly Review <span id="review-overdue-badge" style="display:none;margin-left:4px;font-size:11px;" title="Review overdue">⚠️</span>
+      </div>
       <div class="nav-item" data-page="discussions">
         <span class="icon">💬</span> Discussions
       </div>
@@ -1867,6 +1870,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
 
     <!-- Someday/Maybe Page -->
+    <div class="page" id="page-review" style="max-width:720px;margin:0 auto;"></div>
+
     <div class="page" id="page-someday" style="max-width:700px;margin:0 auto;">
       <div class="page-header">
         <h1 class="page-title">💤 Someday / Maybe</h1>
@@ -2045,6 +2050,8 @@ async function loadData() {
     DATA.mission = d.mission || '';
     DATA.cronJobs = d.cronJobs || [];
     DATA.docs = d.docs || [];
+    DATA.weeklyReviews = d.weeklyReviews || [];
+    DATA.lastReviewDate = d.lastReviewDate || null;
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -2118,6 +2125,7 @@ function navigateTo(page) {
   if (page === 'docs') renderDocs();
   if (page === 'inbox') renderInbox();
   if (page === 'someday') renderSomeday();
+  if (page === 'review') renderReviewPage();
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -6695,6 +6703,213 @@ function addToSomeday(text) {
   saveData();
   renderSomeday();
   showToast('Parked in Someday/Maybe');
+}
+
+// ═══ Weekly Review Page ═══
+function renderReviewPage() {
+  const container = document.getElementById('page-review');
+  if (!container) return;
+
+  const now = new Date();
+  const lastDate = DATA.lastReviewDate ? new Date(DATA.lastReviewDate) : null;
+  let lastReviewText = 'Never';
+  if (lastDate) {
+    const diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+    lastReviewText = diffDays === 0 ? 'Today' : diffDays === 1 ? 'Yesterday' : diffDays + ' days ago';
+  }
+
+  // Update overdue badge in nav
+  const badge = document.getElementById('review-overdue-badge');
+  if (badge) {
+    const overdue = !lastDate || ((now - lastDate) / (1000 * 60 * 60 * 24)) > 7;
+    badge.style.display = overdue ? '' : 'none';
+  }
+
+  // Data summaries
+  const inboxCount = (DATA.inbox || []).length;
+  const somedayCount = (DATA.somedayMaybe || []).length;
+  const activeProjects = (DATA.projects || []).filter(p => p.status === 'active' || (!p.status || p.status === 'Active')).length;
+  const tasks = DATA.tasks || [];
+  const incompleteTasks = tasks.filter(t => !t.completed && !t.done);
+  const overdueTasks = incompleteTasks.filter(t => {
+    if (!t.dueDate && !t.due) return false;
+    return new Date(t.dueDate || t.due) < now;
+  });
+  const decisionsCount = (DATA.decisions || []).length;
+
+  // Load saved reflection state for current in-progress review (not yet submitted)
+  const draft = window._reviewDraft || { completedSteps: [], reflections: { wentWell: '', didntGo: '', priority: '' } };
+
+  function stepChecked(i) {
+    return draft.completedSteps.includes(i);
+  }
+
+  const sections = [
+    {
+      label: 'COLLECT',
+      color: 'var(--accent)',
+      steps: [
+        {
+          i: 0,
+          title: 'Clear your head',
+          desc: 'Write any lingering thoughts into Inbox right now.',
+          extra: '<div style="display:flex;gap:8px;margin-top:8px;">' +
+            '<input type="text" id="review-capture-input" placeholder="Thought or task…" ' +
+            'style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;" ' +
+            'onkeydown="if(event.key===\'Enter\'){var v=this.value.trim();if(v){addToInbox(v);this.value=\'\';showToast(\'Added to Inbox\');}}">' +
+            '<button onclick="(function(){var el=document.getElementById(\'review-capture-input\');var v=el.value.trim();if(v){addToInbox(v);el.value=\'\';showToast(\'Added to Inbox\');}})()" ' +
+            'style="padding:8px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Add to Inbox</button>' +
+            '</div>'
+        },
+        { i: 1, title: 'Process physical inbox', desc: 'Clear your physical desk, notebook, and any loose papers.' },
+        { i: 2, title: 'Review email/messages', desc: 'Scan email, Slack, texts — capture anything actionable.' }
+      ]
+    },
+    {
+      label: 'PROCESS',
+      color: 'var(--yellow)',
+      steps: [
+        {
+          i: 3,
+          title: 'Empty Inbox',
+          desc: 'Process every item: do, delegate, defer, or delete.',
+          extra: '<div style="margin-top:6px;font-size:12px;color:' + (inboxCount > 0 ? 'var(--yellow)' : 'var(--green)') + ';">' +
+            inboxCount + ' item' + (inboxCount === 1 ? '' : 's') + ' in Inbox' +
+            ' <span onclick="navigateTo(\'inbox\')" style="cursor:pointer;color:var(--accent);font-weight:600;">Go to Inbox →</span></div>'
+        },
+        {
+          i: 4,
+          title: 'Review Someday/Maybe',
+          desc: 'Is anything ready to become an active project or task?',
+          extra: '<div style="margin-top:6px;font-size:12px;color:var(--text-muted);">' +
+            somedayCount + ' item' + (somedayCount === 1 ? '' : 's') +
+            ' <span onclick="navigateTo(\'someday\')" style="cursor:pointer;color:var(--accent);font-weight:600;">Go to Someday →</span></div>'
+        }
+      ]
+    },
+    {
+      label: 'REVIEW',
+      color: 'var(--green)',
+      steps: [
+        {
+          i: 5,
+          title: 'Review active projects',
+          desc: 'Scan each project — is it moving? Does it have a next action?',
+          extra: '<div style="margin-top:6px;font-size:12px;color:var(--text-muted);">' +
+            activeProjects + ' active project' + (activeProjects === 1 ? '' : 's') +
+            ' <span onclick="navigateTo(\'projects\')" style="cursor:pointer;color:var(--accent);font-weight:600;">Go to Projects →</span></div>'
+        },
+        {
+          i: 6,
+          title: 'Review all tasks',
+          desc: 'Scan every incomplete task. Remove stale ones, update priorities.',
+          extra: '<div style="margin-top:6px;font-size:12px;">' +
+            '<span style="color:var(--text-muted);">' + incompleteTasks.length + ' incomplete</span>' +
+            (overdueTasks.length > 0 ? ' · <span style="color:var(--red);font-weight:600;">⚠ ' + overdueTasks.length + ' overdue</span>' : '') +
+            ' <span onclick="navigateTo(\'tasks\')" style="cursor:pointer;color:var(--accent);font-weight:600;">Go to Tasks →</span></div>'
+        },
+        { i: 7, title: 'Identify next actions', desc: 'Every active project needs a clear next action. Assign one if missing.' },
+        {
+          i: 8,
+          title: 'Review Decisions log',
+          desc: 'Any decisions pending? Any outcomes worth recording?',
+          extra: '<div style="margin-top:6px;font-size:12px;color:var(--text-muted);">' +
+            decisionsCount + ' decision' + (decisionsCount === 1 ? '' : 's') +
+            ' <span onclick="navigateTo(\'decisions\')" style="cursor:pointer;color:var(--accent);font-weight:600;">Go to Decisions →</span></div>'
+        }
+      ]
+    },
+    {
+      label: 'REFLECT',
+      color: 'var(--accent-dim)',
+      steps: [
+        {
+          i: 9,
+          title: 'What went well this week?',
+          desc: 'Celebrate wins, big or small.',
+          textarea: { key: 'wentWell', placeholder: 'Things that worked…' }
+        },
+        {
+          i: 10,
+          title: "What didn't go as planned?",
+          desc: 'Honest retrospective — no judgment, just learning.',
+          textarea: { key: 'didntGo', placeholder: 'Obstacles or misses…' }
+        },
+        {
+          i: 11,
+          title: "What's the #1 priority for next week?",
+          desc: 'One clear focus. Write it down.',
+          textarea: { key: 'priority', placeholder: 'My top priority is…' }
+        }
+      ]
+    }
+  ];
+
+  const stepsHtml = sections.map(sec => {
+    const stepsInner = sec.steps.map(step => {
+      const checked = stepChecked(step.i);
+      const taHtml = step.textarea
+        ? '<textarea id="review-reflect-' + step.textarea.key + '" placeholder="' + step.textarea.placeholder + '" ' +
+          'rows="2" onchange="window._reviewDraft=window._reviewDraft||{completedSteps:[],reflections:{wentWell:\'\',didntGo:\'\',priority:\'\'}};window._reviewDraft.reflections[\'' + step.textarea.key + '\']=this.value;" ' +
+          'style="width:100%;margin-top:8px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;resize:vertical;outline:none;box-sizing:border-box;">' +
+          escapeHtml(draft.reflections[step.textarea.key] || '') + '</textarea>'
+        : '';
+      return '<div class="review-step" data-step="' + step.i + '" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;transition:opacity 0.2s;' + (checked ? 'opacity:0.55;' : '') + '">' +
+        '<input type="checkbox" ' + (checked ? 'checked' : '') + ' ' +
+        'onchange="(function(cb,i){var d=window._reviewDraft=window._reviewDraft||{completedSteps:[],reflections:{wentWell:\'\',didntGo:\'\',priority:\'\'}};if(cb.checked){if(!d.completedSteps.includes(i))d.completedSteps.push(i);}else{d.completedSteps=d.completedSteps.filter(function(x){return x!==i;});}cb.closest(\'.review-step\').style.opacity=cb.checked?\'0.55\':\'1\';})(this,' + step.i + ')" ' +
+        'style="margin-top:2px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;">' +
+        '<div style="flex:1;">' +
+        '<div style="font-size:14px;font-weight:600;color:var(--text);">' + escapeHtml(step.title) + '</div>' +
+        '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + escapeHtml(step.desc) + '</div>' +
+        (step.extra || '') +
+        taHtml +
+        '</div></div>';
+    }).join('');
+    return '<div style="margin-bottom:var(--sp-6);">' +
+      '<div style="font-size:10px;font-weight:700;letter-spacing:0.1em;color:' + sec.color + ';margin-bottom:var(--sp-3);padding:0 2px;">' + sec.label + '</div>' +
+      stepsInner +
+      '</div>';
+  }).join('');
+
+  container.innerHTML =
+    '<div class="page-header">' +
+    '<h1 class="page-title">🔄 Weekly Review</h1>' +
+    '<p style="color:var(--text-dim);font-size:13px;margin:0;">Your GTD weekly review checklist. Take 30–60 min, no interruptions.</p>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--sp-6);padding:12px 16px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);">' +
+    '<span style="font-size:12px;color:var(--text-muted);">Last review:</span>' +
+    '<span style="font-size:13px;font-weight:600;color:' + (lastDate && (now - lastDate) / 86400000 <= 7 ? 'var(--green)' : 'var(--yellow)') + ';">' + lastReviewText + '</span>' +
+    '</div>' +
+    stepsHtml +
+    '<div style="text-align:center;padding:var(--sp-4) 0 var(--sp-8);">' +
+    '<button onclick="completeWeeklyReview()" style="padding:14px 32px;background:var(--accent);border:none;border-radius:var(--radius-md);color:#fff;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.02em;">✅ Complete Review</button>' +
+    '</div>';
+}
+
+function completeWeeklyReview() {
+  if (!DATA.weeklyReviews) DATA.weeklyReviews = [];
+  const draft = window._reviewDraft || { completedSteps: [], reflections: { wentWell: '', didntGo: '', priority: '' } };
+  // Pull latest textarea values
+  ['wentWell', 'didntGo', 'priority'].forEach(function(key) {
+    var el = document.getElementById('review-reflect-' + key);
+    if (el) draft.reflections[key] = el.value;
+  });
+  const review = {
+    id: Date.now(),
+    date: new Date().toISOString().slice(0, 10),
+    completedSteps: draft.completedSteps.slice(),
+    reflections: Object.assign({}, draft.reflections),
+    completedAt: new Date().toISOString()
+  };
+  DATA.weeklyReviews.unshift(review);
+  DATA.lastReviewDate = new Date().toISOString();
+  window._reviewDraft = null;
+  saveData();
+  // Update overdue badge
+  var badge = document.getElementById('review-overdue-badge');
+  if (badge) badge.style.display = 'none';
+  showToast('Weekly review saved! Great work. 🎉');
+  renderReviewPage();
 }
 
 async function activateSomedayItem(id) {
