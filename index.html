@@ -16,7 +16,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' api.github.com esm.sh *.esm.sh us.i.posthog.com; img-src 'self' data: blob: *; font-src 'self' data: fonts.gstatic.com; frame-src 'none'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' api.github.com esm.sh *.esm.sh us.i.posthog.com https://corsproxy.io; img-src 'self' data: blob: *; font-src 'self' data: fonts.gstatic.com; frame-src 'none'; object-src 'none';">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K2 Command Center</title>
@@ -1364,7 +1364,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
     </div>
     <div class="sidebar-footer">
-      Last synced: <span id="last-sync">just now</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Last synced: <span id="last-sync">just now</span></span>
+        <div onclick="openSettings()" style="cursor:pointer;color:var(--text-dim);font-size:12px;">⚙️ Settings</div>
+      </div>
     </div>
   </div>
 
@@ -1428,6 +1431,15 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 Recent Activity</div>
           <div class="timeline" id="dashboard-timeline"></div>
         </div>
+      </div>
+
+      <!-- Google Calendar widget -->
+      <div class="card" style="margin-bottom:20px;" id="dash-gcal-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:700;">📅 Today</div>
+          <span onclick="openSettings()" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">⚙️ Calendar settings</span>
+        </div>
+        <div id="dash-gcal-events"></div>
       </div>
 
       <!-- inbox alert (keep for compat) -->
@@ -2438,6 +2450,9 @@ function renderDashboard() {
   const sortedTimeline = [...(DATA.timeline||[])].sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('dashboard-timeline').innerHTML = sortedTimeline.slice(0,6).map(t=>`
     <div class="timeline-item"><div class="timeline-date">${t.date}</div><div class="timeline-content">${t.event}</div></div>`).join('') || '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No activity yet</div>';
+
+  // Google Calendar widget
+  renderGCalWidget();
 }
 
 function renderMorningBrief(today) {
@@ -6577,6 +6592,185 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// ═══ Settings Modal ═══
+function openSettings() {
+  const modal = document.getElementById('settings-modal');
+  if (!modal) return;
+  const stored = localStorage.getItem('k2_gcal_ics') || '';
+  const ta = document.getElementById('settings-gcal-ics');
+  if (ta) ta.value = stored;
+  modal.style.display = 'flex';
+}
+function closeSettings() {
+  const modal = document.getElementById('settings-modal');
+  if (modal) modal.style.display = 'none';
+}
+function saveSettings() {
+  const ta = document.getElementById('settings-gcal-ics');
+  if (!ta) return;
+  const val = ta.value.trim();
+  if (val) {
+    localStorage.setItem('k2_gcal_ics', val);
+  } else {
+    localStorage.removeItem('k2_gcal_ics');
+  }
+  closeSettings();
+  showToast('Settings saved ✓');
+  fetchGCalEvents().then(() => renderDashboard());
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeSettings();
+});
+document.getElementById('settings-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+// ═══ Google Calendar ICS ═══
+window._gcalEvents = [];
+
+async function fetchGCalEvents() {
+  const icsUrl = localStorage.getItem('k2_gcal_ics');
+  if (!icsUrl) { window._gcalEvents = []; return; }
+  try {
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(icsUrl);
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+    const text = await res.text();
+    window._gcalEvents = parseICSForToday(text);
+  } catch(e) {
+    console.warn('[K2] GCal fetch error:', e.message);
+    window._gcalEvents = [];
+  }
+}
+
+function parseICSForToday(icsText) {
+  const today = new Date();
+  const todayStr = today.getFullYear().toString() +
+    String(today.getMonth()+1).padStart(2,'0') +
+    String(today.getDate()).padStart(2,'0');
+
+  // Split into VEVENT blocks
+  const eventBlocks = [];
+  const veventRe = /BEGIN:VEVENT[\s\S]*?END:VEVENT/g;
+  let m;
+  while ((m = veventRe.exec(icsText)) !== null) {
+    eventBlocks.push(m[0]);
+  }
+
+  const events = [];
+  for (const block of eventBlocks) {
+    const getField = (name) => {
+      // Handles folded lines (RFC 5545: continuation lines start with space/tab)
+      const re = new RegExp('(?:^|\\n)' + name + '[^:\\r\\n]*:([^\\r\\n]*)(?:\\r?\\n[ \\t][^\\r\\n]*)*', 'm');
+      const match = block.match(re);
+      if (!match) return '';
+      // Unfold
+      return match[0].replace(/\r?\n[ \t]/g, '').replace(/^[^:]+:/, '').trim();
+    };
+
+    const summary = getField('SUMMARY') || '(No title)';
+    const location = getField('LOCATION') || '';
+    const dtstart = getField('DTSTART');
+    const dtend = getField('DTEND');
+
+    if (!dtstart) continue;
+
+    // Check if all-day (date only, no time)
+    const allDay = /VALUE=DATE/.test(block.match(/DTSTART[^:]*:/)?.[0] || '') ||
+                   /^\d{8}$/.test(dtstart.replace(/[^0-9]/g,'').slice(0,8)) && dtstart.length === 8;
+
+    let startDate, endDate, startDateStr;
+    if (allDay || /^\d{8}$/.test(dtstart)) {
+      // DTSTART;VALUE=DATE:20240315 or DTSTART:20240315
+      const raw = dtstart.replace(/[^0-9]/g,'').slice(0,8);
+      startDateStr = raw;
+      startDate = null;
+      endDate = null;
+    } else {
+      // Parse datetime — could be UTC (Z) or floating or with TZID
+      const clean = dtstart.replace(/[^0-9TZ]/g,'');
+      try {
+        if (clean.endsWith('Z')) {
+          startDate = new Date(
+            clean.slice(0,4) + '-' + clean.slice(4,6) + '-' + clean.slice(6,8) +
+            'T' + clean.slice(9,11) + ':' + clean.slice(11,13) + ':' + clean.slice(13,15) + 'Z'
+          );
+        } else {
+          // Floating — treat as local
+          startDate = new Date(
+            clean.slice(0,4) + '-' + clean.slice(4,6) + '-' + clean.slice(6,8) +
+            'T' + clean.slice(9,11) + ':' + clean.slice(11,13) + ':' + (clean.slice(13,15)||'00')
+          );
+        }
+        startDateStr = startDate.getFullYear().toString() +
+          String(startDate.getMonth()+1).padStart(2,'0') +
+          String(startDate.getDate()).padStart(2,'0');
+
+        if (dtend) {
+          const ec = dtend.replace(/[^0-9TZ]/g,'');
+          if (ec.endsWith('Z')) {
+            endDate = new Date(
+              ec.slice(0,4) + '-' + ec.slice(4,6) + '-' + ec.slice(6,8) +
+              'T' + ec.slice(9,11) + ':' + ec.slice(11,13) + ':' + ec.slice(13,15) + 'Z'
+            );
+          } else {
+            endDate = new Date(
+              ec.slice(0,4) + '-' + ec.slice(4,6) + '-' + ec.slice(6,8) +
+              'T' + ec.slice(9,11) + ':' + ec.slice(11,13) + ':' + (ec.slice(13,15)||'00')
+            );
+          }
+        }
+      } catch(e) {
+        continue;
+      }
+    }
+
+    if (startDateStr !== todayStr) continue;
+
+    events.push({ title: summary, start: startDate, end: endDate, location: location, allDay: !startDate });
+  }
+
+  // Sort: all-day first, then by start time
+  events.sort((a, b) => {
+    if (a.allDay && !b.allDay) return -1;
+    if (!a.allDay && b.allDay) return 1;
+    if (a.start && b.start) return a.start - b.start;
+    return 0;
+  });
+
+  return events;
+}
+
+function renderGCalWidget() {
+  const el = document.getElementById('dash-gcal-events');
+  if (!el) return;
+  const icsUrl = localStorage.getItem('k2_gcal_ics');
+  if (!icsUrl) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No calendar connected. <span onclick="openSettings()" style="color:var(--accent);cursor:pointer;">Connect Google Calendar →</span></div>';
+    return;
+  }
+  const events = window._gcalEvents || [];
+  if (events.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No events today</div>';
+    return;
+  }
+  el.innerHTML = events.map(ev => {
+    let timeLabel = '';
+    if (ev.allDay) {
+      timeLabel = '<span style="font-size:10px;color:var(--text-muted);background:var(--surface2);border-radius:3px;padding:1px 5px;flex-shrink:0;">all day</span>';
+    } else if (ev.start) {
+      const t = ev.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      timeLabel = '<span style="font-size:11px;color:var(--text-dim);min-width:68px;flex-shrink:0;">' + t + '</span>';
+    }
+    const loc = ev.location ? '<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">📍 ' + ev.location + '</span>' : '';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-subtle);">' +
+      timeLabel +
+      '<span style="font-size:12px;flex:1;line-height:1.4;">' + ev.title + '</span>' +
+      loc +
+      '</div>';
+  }).join('');
+}
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
@@ -6586,6 +6780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadData();
     initSelectionToolbar();
     initKeyboardShortcuts();
+    fetchGCalEvents().then(() => renderGCalWidget());
   }
 });
 
@@ -7657,5 +7852,24 @@ setTimeout(() => {
   }
 }, 500);
 </script>
+
+<!-- Settings Modal -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;max-width:480px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:16px;font-weight:700;">⚙️ Settings</div>
+      <button onclick="closeSettings()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:0;">✕</button>
+    </div>
+    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--text);">Google Calendar (ICS)</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.5;">
+      In Google Calendar: Settings → [Your Calendar] → "Secret address in iCal format"
+    </div>
+    <textarea id="settings-gcal-ics" rows="3" placeholder="Paste your Google Calendar secret ICS URL here…" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:10px;resize:vertical;font-family:monospace;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+      <button onclick="closeSettings()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:8px 16px;font-size:13px;cursor:pointer;">Cancel</button>
+      <button onclick="saveSettings()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;padding:8px 18px;font-size:13px;cursor:pointer;">Save</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
