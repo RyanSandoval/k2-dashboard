@@ -3667,8 +3667,9 @@ function openTaskModal(taskId) {
       }
     </div>
 
-    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
-      <button onclick="deleteTask(${safeId(task.id)})" style="width:100%;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete Task</button>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
+      <button onclick="taskToSomeday(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">💤 Someday</button>
+      <button onclick="deleteTask(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
     </div>
   `;
 
@@ -3689,6 +3690,24 @@ async function deleteTask(taskId) {
   closeTaskModal();
   renderTasks();
   renderProjects();
+}
+
+async function taskToSomeday(taskId) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  if (!DATA.somedayMaybe) DATA.somedayMaybe = [];
+  DATA.somedayMaybe.unshift({
+    id: Date.now(),
+    text: task.text || task.title || 'Untitled',
+    created: new Date().toISOString(),
+    fromTask: true
+  });
+  DATA.tasks = DATA.tasks.filter(t => t.id != taskId);
+  await saveData();
+  closeTaskModal();
+  renderTasks();
+  renderSomeday();
+  showToast('💤 Moved to Someday/Maybe');
 }
 
 function closeTaskModal() {
