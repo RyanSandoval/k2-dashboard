@@ -1290,6 +1290,18 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <span>🔍</span> Search...
       <span class="search-kbd">⌘K</span>
     </div>
+    <div style="padding:0 12px 8px;">
+      <div style="display:flex;gap:6px;">
+        <input id="sidebar-capture-input" type="text" placeholder="⚡ Capture…"
+          style="flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border-color var(--dur-fast);"
+          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addToInbox(v);this.value='';this.blur();}}"
+          onfocus="this.style.borderColor='var(--accent)'"
+          onblur="this.style.borderColor='var(--border-subtle)'">
+        <button onclick="(function(){const v=document.getElementById('sidebar-capture-input').value.trim();if(v){addToInbox(v);document.getElementById('sidebar-capture-input').value='';}})()"
+          style="padding:7px 10px;background:var(--accent-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--accent);font-size:14px;cursor:pointer;line-height:1;font-weight:700;"
+          title="Capture to inbox (⌘I)">+</button>
+      </div>
+    </div>
     <div class="nav-section">
       <div class="nav-section-title">Overview</div>
       <div class="nav-item" data-page="dashboard">
@@ -1929,6 +1941,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   <div class="mobile-more-drawer" id="mobile-more-drawer">
     <div class="mobile-more-handle"></div>
     <div class="mobile-more-grid">
+      <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()"><span class="icon">⚡</span>Capture</div>
+      <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
+      <div class="mobile-more-item" data-page="someday" onclick="mobileNavMore('someday')"><span class="icon">💤</span>Someday</div>
       <div class="mobile-more-item" data-page="projects" onclick="mobileNavMore('projects')"><span class="icon">🚀</span>Projects</div>
       <div class="mobile-more-item" data-page="trading" onclick="mobileNavMore('trading')"><span class="icon">📈</span>Trading</div>
       <div class="mobile-more-item" data-page="decisions" onclick="mobileNavMore('decisions')"><span class="icon">⚖️</span>Decisions</div>
@@ -6065,12 +6080,47 @@ async function editNextStep(projectId, stepIdx, el) {
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════
 
+function openCapturePopover() {
+  let pop = document.getElementById('global-capture-popover');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'global-capture-popover';
+    pop.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding-top:20vh;background:rgba(0,0,0,0.55);';
+    pop.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">⚡ Quick Capture → Inbox</div>
+        <input id="global-capture-input" type="text" placeholder="What's on your mind?"
+          style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--text);font-size:15px;outline:none;font-family:inherit;caret-color:var(--accent);"
+          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addToInbox(v);closeCapturePopover();}}else if(event.key==='Escape'){closeCapturePopover();}">
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:11px;color:var(--text-muted);">Enter to capture · Esc to close</span>
+          <button onclick="closeCapturePopover()" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button>
+        </div>
+      </div>`;
+    pop.addEventListener('click', e => { if (e.target === pop) closeCapturePopover(); });
+    document.body.appendChild(pop);
+  }
+  pop.style.display = 'flex';
+  setTimeout(() => document.getElementById('global-capture-input')?.focus(), 50);
+}
+function closeCapturePopover() {
+  const pop = document.getElementById('global-capture-popover');
+  if (pop) { pop.style.display = 'none'; const inp = document.getElementById('global-capture-input'); if (inp) inp.value = ''; }
+}
+
 function initKeyboardShortcuts() {
   // Cmd+K: Open search (works from anywhere)
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
       openSearch();
+    }
+  });
+  // Cmd+I: Quick capture to inbox (works from anywhere)
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+      e.preventDefault();
+      openCapturePopover();
     }
   });
 
