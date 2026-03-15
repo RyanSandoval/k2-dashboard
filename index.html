@@ -1328,6 +1328,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-item" data-page="someday">
         <span class="icon">💤</span> Someday
       </div>
+      <div class="nav-item" data-page="waiting">
+        <span class="icon">⏳</span> Waiting For
+        <span class="badge" id="waiting-badge" style="display:none"></span>
+      </div>
       <div class="nav-item" data-page="review">
         <span class="icon">🔄</span> Weekly Review <span id="review-overdue-badge" style="display:none;margin-left:4px;font-size:11px;" title="Review overdue">⚠️</span>
       </div>
@@ -1882,6 +1886,25 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
 
     <!-- Someday/Maybe Page -->
+    <!-- Waiting For Page -->
+    <div class="page" id="page-waiting" style="max-width:700px;margin:0 auto;">
+      <div class="page-header">
+        <h2>⏳ Waiting For</h2>
+        <p>Things delegated or blocked — not your move right now</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:var(--sp-5);flex-wrap:wrap;">
+        <input id="waiting-text-input" type="text" placeholder="What are you waiting for?"
+          style="flex:2;min-width:200px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;font-family:inherit;"
+          onkeydown="if(event.key==='Enter'){const t=this.value.trim(),w=document.getElementById('waiting-on-input').value.trim();if(t){addWaitingFor(t,w);this.value='';document.getElementById('waiting-on-input').value='';}}" >
+        <input id="waiting-on-input" type="text" placeholder="Waiting on who/what? (optional)"
+          style="flex:1;min-width:160px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;font-family:inherit;"
+          onkeydown="if(event.key==='Enter'){const t=document.getElementById('waiting-text-input').value.trim(),w=this.value.trim();if(t){addWaitingFor(t,w);this.value='';document.getElementById('waiting-text-input').value='';}}" >
+        <button onclick="(function(){const t=document.getElementById('waiting-text-input').value.trim(),w=document.getElementById('waiting-on-input').value.trim();if(t){addWaitingFor(t,w);document.getElementById('waiting-text-input').value='';document.getElementById('waiting-on-input').value='';}})();"
+          style="padding:10px 18px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Add</button>
+      </div>
+      <div id="waiting-list"></div>
+    </div>
+
     <div class="page" id="page-review" style="max-width:720px;margin:0 auto;"></div>
 
     <div class="page" id="page-someday" style="max-width:700px;margin:0 auto;">
@@ -1961,6 +1984,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()"><span class="icon">⚡</span>Capture</div>
       <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
       <div class="mobile-more-item" data-page="someday" onclick="mobileNavMore('someday')"><span class="icon">💤</span>Someday</div>
+      <div class="mobile-more-item" data-page="waiting" onclick="mobileNavMore('waiting')"><span class="icon">⏳</span>Waiting</div>
       <div class="mobile-more-item" data-page="projects" onclick="mobileNavMore('projects')"><span class="icon">🚀</span>Projects</div>
       <div class="mobile-more-item" data-page="trading" onclick="mobileNavMore('trading')"><span class="icon">📈</span>Trading</div>
       <div class="mobile-more-item" data-page="decisions" onclick="mobileNavMore('decisions')"><span class="icon">⚖️</span>Decisions</div>
@@ -2049,6 +2073,7 @@ async function loadData() {
     DATA.timeline = d.timeline || [];
     DATA.inbox = d.inbox || [];
     DATA.somedayMaybe = d.somedayMaybe || [];
+    DATA.waitingFor = d.waitingFor || [];
     DATA.jots = d.jots || [];
     DATA.dailyDocs = d.dailyDocs || {};
     DATA.commands = d.commands || [];
@@ -2105,7 +2130,7 @@ async function saveData() {
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -2137,6 +2162,7 @@ function navigateTo(page) {
   if (page === 'docs') renderDocs();
   if (page === 'inbox') renderInbox();
   if (page === 'someday') renderSomeday();
+  if (page === 'waiting') renderWaitingFor();
   if (page === 'review') renderReviewPage();
 }
 
@@ -3690,8 +3716,9 @@ function openTaskModal(taskId) {
       }
     </div>
 
-    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="taskToSomeday(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">💤 Someday</button>
+      <button onclick="taskToWaiting(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">⏳ Waiting</button>
       <button onclick="deleteTask(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
     </div>
   `;
@@ -7124,6 +7151,120 @@ async function deleteSomedayItem(id) {
   DATA.somedayMaybe = (DATA.somedayMaybe || []).filter(i => i.id != id);
   await saveData();
   renderSomeday();
+}
+
+// ═══ GTD Waiting For ═══
+function renderWaitingFor() {
+  const list = document.getElementById('waiting-list');
+  const badge = document.getElementById('waiting-badge');
+  const items = (DATA.waitingFor || []).slice().sort((a, b) => new Date(a.since || a.created) - new Date(b.since || b.created));
+
+  if (badge) {
+    if (items.length > 0) { badge.textContent = items.length; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
+  if (!list) return;
+  if (items.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">🎉 Nothing waiting — you\'re unblocked!</div>';
+    return;
+  }
+
+  const now = Date.now();
+  list.innerHTML = items.map(item => {
+    const since = new Date(item.since || item.created);
+    const days = Math.floor((now - since.getTime()) / 86400000);
+    const ageColor = days > 14 ? 'var(--red)' : days > 7 ? 'var(--yellow)' : 'var(--text-muted)';
+    const ageBg = days > 14 ? 'var(--red-dim)' : days > 7 ? 'oklch(25% 0.05 85)' : 'var(--surface3)';
+    const sinceStr = since.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const ageStr = days === 0 ? 'today' : days === 1 ? '1 day' : `${days} days`;
+    return `<div style="padding:14px 16px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;color:var(--text);margin-bottom:4px;">${escapeHtml(item.text)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            ${item.waitingOn ? `<span style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:var(--accent-surface);color:var(--accent);font-weight:600;">→ ${escapeHtml(item.waitingOn)}</span>` : ''}
+            <span style="font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:${ageBg};color:${ageColor};font-weight:600;">Since ${sinceStr} · ${ageStr}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="resolveWaitingFor(${item.id})" title="Mark received" style="padding:5px 10px;background:var(--green-dim);border:1px solid var(--green);border-radius:var(--radius-sm);color:var(--green);font-size:11px;font-weight:600;cursor:pointer;">✅ Done</button>
+          <button onclick="waitingToTask(${item.id})" title="Make task" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;">📋 Task</button>
+          <button onclick="deleteWaitingItem(${item.id})" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addWaitingFor(text, waitingOn) {
+  if (!text) return;
+  if (!DATA.waitingFor) DATA.waitingFor = [];
+  DATA.waitingFor.unshift({ id: Date.now(), text, waitingOn: waitingOn || '', since: new Date().toISOString(), created: new Date().toISOString() });
+  saveData();
+  renderWaitingFor();
+  showToast('⏳ Added to Waiting For');
+}
+
+async function resolveWaitingFor(id) {
+  DATA.waitingFor = (DATA.waitingFor || []).filter(i => i.id != id);
+  await saveData();
+  renderWaitingFor();
+  showToast('✅ Received!');
+}
+
+async function waitingToTask(id) {
+  const item = (DATA.waitingFor || []).find(i => i.id == id);
+  if (!item) return;
+  const now = new Date();
+  const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  DATA.tasks.push({ id: Date.now(), text: item.text, urgency: 2, importance: 2, project: '', owner: 'ryan', done: false, created: dateStr, messages: [] });
+  DATA.waitingFor = (DATA.waitingFor || []).filter(i => i.id != id);
+  await saveData();
+  renderWaitingFor();
+  renderTasks();
+  showToast('📋 Moved to Tasks');
+}
+
+async function deleteWaitingItem(id) {
+  DATA.waitingFor = (DATA.waitingFor || []).filter(i => i.id != id);
+  await saveData();
+  renderWaitingFor();
+}
+
+async function taskToWaiting(taskId) {
+  const task = (DATA.tasks || []).find(t => t.id == taskId);
+  if (!task) return;
+  // Show inline form in modal instead of prompt()
+  const modal = document.getElementById('task-modal-content');
+  if (!modal) return;
+  const existing = document.getElementById('waiting-inline-form');
+  if (existing) { existing.remove(); return; }
+  const form = document.createElement('div');
+  form.id = 'waiting-inline-form';
+  form.style.cssText = 'margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--accent-dim);';
+  form.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">⏳ Waiting on who/what?</div>
+    <div style="display:flex;gap:8px;">
+      <input id="waiting-inline-input" type="text" placeholder="Person, team, vendor… (optional)" autocomplete="off"
+        style="flex:1;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')confirmTaskToWaiting(${safeId(taskId)});else if(event.key==='Escape')document.getElementById('waiting-inline-form').remove();">
+      <button onclick="confirmTaskToWaiting(${safeId(taskId)})" style="padding:8px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Confirm</button>
+    </div>`;
+  modal.appendChild(form);
+  setTimeout(() => document.getElementById('waiting-inline-input')?.focus(), 50);
+}
+
+async function confirmTaskToWaiting(taskId) {
+  const task = (DATA.tasks || []).find(t => t.id == taskId);
+  if (!task) return;
+  const waitingOn = document.getElementById('waiting-inline-input')?.value.trim() || '';
+  if (!DATA.waitingFor) DATA.waitingFor = [];
+  DATA.waitingFor.unshift({ id: Date.now(), text: task.text || task.title || 'Untitled', waitingOn, since: new Date().toISOString(), created: new Date().toISOString() });
+  DATA.tasks = (DATA.tasks || []).filter(t => t.id != taskId);
+  await saveData();
+  closeTaskModal();
+  renderTasks();
+  renderWaitingFor();
+  showToast('⏳ Moved to Waiting For');
 }
 </script>
 <!-- Selection Toolbar -->
