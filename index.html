@@ -16,7 +16,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' api.github.com esm.sh *.esm.sh us.i.posthog.com https://corsproxy.io; img-src 'self' data: blob: *; font-src 'self' data: fonts.gstatic.com; frame-src 'none'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com us.i.posthog.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' api.github.com esm.sh *.esm.sh us.i.posthog.com cdn.jsdelivr.net https://corsproxy.io; img-src 'self' data: blob: *; font-src 'self' data: fonts.gstatic.com; frame-src 'none'; object-src 'none';">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K2 Command Center</title>
@@ -6648,8 +6648,9 @@ function saveSettings() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeSettings();
 });
-document.getElementById('settings-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeSettings();
+document.addEventListener('DOMContentLoaded', function() {
+  const sm = document.getElementById('settings-modal');
+  if (sm) sm.addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
 });
 
 // ═══ Google Calendar ICS ═══
