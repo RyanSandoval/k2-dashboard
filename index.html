@@ -4744,25 +4744,17 @@ function renderNotes(page = 0) {
       `;
     }).join('');
 
-    // Lazy-init editors via IntersectionObserver — don't initialize 829 at once
-    const noteObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        const noteId = entry.target.dataset.noteId;
-        if (!noteId) return;
-        noteObserver.unobserve(entry.target);
-        if (window.createEditor) {
-          initNoteInlineEditor(noteId);
-        } else {
-          const retry = setInterval(() => {
-            if (window.createEditor) { clearInterval(retry); initNoteInlineEditor(noteId); }
-          }, 300);
-          setTimeout(() => clearInterval(retry), 10000);
-        }
-      });
-    }, { rootMargin: '200px' }); // pre-load 200px before visible
-
-    container.querySelectorAll('.note-card[data-note-id]').forEach(el => noteObserver.observe(el));
+    // Init all visible note editors — simple and reliable
+    pageNotes.forEach(note => {
+      if (window.createEditor) {
+        initNoteInlineEditor(note.id);
+      } else {
+        const retry = setInterval(() => {
+          if (window.createEditor) { clearInterval(retry); initNoteInlineEditor(note.id); }
+        }, 300);
+        setTimeout(() => clearInterval(retry), 10000);
+      }
+    });
     // Append bottom pagination
     if (totalPages > 1) container.insertAdjacentHTML('beforeend', paginationHtml);
   }
