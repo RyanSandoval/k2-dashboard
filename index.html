@@ -4744,38 +4744,25 @@ function renderNotes(page = 0) {
       `;
     }).join('');
 
-    // Init editors — immediate for first 5, lazy via observer for the rest
-    const cards = [...container.querySelectorAll('.note-card[data-note-id]')];
-    const scrollRoot = document.querySelector('.main') || null;
+    // Lazy-init editors via IntersectionObserver — don't initialize 829 at once
+    const noteObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const noteId = entry.target.dataset.noteId;
+        if (!noteId) return;
+        noteObserver.unobserve(entry.target);
+        if (window.createEditor) {
+          initNoteInlineEditor(noteId);
+        } else {
+          const retry = setInterval(() => {
+            if (window.createEditor) { clearInterval(retry); initNoteInlineEditor(noteId); }
+          }, 300);
+          setTimeout(() => clearInterval(retry), 10000);
+        }
+      });
+    }, { rootMargin: '200px' }); // pre-load 200px before visible
 
-    const initCard = (noteId) => {
-      if (window.createEditor) {
-        initNoteInlineEditor(noteId);
-      } else {
-        const retry = setInterval(() => {
-          if (window.createEditor) { clearInterval(retry); initNoteInlineEditor(noteId); }
-        }, 300);
-        setTimeout(() => clearInterval(retry), 10000);
-      }
-    };
-
-    // Init first 5 immediately
-    cards.slice(0, 5).forEach(el => initCard(el.dataset.noteId));
-
-    // Lazy-init the rest via IntersectionObserver with correct scroll root
-    if (cards.length > 5) {
-      const noteObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
-          const noteId = entry.target.dataset.noteId;
-          if (!noteId) return;
-          noteObserver.unobserve(entry.target);
-          initCard(noteId);
-        });
-      }, { root: scrollRoot, rootMargin: '300px' });
-
-      cards.slice(5).forEach(el => noteObserver.observe(el));
-    }
+    container.querySelectorAll('.note-card[data-note-id]').forEach(el => noteObserver.observe(el));
     // Append bottom pagination
     if (totalPages > 1) container.insertAdjacentHTML('beforeend', paginationHtml);
   }
@@ -5195,8 +5182,8 @@ function debugNoteEditors() {
 function convertTextToHTML(text) {
   if (!text || text.trim() === '') return '<p></p>';
   
-  // If it's already HTML (has actual HTML tags, not just < > chars), return as-is
-  if (/<(p|h[1-6]|ul|ol|li|div|span|br|strong|em|code|pre|blockquote)[^>]*>/i.test(text)) {
+  // If it's already HTML, return as-is
+  if (text.includes('<') && text.includes('>')) {
     return text;
   }
   
