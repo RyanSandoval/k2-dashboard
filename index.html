@@ -7557,9 +7557,7 @@ function showDatePickerForSlash(editor) {
   const items = picker.querySelectorAll('.slash-menu-item');
 
   const insertDate = (value) => {
-    const label = options.find(o=>o.value===value)?.label || value;
-    const displayText = label === value ? value : `${label} (${value})`;
-    editor.chain().focus().insertContent(`📅 ${displayText}`).run();
+    editor.chain().focus().insertContent(`📅 ${value}`).run();
     picker.remove();
     document.removeEventListener('keydown', keyHandler);
   };
