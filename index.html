@@ -6219,9 +6219,14 @@ function closeCapturePopover() {
 function initKeyboardShortcuts() {
   // Cmd+K: Open search (works from anywhere)
   document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      openSearch();
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
+      // Don't hijack Cmd+K when typing in an editor — that's for the link popover
+      const active = document.activeElement;
+      const inEditor = active?.closest('.ProseMirror') || active?.closest('[contenteditable]') || active?.tagName === 'TEXTAREA' || active?.tagName === 'INPUT';
+      if (!inEditor) {
+        e.preventDefault();
+        openSearch();
+      }
     }
   });
   // Cmd+I: Quick capture to inbox (works from anywhere)
