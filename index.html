@@ -1383,7 +1383,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <!-- Dashboard Page -->
     <div class="page" id="page-dashboard">
       <!-- Greeting + Mission -->
-      <div id="dash-greeting" style="margin-bottom:20px;"></div>
+      <div id="dash-greeting" style="margin-bottom:12px;"></div>
+      <div id="dash-heatmap" style="margin-bottom:16px;"></div>
 
       <!-- Morning Brief -->
       <div class="card" style="margin-bottom:20px;border-left:3px solid var(--accent);">
@@ -2134,7 +2135,7 @@ async function saveData() {
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -2483,6 +2484,7 @@ function renderDashboard() {
 
   // Google Calendar widget
   renderGCalWidget();
+  renderTaskHeatmap();
 }
 
 function renderMorningBrief(today) {
@@ -6668,18 +6670,17 @@ async function fetchGCalEvents() {
     const res = await fetch(proxyUrl);
     if (!res.ok) throw new Error('Fetch failed: ' + res.status);
     const text = await res.text();
-    window._gcalEvents = parseICSForToday(text);
+    const t0 = new Date(), t1 = new Date(t0); t1.setDate(t0.getDate()+1);
+    const ds = (d) => d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+    window._gcalEvents = parseICSForDates(text, [ds(t0), ds(t1)]);
   } catch(e) {
     console.warn('[K2] GCal fetch error:', e.message);
     window._gcalEvents = [];
   }
 }
 
-function parseICSForToday(icsText) {
-  const today = new Date();
-  const todayStr = today.getFullYear().toString() +
-    String(today.getMonth()+1).padStart(2,'0') +
-    String(today.getDate()).padStart(2,'0');
+function parseICSForDates(icsText, targetDates) {
+  const dateSet = new Set(targetDates);
 
   // Split into VEVENT blocks
   const eventBlocks = [];
@@ -6757,9 +6758,9 @@ function parseICSForToday(icsText) {
       }
     }
 
-    if (startDateStr !== todayStr) continue;
+    if (!dateSet.has(startDateStr)) continue;
 
-    events.push({ title: summary, start: startDate, end: endDate, location: location, allDay: !startDate });
+    events.push({ title: summary, start: startDate, end: endDate, location: location, allDay: !startDate, dateStr: startDateStr });
   }
 
   // Sort: all-day first, then by start time
@@ -6773,6 +6774,39 @@ function parseICSForToday(icsText) {
   return events;
 }
 
+function renderTaskHeatmap() {
+  const el = document.getElementById('dash-heatmap');
+  if (!el) return;
+  const today = getTodayStr();
+  const tasks = (DATA.tasks || []).filter(t => !t.done);
+  if (!tasks.length) { el.innerHTML = ''; return; }
+
+  const byProject = {};
+  for (const t of tasks) {
+    const key = t.project || '__none__';
+    if (!byProject[key]) byProject[key] = { overdue: 0, dueToday: 0, total: 0 };
+    byProject[key].total++;
+    if (t.dueDate && t.dueDate < today) byProject[key].overdue++;
+    else if (t.dueDate === today) byProject[key].dueToday++;
+  }
+
+  const chips = Object.entries(byProject)
+    .filter(([,c]) => c.total > 0)
+    .sort((a,b) => (b[1].overdue - a[1].overdue) || (b[1].dueToday - a[1].dueToday))
+    .map(([projId, counts]) => {
+      const proj = (DATA.projects||[]).find(p => p.id === projId);
+      const name = proj ? proj.name : (projId === '__none__' ? 'Unassigned' : projId);
+      const short = name.length > 22 ? name.slice(0,20)+'…' : name;
+      let bg, color, label;
+      if (counts.overdue > 0) { bg='var(--red-dim)'; color='var(--red)'; label=`${counts.overdue} overdue`; }
+      else if (counts.dueToday > 0) { bg='#2a2818'; color='var(--yellow)'; label=`${counts.dueToday} due today`; }
+      else { bg='var(--surface2)'; color='var(--text-dim)'; label=`${counts.total} open`; }
+      return `<span onclick="navigateTo('tasks')" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:${bg};border-radius:20px;cursor:pointer;white-space:nowrap;font-size:11px;font-weight:600;color:${color};transition:opacity 0.15s;" onmouseover="this.style.opacity=.75" onmouseout="this.style.opacity=1">${short} <span style="opacity:0.75;font-weight:400;">${label}</span></span>`;
+    });
+
+  el.innerHTML = chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${chips.join('')}</div>` : '';
+}
+
 function renderGCalWidget() {
   const el = document.getElementById('dash-gcal-events');
   if (!el) return;
@@ -6782,25 +6816,38 @@ function renderGCalWidget() {
     return;
   }
   const events = window._gcalEvents || [];
-  if (events.length === 0) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No events today</div>';
+  const t0 = new Date(), t1 = new Date(t0); t1.setDate(t0.getDate()+1);
+  const ds = (d) => d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  const todayStr = ds(t0), tomorrowStr = ds(t1);
+
+  const todayEvs = events.filter(e => e.dateStr === todayStr);
+  const tomorrowEvs = events.filter(e => e.dateStr === tomorrowStr);
+
+  if (!todayEvs.length && !tomorrowEvs.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No events today or tomorrow</div>';
     return;
   }
-  el.innerHTML = events.map(ev => {
-    let timeLabel = '';
+
+  const renderEvRow = (ev) => {
+    let timeLabel;
     if (ev.allDay) {
-      timeLabel = '<span style="font-size:10px;color:var(--text-muted);background:var(--surface2);border-radius:3px;padding:1px 5px;flex-shrink:0;">all day</span>';
+      timeLabel = '<span style="font-size:10px;color:var(--text-muted);background:var(--surface2);border-radius:3px;padding:1px 5px;flex-shrink:0;min-width:58px;text-align:center;">all day</span>';
     } else if (ev.start) {
       const t = ev.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      timeLabel = '<span style="font-size:11px;color:var(--text-dim);min-width:68px;flex-shrink:0;">' + t + '</span>';
-    }
-    const loc = ev.location ? '<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">📍 ' + ev.location + '</span>' : '';
+      timeLabel = '<span style="font-size:11px;color:var(--text-dim);min-width:58px;flex-shrink:0;">' + t + '</span>';
+    } else { timeLabel = '<span style="min-width:58px;"></span>'; }
+    const loc = ev.location ? ' <span style="font-size:10px;color:var(--text-muted);">📍 ' + escapeHtml(ev.location) + '</span>' : '';
+    const safeTitle = escapeHtml(ev.title);
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-subtle);">' +
       timeLabel +
-      '<span style="font-size:12px;flex:1;line-height:1.4;">' + ev.title + '</span>' +
-      loc +
+      '<span style="font-size:12px;flex:1;line-height:1.4;">' + safeTitle + loc + '</span>' +
+      '<button onclick="addToInbox(\'' + safeTitle.replace(/'/g,"\\'") + '\')" title="Capture to Inbox" style="padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-size:10px;cursor:pointer;flex-shrink:0;">+ Inbox</button>' +
       '</div>';
-  }).join('');
+  };
+
+  const section = (label, evs) => evs.length ? `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin:8px 0 4px;">${label}</div>${evs.map(renderEvRow).join('')}` : '';
+
+  el.innerHTML = section('Today', todayEvs) + section('Tomorrow', tomorrowEvs);
 }
 
 // Initialize on load
