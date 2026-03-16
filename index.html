@@ -5358,6 +5358,9 @@ function initFullScreenEditor(noteId, content) {
           const updatedNote = DATA.notes.find(n => n.id === noteId);
           if (updatedNote) {
             const html = editor.getHTML();
+            // Safety guard: never overwrite existing content with an empty editor
+            const isEmpty = !html || html === '<p></p>' || html === '<p><br></p>';
+            if (isEmpty && updatedNote.text && updatedNote.text !== '<p></p>') return;
             updatedNote.text = html; // Store HTML to preserve mentions
 
             const plainText = convertHTMLToText(html);
