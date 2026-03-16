@@ -7504,6 +7504,82 @@ function hideSlashMenu() {
   if (slashMenuEl) slashMenuEl.style.display = 'none';
 }
 
+function showDatePickerForSlash(editor) {
+  // Remove any existing picker
+  const existing = document.getElementById('slash-date-picker');
+  if (existing) existing.remove();
+
+  const d = new Date();
+  const fmt = (dt) => dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  const iso = (dt) => dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+
+  const today = new Date(d);
+  const tomorrow = new Date(d); tomorrow.setDate(d.getDate()+1);
+  const nextWeek = new Date(d); nextWeek.setDate(d.getDate()+7);
+  const nextMon = new Date(d); nextMon.setDate(d.getDate() + ((8-d.getDay())%7||7));
+  const nextFri = new Date(d); nextFri.setDate(d.getDate() + ((5-d.getDay()+7)%7||7));
+
+  const coords = editor.view.coordsAtPos(editor.state.selection.from);
+
+  const picker = document.createElement('div');
+  picker.id = 'slash-date-picker';
+  picker.style.cssText = `position:fixed;z-index:9000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:8px;min-width:220px;left:${Math.min(coords.left, window.innerWidth-240)}px;top:${Math.min(coords.bottom+4, window.innerHeight-300)}px;`;
+
+  const options = [
+    { label: 'Today', sub: fmt(today), value: iso(today) },
+    { label: 'Tomorrow', sub: fmt(tomorrow), value: iso(tomorrow) },
+    { label: 'Next Monday', sub: fmt(nextMon), value: iso(nextMon) },
+    { label: 'Next Friday', sub: fmt(nextFri), value: iso(nextFri) },
+    { label: 'Next Week', sub: fmt(nextWeek), value: iso(nextWeek) },
+  ];
+
+  picker.innerHTML = options.map((o, i) => `
+    <div class="slash-menu-item${i===0?' active':''}" data-value="${o.value}" style="justify-content:space-between;">
+      <span class="sm-label">${o.label}</span>
+      <span class="sm-desc">${o.sub}</span>
+    </div>
+  `).join('') + `
+    <div style="padding:6px 8px;border-top:1px solid var(--border-subtle);margin-top:4px;">
+      <input type="date" id="slash-date-custom" style="width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;" value="${iso(today)}">
+    </div>`;
+
+  document.body.appendChild(picker);
+
+  let pickerIdx = 0;
+  const items = picker.querySelectorAll('.slash-menu-item');
+
+  const insertDate = (value) => {
+    const label = options.find(o=>o.value===value)?.label || value;
+    const displayText = label === value ? value : `${label} (${value})`;
+    editor.chain().focus().insertContent(`📅 ${displayText}`).run();
+    picker.remove();
+    document.removeEventListener('keydown', keyHandler);
+  };
+
+  const keyHandler = (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); pickerIdx = Math.min(pickerIdx+1, items.length-1); items.forEach((el,i)=>el.classList.toggle('active',i===pickerIdx)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); pickerIdx = Math.max(pickerIdx-1, 0); items.forEach((el,i)=>el.classList.toggle('active',i===pickerIdx)); }
+    else if (e.key === 'Enter') { e.preventDefault(); insertDate(options[pickerIdx]?.value || iso(today)); }
+    else if (e.key === 'Escape') { picker.remove(); document.removeEventListener('keydown', keyHandler); }
+  };
+  document.addEventListener('keydown', keyHandler);
+
+  items.forEach((el) => {
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); insertDate(el.dataset.value); });
+  });
+
+  picker.querySelector('#slash-date-custom').addEventListener('change', (e) => {
+    if (e.target.value) insertDate(e.target.value);
+  });
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('pointerdown', function outside(e) {
+      if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('keydown', keyHandler); document.removeEventListener('pointerdown', outside); }
+    });
+  }, 100);
+}
+
 function selectSlashCommand(cmd) {
   if (!cmd || !slashMenuEditor) return;
   const { from } = slashMenuEditor.state.selection;
