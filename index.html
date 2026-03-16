@@ -7367,7 +7367,79 @@ const NoteMention = Node.create({
 });
 
 // Slash command menu
+function showDatePickerForSlash(editor) {
+  // Remove any existing date picker
+  const old = document.getElementById('slash-date-picker');
+  if (old) old.remove();
+
+  const { from } = editor.state.selection;
+  let coords;
+  try { coords = editor.view.coordsAtPos(from); } catch(e) { coords = { left: 120, bottom: 200 }; }
+
+  const today = new Date();
+  const fmt = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  const fmtDisplay = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const friday = new Date(today); friday.setDate(today.getDate() + ((5 - today.getDay() + 7) % 7 || 7));
+  const nextMon = new Date(today); nextMon.setDate(today.getDate() + ((1 - today.getDay() + 7) % 7 || 7));
+
+  const options = [
+    { label: 'Today', sub: fmtDisplay(today), val: fmt(today) },
+    { label: 'Tomorrow', sub: fmtDisplay(tomorrow), val: fmt(tomorrow) },
+    { label: 'This Friday', sub: fmtDisplay(friday), val: fmt(friday) },
+    { label: 'Next Week', sub: fmtDisplay(nextMon), val: fmt(nextMon) },
+  ];
+
+  const pop = document.createElement('div');
+  pop.id = 'slash-date-picker';
+  pop.style.cssText = `position:fixed;z-index:800;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:220px;padding:6px;`;
+  const left = Math.max(8, Math.min(coords.left, window.innerWidth - 240));
+  const top = Math.min(coords.bottom + 6, window.innerHeight - 220);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+
+  pop.innerHTML = options.map((o, i) => `
+    <div class="slash-date-opt" data-val="${o.val}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;gap:12px;${i===0?'background:var(--accent-surface);':''}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${i===0?'var(--accent-surface)':'transparent'}'">
+      <span style="font-size:13px;font-weight:600;color:var(--text);">${o.label}</span>
+      <span style="font-size:11px;color:var(--text-muted);">${o.sub}</span>
+    </div>`).join('') +
+    `<div style="border-top:1px solid var(--border-subtle);margin:4px 0;"></div>
+    <div style="padding:6px 8px;display:flex;gap:6px;align-items:center;">
+      <input type="date" id="slash-date-custom" style="flex:1;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;outline:none;" value="${fmt(today)}">
+      <button id="slash-date-custom-btn" style="padding:6px 10px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Pick</button>
+    </div>`;
+
+  document.body.appendChild(pop);
+
+  function insertDate(val) {
+    pop.remove();
+    editor.commands.focus();
+    editor.commands.insertContent('📅 ' + val + ' ');
+  }
+
+  pop.querySelectorAll('.slash-date-opt').forEach(el => {
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); insertDate(el.dataset.val); });
+  });
+  document.getElementById('slash-date-custom-btn').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const v = document.getElementById('slash-date-custom').value;
+    if (v) insertDate(v);
+  });
+  document.getElementById('slash-date-custom').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); const v = e.target.value; if (v) insertDate(v); }
+  });
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('pointerdown', function closePop(e) {
+      if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener('pointerdown', closePop); }
+    });
+  }, 100);
+}
+
 const slashCommands = [
+  { label: 'Date', icon: '📅', desc: 'Insert a date', action: (editor) => showDatePickerForSlash(editor) },
   { label: 'Heading 1', icon: 'H1', desc: 'Big heading', action: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run() },
   { label: 'Heading 2', icon: 'H2', desc: 'Medium heading', action: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run() },
   { label: 'Heading 3', icon: 'H3', desc: 'Small heading', action: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run() },
