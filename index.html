@@ -1290,7 +1290,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <div class="search-trigger" onclick="openSearch()">
       <span>🔍</span> Search...
-      <span class="search-kbd">⌘K</span>
+      <span class="search-kbd">⌘/</span>
     </div>
     <div style="padding:0 10px 6px;">
       <div style="display:flex;gap:6px;">
@@ -6219,10 +6219,15 @@ function closeCapturePopover() {
 function initKeyboardShortcuts() {
   // Cmd+K: Open search (works from anywhere)
   document.addEventListener('keydown', (e) => {
+    // Cmd+F or Cmd+/ — global search (works from anywhere)
+    if ((e.metaKey || e.ctrlKey) && (e.key === '/' || e.key === 'f')) {
+      e.preventDefault();
+      openSearch();
+    }
+    // Cmd+K — global search (only when not in editor, since editors use it for links)
     if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
-      // Don't hijack Cmd+K when typing in an editor — that's for the link popover
       const active = document.activeElement;
-      const inEditor = active?.closest('.ProseMirror') || active?.closest('[contenteditable]') || active?.tagName === 'TEXTAREA' || active?.tagName === 'INPUT';
+      const inEditor = active?.closest('.ProseMirror') || active?.closest('[contenteditable]');
       if (!inEditor) {
         e.preventDefault();
         openSearch();
