@@ -1534,6 +1534,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <option value="due">Due Date</option>
         </select>
       </div>
+      <div id="context-filter-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px 0;scrollbar-width:none;align-items:center;">
+        <!-- Populated by renderContextFilterBar() -->
+      </div>
       <div class="card" id="task-list-card">
         <ul class="task-list" id="task-list">
           <!-- Populated by JS -->
@@ -2099,6 +2102,7 @@ async function loadData() {
     DATA.docs = d.docs || [];
     DATA.weeklyReviews = d.weeklyReviews || [];
     DATA.lastReviewDate = d.lastReviewDate || null;
+    DATA.contexts = d.contexts || ['@computer', '@phone', '@office', '@home', '@errands', '@email'];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -3664,14 +3668,13 @@ function openTaskModal(taskId) {
       ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date">✕</span>` : ''}
     </div>
 
-    ${task.context ? `
-    <div style="margin-bottom:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--accent2);cursor:pointer;" onclick="editTaskField(${safeId(task.id)},'context',this.querySelector('.ctx-text'))" title="Click to edit context">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent2);font-weight:600;margin-bottom:4px;">Context</div>
-      <div class="ctx-text" style="font-size:12px;color:var(--text-dim);line-height:1.5;">${task.context}</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📍 Context</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="setTaskContext(${safeId(task.id)}, null)" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${!task.context ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">None</button>
+        ${(DATA.contexts || []).map(ctx => `<button onclick="setTaskContext(${safeId(task.id)}, '${ctx.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${task.context === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${ctx}</button>`).join('')}
+      </div>
     </div>
-    ` : `
-    <div style="margin-bottom:12px;font-size:12px;color:var(--text-dim);cursor:pointer;padding:8px;border:1px dashed var(--border);border-radius:8px;text-align:center;" onclick="editTaskField(${safeId(task.id)},'context',this)">+ Add context</div>
-    `}
 
     ${projectGoal ? `
     <div style="margin-bottom:12px;background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--green);">
@@ -4105,7 +4108,15 @@ function renderTasks() {
   } else if (activeFilter === 'done') {
     filteredTasks = DATA.tasks.filter(t => t.done || t.status === 'done');
   }
-  
+
+  // Context filter
+  if (window._activeContext) {
+    filteredTasks = filteredTasks.filter(t => t.context === window._activeContext);
+  }
+
+  // Render context filter bar
+  renderContextFilterBar();
+
   // Migrate all tasks before sorting
   filteredTasks.forEach(migrateTaskPriority);
   // Sort tasks
@@ -4163,8 +4174,8 @@ function renderTasks() {
             <span>${taskText}</span>
             ${isK2 ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.label}</span>` : ''}
             ${dueInfo ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${dueInfo.overdue ? 'var(--red)' : 'var(--text-dim)'};background:color-mix(in srgb, ${dueInfo.overdue ? 'var(--red)' : 'var(--accent)'} 12%, transparent);">${dueInfo.text}</span>` : ''}
+            ${task.context ? `<span style="font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border-subtle);">📍 ${task.context}</span>` : ''}
           </div>
-          ${task.context ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic;opacity:0.8;">${task.context}</div>` : ''}
           <div class="task-meta">
             ${projectName} • ${task.created}${task.source === 'jot' ? ' • 📝 from jot' : ''}
           </div>
@@ -4559,6 +4570,78 @@ async function editTaskField(taskId, field, el) {
   el.replaceWith(input);
   input.focus();
 }
+
+// Context Tags feature
+window._activeContext = null;
+
+function setTaskContext(taskId, ctx) {
+  const task = DATA.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  task.context = ctx || undefined;
+  saveData();
+  openTaskModal(taskId);
+  renderTasks();
+}
+
+function renderContextFilterBar() {
+  const bar = document.getElementById('context-filter-bar');
+  if (!bar) return;
+  const contexts = DATA.contexts || [];
+  bar.innerHTML = [
+    `<button onclick="setActiveContext(null)" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:${!window._activeContext ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)'};transition:all 0.15s;">All</button>`,
+    ...contexts.map(ctx =>
+      `<button onclick="setActiveContext('${ctx.replace(/'/g, "\\'")}') " style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:${window._activeContext === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)'};transition:all 0.15s;">📍 ${ctx}</button>`
+    ),
+    `<button onclick="addContextPrompt()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px dashed var(--border);cursor:pointer;white-space:nowrap;background:transparent;color:var(--text-muted);">+ Add Context</button>`
+  ].join('');
+}
+
+function setActiveContext(ctx) {
+  window._activeContext = ctx || null;
+  renderTasks();
+}
+
+function addContextPrompt() {
+  const name = prompt('New context name (e.g. @computer):');
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  if (!DATA.contexts.includes(trimmed)) {
+    DATA.contexts.push(trimmed);
+    saveData();
+  }
+  renderContextFilterBar();
+}
+
+function openContextPicker() {
+  const existing = document.getElementById('context-picker-overlay');
+  if (existing) { existing.remove(); return; }
+  const contexts = DATA.contexts || [];
+  const overlay = document.createElement('div');
+  overlay.id = 'context-picker-overlay';
+  overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:220px;';
+  overlay.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">📍 Filter by Context</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button onclick="setActiveContext(null);document.getElementById('context-picker-overlay').remove()" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:${!window._activeContext ? 'var(--accent-surface)' : 'var(--surface2)'};color:var(--text);font-size:13px;">All Tasks</button>
+      ${contexts.map(ctx => `<button onclick="setActiveContext('${ctx.replace(/'/g, "\\'")}');document.getElementById('context-picker-overlay').remove()" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:${window._activeContext === ctx ? 'var(--accent-surface)' : 'var(--surface2)'};color:var(--text);font-size:13px;">📍 ${ctx}</button>`).join('')}
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text-muted);text-align:center;">Esc or ⌘⇧C to close</div>
+  `;
+  document.body.appendChild(overlay);
+  const close = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', close); } };
+  document.addEventListener('keydown', close);
+  overlay.addEventListener('click', e => e.stopPropagation());
+  setTimeout(() => document.addEventListener('click', function once() { overlay.remove(); document.removeEventListener('click', once); }), 100);
+}
+
+// Cmd+Shift+C — open context picker
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+    e.preventDefault();
+    navigateTo('tasks');
+    openContextPicker();
+  }
+});
 
 // Setup task filters
 document.querySelectorAll('.filter-btn[data-group="tasks"]').forEach(btn => {
