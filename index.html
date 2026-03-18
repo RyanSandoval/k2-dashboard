@@ -7943,6 +7943,40 @@ async function confirmTaskToWaiting(taskId) {
   renderWaitingFor();
   showToast('⏳ Moved to Waiting For');
 }
+
+window.createTaskFromCurrentLine = function(editor) {
+  const { from } = editor.state.selection;
+  const $pos = editor.state.doc.resolve(from);
+  const lineStart = $pos.start($pos.depth);
+  const lineEnd = $pos.end($pos.depth);
+  const lineText = editor.state.doc.textBetween(lineStart, lineEnd).trim();
+  if (!lineText) { showToast('Empty line — nothing to create'); return; }
+
+  const noteId = activeNoteId || null;
+  const jotDate = window._todayEditorDate || getTodayStr();
+  const source = noteId ? 'note' : 'jot';
+
+  const task = {
+    id: Date.now(),
+    text: lineText,
+    source: source,
+    linkedNoteId: noteId || undefined,
+    sourceDate: source === 'jot' ? jotDate : undefined,
+    urgency: 2,
+    importance: 2,
+    project: '',
+    owner: 'ryan',
+    done: false,
+    created: getTodayStr(),
+    messages: []
+  };
+  DATA.tasks.push(task);
+  saveData();
+  renderTasks();
+
+  editor.chain().focus().toggleTaskList().run();
+  showToast('✅ Task created: ' + lineText.slice(0, 40));
+};
 </script>
 <!-- Selection Toolbar -->
 <div class="selection-toolbar" id="selection-toolbar">
@@ -8039,6 +8073,7 @@ const slashCommands = [
   { label: 'Code Block', icon: '<>', desc: 'Code snippet', action: (editor) => editor.chain().focus().toggleCodeBlock().run() },
   { label: 'Blockquote', icon: '❝', desc: 'Quote text', action: (editor) => editor.chain().focus().toggleBlockquote().run() },
   { label: 'Divider', icon: '—', desc: 'Horizontal rule', action: (editor) => editor.chain().focus().setHorizontalRule().run() },
+  { label: 'Task', icon: '☑', desc: 'Create task from line', action: (editor) => createTaskFromCurrentLine(editor) },
 ];
 
 let slashMenuEl = null;
