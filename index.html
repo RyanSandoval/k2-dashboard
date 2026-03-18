@@ -1514,40 +1514,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <!-- Tasks Page -->
     <div class="page" id="page-tasks">
-      <div class="page-header">
-        <h2>Tasks</h2>
-        <p>Things to get done <span id="scheduled-tasks-stat" style="display:none;font-size:11px;font-weight:600;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 15%,transparent);border:1px solid color-mix(in srgb,var(--yellow) 40%,transparent);border-radius:10px;padding:2px 8px;margin-left:6px;"></span></p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="font-size:var(--text-2xl);font-weight:800;letter-spacing:-0.03em;">Tasks <span id="scheduled-tasks-stat" style="display:none;font-size:11px;font-weight:600;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 15%,transparent);border:1px solid color-mix(in srgb,var(--yellow) 40%,transparent);border-radius:10px;padding:2px 8px;margin-left:6px;vertical-align:middle;"></span></h2>
+        <button id="matrix-toggle-btn" onclick="toggleMatrixView()" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">⊞ Matrix</button>
       </div>
-      <div class="quick-add">
-        <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
-        <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;white-space:nowrap;">U:<select id="new-task-urgency" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:12px;"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></label>
-        <label style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:4px;white-space:nowrap;">I:<select id="new-task-importance" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:12px;"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></label>
-        <select id="new-task-project">
-          <option value="">No Project</option>
-        </select>
-        <button onclick="addTask()">Add</button>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="new-task-input" placeholder="Add a task… (try 'call joe #viking @phone !high tomorrow')" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')addTask()">
+        <select id="new-task-project" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;"><option value="">Project</option></select>
+        <button onclick="addTask()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;">Add</button>
       </div>
-      <div class="filter-bar">
-        <button class="filter-btn active" data-filter="my" data-group="tasks">👤 My Tasks</button>
-        <button class="filter-btn" data-filter="k2" data-group="tasks">🤖 K-2's Tasks</button>
-        <button class="filter-btn" data-filter="all" data-group="tasks">All</button>
-        <button class="filter-btn" data-filter="done" data-group="tasks">Done</button>
-        <button class="filter-btn" data-filter="scheduled" data-group="tasks">⏰ Scheduled <span id="scheduled-badge" style="display:none;background:var(--yellow);color:#000;border-radius:8px;padding:0 5px;font-size:10px;font-weight:700;margin-left:2px;"></span></button>
-        <button id="matrix-toggle-btn" onclick="toggleMatrixView()" style="margin-left:auto;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">⊞ Matrix</button>
-        <select id="task-sort" onchange="renderTasks()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;">
-          <option value="smart">Smart Sort</option>
-          <option value="score">Score</option>
-          <option value="created">Created</option>
-          <option value="due">Due Date</option>
-        </select>
+      <div id="focus-filter-bar" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;flex-wrap:wrap;scrollbar-width:none;">
+        <!-- Populated by renderTasks(): project pills + context pills -->
       </div>
-      <div id="context-filter-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px 0;scrollbar-width:none;align-items:center;">
-        <!-- Populated by renderContextFilterBar() -->
-      </div>
-      <div class="card" id="task-list-card">
-        <ul class="task-list" id="task-list">
-          <!-- Populated by JS -->
-        </ul>
+      <div id="focus-board">
+        <!-- Populated by renderTasks() -->
       </div>
       <div class="card" id="task-matrix-card" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -4136,16 +4116,94 @@ function formatTaskTextDisplay(text) {
   }).join('');
 }
 
+window._focusSections = window._focusSections || {};
+function toggleFocusSection(id) {
+  window._focusSections[id] = !window._focusSections[id];
+  renderTasks();
+}
+
+window._focusProjectFilter = window._focusProjectFilter || null;
+
+function renderTaskRow(task) {
+  const project = DATA.projects.find(p => p.id === task.project);
+  const projectName = project ? project.name : 'General';
+  const taskText = formatTaskTextDisplay(task.text || task.title || 'Untitled');
+  const taskId = typeof task.id === 'string' ? "'" + task.id.replace(/'/g,"\\'") + "'" : task.id;
+  const isK2 = task.owner === 'k2';
+  const ownerBadge = isK2 ? '🤖' : '👤';
+  const k2Status = task.k2Status || 'pending';
+  const k2StatusConfig = { pending: { icon: '⏳', label: 'Pending', color: 'var(--text-dim)' }, 'in-progress': { icon: '🔨', label: 'In Progress', color: 'var(--orange)' }, review: { icon: '👀', label: 'Review', color: 'var(--yellow)' }, done: { icon: '✅', label: 'Done', color: 'var(--green)' } };
+  const statusInfo = k2StatusConfig[k2Status] || k2StatusConfig.pending;
+  let leftEl, actionBtns = '';
+  if (isK2) {
+    leftEl = '<span style="font-size:16px;flex-shrink:0;margin-top:1px;" title="' + statusInfo.label + '">' + statusInfo.icon + '</span>';
+    if (k2Status === 'pending' && !task.done) {
+      actionBtns = '<button onclick="event.stopPropagation();queueTaskForK2(' + taskId + ')" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>';
+    } else if (k2Status === 'review') {
+      actionBtns = '<button onclick="event.stopPropagation();acceptK2Task(' + taskId + ')" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" title="Accept">👍</button><button onclick="event.stopPropagation();reworkK2Task(' + taskId + ')" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:8px;" title="Rework">👎</button>';
+    }
+  } else {
+    leftEl = '<div class="task-check ' + (task.done ? 'done' : '') + '" onclick="event.stopPropagation();toggleTask(' + taskId + ')"></div>';
+  }
+  const dueInfo = formatDueDate(task.dueDate);
+  const overdueStyle = dueInfo && dueInfo.overdue && !task.done ? 'border-left:3px solid var(--red);background:color-mix(in srgb, var(--red) 5%, var(--surface2));' : '';
+  const stale = isTaskStale(task);
+  const staleAgeDays = stale ? Math.floor((new Date() - new Date(task.created)) / (1000 * 60 * 60 * 24)) : 0;
+  const staleBanner = stale ? (
+    '<div onclick="event.stopPropagation()" style="flex:0 0 100%;width:100%;margin-top:6px;padding:6px 10px;background:color-mix(in srgb,#f59e0b 12%,transparent);border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+    '<span style="font-size:11px;color:#92400e;font-weight:500;flex:1;min-width:160px;">⚠️ This task is ' + staleAgeDays + ' days old. Still relevant?</span>' +
+    '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'keep\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#10b981;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Keep — remind again in 7 days">✓ Keep</button>' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'snooze\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#f59e0b;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Snooze 7 days — hide until then">⏰ Snooze 7d</button>' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'delete\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#ef4444;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Delete this task">🗑 Delete</button>' +
+    '</div></div>'
+  ) : '';
+  return '<li class="task-item" onclick="openTaskModal(' + taskId + ')" style="' + overdueStyle + 'flex-wrap:wrap;">' +
+    leftEl +
+    '<div class="task-content ' + (task.done ? 'done' : '') + '">' +
+    '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+    '<span title="' + (isK2 ? 'K-2' : 'Ryan') + '">' + ownerBadge + '</span>' +
+    '<span>' + taskText + '</span>' +
+    (isK2 ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:' + statusInfo.color + ';background:color-mix(in srgb, ' + statusInfo.color + ' 15%, transparent);">' + statusInfo.label + '</span>' : '') +
+    (dueInfo ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:' + (dueInfo.overdue ? 'var(--red)' : 'var(--text-dim)') + ';background:color-mix(in srgb, ' + (dueInfo.overdue ? 'var(--red)' : 'var(--accent)') + ' 12%, transparent);">' + dueInfo.text + '</span>' : '') +
+    ((task.hideUntil && task.hideUntil > getTodayStr() && !task.done) ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 15%,transparent);">⏰ Shows ' + task.hideUntil + '</span>' : '') +
+    (task.context ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border-subtle);">📍 ' + task.context + '</span>' : '') +
+    '</div>' +
+    '<div class="task-meta">' + projectName + ' • ' + task.created + (task.source === 'jot' ? ' • 📝 from jot' : '') + '</div>' +
+    '</div>' +
+    actionBtns +
+    '<button onclick="event.stopPropagation();quickSetHideUntil(' + taskId + ',this)" title="Schedule: hide until date" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;color:' + ((task.hideUntil && task.hideUntil > getTodayStr()) ? 'var(--yellow)' : 'var(--text-muted)') + ';flex-shrink:0;">⏰</button>' +
+    '<div class="task-priority ' + scoreClass(taskScoreRaw(task)) + '" title="U' + (task.urgency||2) + '×I' + (task.importance||2) + ' — click task to edit">' + scoreLabel(task) + '</div>' +
+    staleBanner +
+    '</li>';
+}
+
+function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
+  if (tasks.length === 0) return '';
+  var isOpen = !collapsed || !!window._focusSections[id];
+  var shown = (limit && !isOpen) ? tasks.slice(0, limit) : tasks;
+  return '<div style="margin-bottom:20px;">' +
+    '<div onclick="toggleFocusSection(\'' + id + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;user-select:none;">' +
+    '<span style="font-size:10px;color:var(--text-muted);transition:transform 0.2s;' + (isOpen ? 'transform:rotate(90deg);' : '') + '">▶</span>' +
+    '<span style="font-size:14px;">' + icon + '</span>' +
+    '<span style="font-size:13px;font-weight:700;color:var(--text);">' + label + '</span>' +
+    '<span style="font-size:11px;padding:1px 8px;border-radius:10px;background:var(--surface2);color:var(--text-dim);font-weight:600;">' + tasks.length + '</span>' +
+    '</div>' +
+    (isOpen ? '<ul class="task-list">' + shown.map(function(t){ return renderTaskRow(t); }).join('') + '</ul>' : '') +
+    (limit && tasks.length > limit && !isOpen ? '<div style="padding:4px 0 0 28px;font-size:12px;color:var(--accent);cursor:pointer;" onclick="toggleFocusSection(\'' + id + '\')">Show all ' + tasks.length + ' ▾</div>' : '') +
+    '</div>';
+}
+
 function renderTasks() {
-  const taskContainer = document.getElementById('task-list');
-  if (!taskContainer) return;
+  const board = document.getElementById('focus-board');
+  if (!board) return;
 
-  const activeFilter = document.querySelector('.filter-btn.active[data-group="tasks"]')?.dataset.filter || 'my';
-  let filteredTasks = DATA.tasks;
-  const todayStr = getTodayStr();
+  const today = getTodayStr();
+  const weekFromNow = new Date(); weekFromNow.setDate(weekFromNow.getDate()+7);
+  const weekStr = weekFromNow.toISOString().slice(0,10);
 
-  // Update scheduled stats
-  const scheduledCount = DATA.tasks.filter(t => t.hideUntil && t.hideUntil > todayStr && !t.done).length;
+  // Update scheduled stats badge
+  const scheduledCount = DATA.tasks.filter(t => t.hideUntil && t.hideUntil > today && !t.done).length;
   const scheduledStat = document.getElementById('scheduled-tasks-stat');
   if (scheduledStat) {
     if (scheduledCount > 0) {
@@ -4155,130 +4213,83 @@ function renderTasks() {
       scheduledStat.style.display = 'none';
     }
   }
-  const scheduledBadge = document.getElementById('scheduled-badge');
-  if (scheduledBadge) {
-    if (scheduledCount > 0) {
-      scheduledBadge.textContent = scheduledCount;
-      scheduledBadge.style.display = 'inline';
-    } else {
-      scheduledBadge.style.display = 'none';
-    }
-  }
 
-  if (activeFilter === 'my') {
-    filteredTasks = DATA.tasks.filter(t => {
-      const notDone = (!t.done && t.status !== 'done');
-      const isMyTask = (t.owner === 'ryan' || !t.owner);
-      const notHidden = !(t.hideUntil && t.hideUntil > todayStr && !t.done);
-      return notDone && isMyTask && notHidden;
-    });
-  } else if (activeFilter === 'k2') {
-    filteredTasks = DATA.tasks.filter(t => {
-      const notHidden = !(t.hideUntil && t.hideUntil > todayStr && !t.done);
-      return (!t.done && t.status !== 'done') && t.owner === 'k2' && notHidden;
-    });
-  } else if (activeFilter === 'all') {
-    filteredTasks = DATA.tasks.filter(t => {
-      const notHidden = !(t.hideUntil && t.hideUntil > todayStr && !t.done);
-      return notHidden;
-    });
-  } else if (activeFilter === 'done') {
-    filteredTasks = DATA.tasks.filter(t => t.done || t.status === 'done');
-  } else if (activeFilter === 'scheduled') {
-    filteredTasks = DATA.tasks.filter(t => t.hideUntil && t.hideUntil > todayStr && !t.done);
+  // Migrate all tasks
+  DATA.tasks.forEach(migrateTaskPriority);
+
+  // Base: all open tasks
+  let tasks = DATA.tasks.filter(t => !(t.done || t.status === 'done'));
+
+  // Project filter
+  if (window._focusProjectFilter) {
+    tasks = tasks.filter(t => t.project === window._focusProjectFilter);
   }
 
   // Context filter
   if (window._activeContext) {
-    filteredTasks = filteredTasks.filter(t => t.context === window._activeContext);
+    tasks = tasks.filter(t => t.context === window._activeContext);
   }
 
-  // Render context filter bar
+  // Render filter bar (project pills + context pills)
+  const filterBar = document.getElementById('focus-filter-bar');
+  if (filterBar) {
+    // Project pills from tasks with open items
+    const projectsWithTasks = new Map();
+    DATA.tasks.filter(t => !(t.done || t.status === 'done')).forEach(t => {
+      if (t.project) projectsWithTasks.set(t.project, true);
+    });
+    const projectPills = [
+      '<button onclick="window._focusProjectFilter=null;renderTasks()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (!window._focusProjectFilter ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">All</button>'
+    ];
+    DATA.projects.filter(p => projectsWithTasks.has(p.id)).forEach(p => {
+      projectPills.push('<button onclick="window._focusProjectFilter=\'' + p.id.toString().replace(/'/g,"\\'") + '\';renderTasks()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (window._focusProjectFilter === p.id ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">' + p.name + '</button>');
+    });
+    // Context pills
+    const contexts = DATA.contexts || [];
+    const ctxPills = contexts.length ? [
+      '<span style="width:1px;height:20px;background:var(--border);display:inline-block;margin:0 4px;vertical-align:middle;"></span>',
+      '<button onclick="setActiveContext(null)" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (!window._activeContext ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">All Contexts</button>',
+      ...contexts.map(ctx => '<button onclick="setActiveContext(\'' + ctx.replace(/'/g,"\\'") + '\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (window._activeContext === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">📍 ' + ctx + '</button>')
+    ] : [];
+    filterBar.innerHTML = projectPills.concat(ctxPills).join('');
+  }
+
+  // Render context filter bar (legacy, for compatibility)
   renderContextFilterBar();
 
-  // Migrate all tasks before sorting
-  filteredTasks.forEach(migrateTaskPriority);
-  // Sort tasks
-  const sortMode = document.getElementById('task-sort')?.value || 'smart';
-  filteredTasks = [...filteredTasks].sort((a, b) => {
-    if (sortMode === 'smart' || sortMode === 'score') {
-      const sa = taskScoreRaw(a), sb = taskScoreRaw(b);
-      if (sb !== sa) return sb - sa;
-      return (b.created || '').localeCompare(a.created || '');
-    } else if (sortMode === 'due') {
-      const da = a.dueDate || '9999', db = b.dueDate || '9999';
-      return da.localeCompare(db);
-    } else { // created
-      return (b.created || '').localeCompare(a.created || '');
-    }
+  // Bucket logic
+  const scheduled = tasks.filter(t => t.hideUntil && t.hideUntil > today);
+  const visible = tasks.filter(t => !(t.hideUntil && t.hideUntil > today));
+
+  const doToday = visible.filter(t => {
+    const score = (t.urgency||2) * (t.importance||2);
+    return score >= 12 || t.dueDate === today || (t.dueDate && t.dueDate < today);
   });
+  const todayIds = new Set(doToday.map(t => t.id));
 
-  taskContainer.innerHTML = filteredTasks.map(task => {
-    const project = DATA.projects.find(p => p.id === task.project);
-    const projectName = project ? project.name : 'General';
+  const thisWeek = visible.filter(t => {
+    if (todayIds.has(t.id)) return false;
+    const score = (t.urgency||2) * (t.importance||2);
+    return score >= 6 || (t.dueDate && t.dueDate <= weekStr && t.dueDate > today);
+  });
+  const weekIds = new Set(thisWeek.map(t => t.id));
 
-    const taskText = formatTaskTextDisplay(task.text || task.title || 'Untitled');
-    const taskId = typeof task.id === 'string' ? "'" + task.id.replace(/'/g,"\\'") + "'" : task.id;
-    const isK2 = task.owner === 'k2';
-    const ownerBadge = isK2 ? '🤖' : '👤';
-    const k2Status = task.k2Status || 'pending';
-    const k2StatusConfig = { pending: { icon: '⏳', label: 'Pending', color: 'var(--text-dim)' }, 'in-progress': { icon: '🔨', label: 'In Progress', color: 'var(--orange)' }, review: { icon: '👀', label: 'Review', color: 'var(--yellow)' }, done: { icon: '✅', label: 'Done', color: 'var(--green)' } };
-    const statusInfo = k2StatusConfig[k2Status] || k2StatusConfig.pending;
+  const needsTriage = visible.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && (isTaskStale(t) || !t.project || (t.text||'').length < 10));
+  const triageIds = new Set(needsTriage.map(t => t.id));
 
-    // K-2 tasks: status indicator + Do it (only pending) + review actions
-    // Ryan tasks: normal checkbox
-    let leftEl, actionBtns = '';
-    if (isK2) {
-      leftEl = `<span style="font-size:16px;flex-shrink:0;margin-top:1px;" title="${statusInfo.label}">${statusInfo.icon}</span>`;
-      if (k2Status === 'pending' && !task.done) {
-        actionBtns = `<button onclick="event.stopPropagation();queueTaskForK2(${taskId})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>`;
-      } else if (k2Status === 'review') {
-        actionBtns = `
-          <button onclick="event.stopPropagation();acceptK2Task(${taskId})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" title="Accept">👍</button>
-          <button onclick="event.stopPropagation();reworkK2Task(${taskId})" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:8px;" title="Rework">👎</button>`;
-      }
-    } else {
-      leftEl = `<div class="task-check ${task.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${taskId})"></div>`;
-    }
+  const backlog = visible.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && !triageIds.has(t.id));
 
-    const dueInfo = formatDueDate(task.dueDate);
-    const overdueStyle = dueInfo && dueInfo.overdue && !task.done ? 'border-left:3px solid var(--red);background:color-mix(in srgb, var(--red) 5%, var(--surface2));' : '';
+  // Render sections
+  board.innerHTML =
+    renderTaskSection('doToday', '🔴', 'Do Today', doToday, false, null) +
+    renderTaskSection('thisWeek', '🟡', 'This Week', thisWeek, false, null) +
+    renderTaskSection('backlog', '📋', 'Backlog', backlog, true, 5) +
+    renderTaskSection('scheduled', '⏰', 'Scheduled', scheduled, true, null) +
+    renderTaskSection('needsTriage', '⚠️', 'Needs Triage', needsTriage, true, null);
 
-    const stale = isTaskStale(task);
-    const staleAgeDays = stale ? Math.floor((new Date() - new Date(task.created)) / (1000 * 60 * 60 * 24)) : 0;
-    const staleBanner = stale ? `
-      <div onclick="event.stopPropagation()" style="flex:0 0 100%;width:100%;margin-top:6px;padding:6px 10px;background:color-mix(in srgb,#f59e0b 12%,transparent);border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-size:11px;color:#92400e;font-weight:500;flex:1;min-width:160px;">⚠️ This task is ${staleAgeDays} days old. Still relevant?</span>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="event.stopPropagation();triageTask(${taskId},'keep')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#10b981;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Keep — remind again in 7 days">✓ Keep</button>
-          <button onclick="event.stopPropagation();triageTask(${taskId},'snooze')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#f59e0b;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Snooze 7 days — hide until then">⏰ Snooze 7d</button>
-          <button onclick="event.stopPropagation();triageTask(${taskId},'delete')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#ef4444;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Delete this task">🗑 Delete</button>
-        </div>
-      </div>` : '';
-
-    return `
-      <li class="task-item" onclick="openTaskModal(${taskId})" style="${overdueStyle}flex-wrap:wrap;">
-        ${leftEl}
-        <div class="task-content ${task.done ? 'done' : ''}">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <span title="${isK2 ? 'K-2' : 'Ryan'}">${ownerBadge}</span>
-            <span>${taskText}</span>
-            ${isK2 ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.label}</span>` : ''}
-            ${dueInfo ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${dueInfo.overdue ? 'var(--red)' : 'var(--text-dim)'};background:color-mix(in srgb, ${dueInfo.overdue ? 'var(--red)' : 'var(--accent)'} 12%, transparent);">${dueInfo.text}</span>` : ''}
-            ${(task.hideUntil && task.hideUntil > getTodayStr() && !task.done) ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 15%,transparent);">⏰ Shows ${task.hideUntil}</span>` : ''}
-            ${task.context ? `<span style="font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border-subtle);">📍 ${task.context}</span>` : ''}
-          </div>
-          <div class="task-meta">
-            ${projectName} • ${task.created}${task.source === 'jot' ? ' • 📝 from jot' : ''}
-          </div>
-        </div>
-        ${actionBtns}
-        <button onclick="event.stopPropagation();quickSetHideUntil(${taskId},this)" title="Schedule: hide until date" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;color:${(task.hideUntil && task.hideUntil > getTodayStr()) ? 'var(--yellow)' : 'var(--text-muted)'};flex-shrink:0;">⏰</button>
-        <div class="task-priority ${scoreClass(taskScoreRaw(task))}" title="U${task.urgency||2}×I${task.importance||2} — click task to edit">${scoreLabel(task)}</div>
-        ${staleBanner}
-      </li>
-    `;
-  }).join('');
+  if (board.innerHTML === '') {
+    board.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">🎉 All clear! No tasks here.</div>';
+  }
 
   // Update badge counts
   const pendingCount = DATA.tasks.filter(t => !t.done).length;
@@ -4288,11 +4299,12 @@ function renderTasks() {
     badge.style.display = pendingCount > 0 ? 'inline' : 'none';
   }
 
-  // Populate project dropdown
+  // Populate project dropdown for quick-add
   const projectSelect = document.getElementById('new-task-project');
   if (projectSelect) {
-    projectSelect.innerHTML = '<option value="">No Project</option>' +
-      DATA.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    const curVal = projectSelect.value;
+    projectSelect.innerHTML = '<option value="">Project</option>' +
+      DATA.projects.map(p => '<option value="' + p.id + '"' + (p.id == curVal ? ' selected' : '') + '>' + p.name + '</option>').join('');
   }
 }
 
@@ -4587,7 +4599,7 @@ async function setTaskImportance(taskId, value) {
 let _matrixViewActive = false;
 function toggleMatrixView() {
   _matrixViewActive = !_matrixViewActive;
-  document.getElementById('task-list-card').style.display = _matrixViewActive ? 'none' : '';
+  document.getElementById('focus-board').style.display = _matrixViewActive ? 'none' : '';
   document.getElementById('task-matrix-card').style.display = _matrixViewActive ? '' : 'none';
   const btn = document.getElementById('matrix-toggle-btn');
   if (btn) { btn.style.background = _matrixViewActive ? 'var(--accent)' : 'var(--surface2)'; btn.style.color = _matrixViewActive ? '#fff' : 'var(--text-dim)'; }
