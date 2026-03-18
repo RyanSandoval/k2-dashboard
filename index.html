@@ -1296,10 +1296,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div style="display:flex;gap:6px;">
         <input id="sidebar-capture-input" type="text" placeholder="⚡ Capture…"
           style="flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border-color var(--dur-fast);"
-          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addToInbox(v);this.value='';this.blur();}}"
+          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);this.value='';this.blur();showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}}"
           onfocus="this.style.borderColor='var(--accent)'"
           onblur="this.style.borderColor='var(--border-subtle)'">
-        <button onclick="(function(){const v=document.getElementById('sidebar-capture-input').value.trim();if(v){addToInbox(v);document.getElementById('sidebar-capture-input').value='';}})()"
+        <button onclick="(function(){const v=document.getElementById('sidebar-capture-input').value.trim();if(v){const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);document.getElementById('sidebar-capture-input').value='';showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}})()"
           style="padding:7px 10px;background:var(--accent-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--accent);font-size:14px;cursor:pointer;line-height:1;font-weight:700;"
           title="Capture to inbox (⌘I)">+</button>
       </div>
@@ -6400,7 +6400,9 @@ function openCapturePopover() {
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">⚡ Quick Capture → Inbox</div>
         <input id="global-capture-input" type="text" placeholder="What's on your mind?"
           style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--text);font-size:15px;outline:none;font-family:inherit;caret-color:var(--accent);"
+          oninput="updateCapturePreview(this.value)"
           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addToInbox(v);closeCapturePopover();}}else if(event.key==='Escape'){closeCapturePopover();}">
+        <div id="global-capture-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);font-size:12px;color:var(--text-dim);line-height:1.6;"></div>
         <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:11px;color:var(--text-muted);">Enter to capture · Esc to close</span>
           <button onclick="closeCapturePopover()" style="padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button>
@@ -6415,6 +6417,27 @@ function openCapturePopover() {
 function closeCapturePopover() {
   const pop = document.getElementById('global-capture-popover');
   if (pop) { pop.style.display = 'none'; const inp = document.getElementById('global-capture-input'); if (inp) inp.value = ''; }
+  const prev = document.getElementById('global-capture-preview');
+  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+  if (window._capturePreviewTimer) { clearTimeout(window._capturePreviewTimer); window._capturePreviewTimer = null; }
+}
+
+var _capturePreviewTimer = null;
+function updateCapturePreview(val) {
+  const prev = document.getElementById('global-capture-preview');
+  if (!prev) return;
+  if (window._capturePreviewTimer) { clearTimeout(window._capturePreviewTimer); window._capturePreviewTimer = null; }
+  const v = val.trim();
+  if (!v || (v.indexOf('#') === -1 && v.indexOf('@') === -1 && v.indexOf('!') === -1 && !/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|this week)\b/i.test(v))) {
+    prev.style.display = 'none'; prev.innerHTML = ''; return;
+  }
+  const parsed = parseCapture(v);
+  const preview = parsedCapturePreview(parsed);
+  if (!preview.meta) { prev.style.display = 'none'; prev.innerHTML = ''; return; }
+  prev.innerHTML = '<div style="font-weight:600;color:var(--text);margin-bottom:3px;">📋 ' + escapeHtml(preview.text || v) + '</div>' +
+    '<div style="color:var(--text-muted);">' + escapeHtml(preview.meta) + '</div>';
+  prev.style.display = 'block';
+  window._capturePreviewTimer = setTimeout(function() { prev.style.display = 'none'; }, 2000);
 }
 
 function initKeyboardShortcuts() {
@@ -7139,10 +7162,94 @@ function renderInbox() {
   }).join('');
 }
 
+function parseCapture(rawText) {
+  var text = rawText;
+  var project = null;
+  var context = null;
+  var urgency = null;
+  var importance = null;
+  var dueDate = null;
+
+  // Extract #project — match against DATA.projects by id or name (case-insensitive partial)
+  text = text.replace(/#([\w][\w\-]*)/g, function(match, tag) {
+    var projects = DATA.projects || [];
+    var found = projects.find(function(p) {
+      return p.id && p.id.toLowerCase().includes(tag.toLowerCase());
+    }) || projects.find(function(p) {
+      return p.name && p.name.toLowerCase().includes(tag.toLowerCase().replace(/-/g,' '));
+    });
+    if (found) { project = found.id; return ''; }
+    return match; // keep unknown hashtags
+  });
+
+  // Extract @context — match against DATA.contexts
+  text = text.replace(/@([\w][\w\-]*)/g, function(match, tag) {
+    var contexts = DATA.contexts || [];
+    var full = '@' + tag;
+    var found = contexts.find(function(c) {
+      return c.toLowerCase() === full.toLowerCase();
+    }) || contexts.find(function(c) {
+      return c.toLowerCase().includes(tag.toLowerCase());
+    });
+    if (found) { context = found; return ''; }
+    return match; // keep unmatched @mentions
+  });
+
+  // Extract !urgency
+  text = text.replace(/!(high|urgent|critical)\b/i, function() { urgency = 4; return ''; });
+  text = text.replace(/!medium\b/i, function() { if (!urgency) urgency = 3; return ''; });
+  text = text.replace(/!low\b/i, function() { if (!urgency) urgency = 1; return ''; });
+
+  // Date parsing — use existing parseNaturalLanguageTask for due date
+  var parsed = parseNaturalLanguageTask(text);
+  dueDate = parsed.dueDate;
+  text = parsed.text;
+  if (parsed.urgency !== null && urgency === null) urgency = parsed.urgency;
+  if (parsed.importance !== null && importance === null) importance = parsed.importance;
+
+  // Cleanup: trim, collapse whitespace, remove dangling punctuation
+  text = text.replace(/^[\s:,·\-·]+|[\s:,·\-·]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+
+  return { text: text, project: project, context: context, dueDate: dueDate, urgency: urgency, importance: importance };
+}
+
+function parsedCapturePreview(parsed) {
+  // Build a human-readable summary of parsed metadata
+  var parts = [];
+  if (parsed.project) {
+    var proj = (DATA.projects || []).find(function(p) { return p.id === parsed.project; });
+    if (proj) parts.push('📁 ' + proj.name);
+  }
+  if (parsed.context) parts.push('📍 ' + parsed.context);
+  if (parsed.dueDate) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+    var due = new Date(parsed.dueDate + 'T00:00:00');
+    var dueTxt;
+    if (due.toDateString() === today.toDateString()) dueTxt = 'Today';
+    else if (due.toDateString() === tomorrow.toDateString()) dueTxt = 'Tomorrow';
+    else dueTxt = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    parts.push('⏰ ' + dueTxt);
+  }
+  if (parsed.urgency === 4) parts.push('🔴 High');
+  else if (parsed.urgency === 3) parts.push('🟡 Medium');
+  else if (parsed.urgency === 1) parts.push('⚪ Low');
+  return { text: parsed.text, meta: parts.join(' · ') };
+}
+
 function addToInbox(text) {
   if (!text) return;
   if (!DATA.inbox) DATA.inbox = [];
-  DATA.inbox.unshift({ id: Date.now(), text: text, created: new Date().toISOString() });
+  var parsed = parseCapture(text);
+  DATA.inbox.unshift({
+    id: Date.now(),
+    text: parsed.text || text,
+    created: new Date().toISOString(),
+    project: parsed.project,
+    context: parsed.context,
+    dueDate: parsed.dueDate,
+    urgency: parsed.urgency
+  });
   saveData();
   renderInbox();
   showToast('Captured to inbox');
@@ -7154,13 +7261,16 @@ async function inboxMakeTask(id) {
   const item = DATA.inbox[idx];
   const now = new Date();
   const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const urgency = (item.urgency != null) ? item.urgency : 2;
   const newTask = {
     id: Date.now(),
     text: item.text,
-    urgency: 2,
+    urgency: urgency,
     importance: 2,
-    priority: 'medium',
-    project: '',
+    priority: urgency >= 3 ? 'high' : urgency >= 2 ? 'medium' : 'low',
+    project: item.project || '',
+    context: item.context || '',
+    dueDate: item.dueDate || null,
     owner: 'ryan',
     done: false,
     created: dateStr,
