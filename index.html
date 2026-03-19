@@ -502,6 +502,37 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .score-high     { background: #2a2018; color: var(--orange); border: 1px solid #3d2e1a; }
   .score-medium   { background: #2a2818; color: var(--yellow); border: 1px solid #3d3a1a; }
   .score-low      { background: var(--accent-surface); color: var(--accent); border: 1px solid #1e2a3d; }
+  /* ── Planner / Time-Block ── */
+  .planner-timeline { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+  .planner-row { display: flex; min-height: 44px; border-bottom: 1px solid var(--border-subtle); position: relative; }
+  .planner-row:last-child { border-bottom: none; }
+  .planner-row.half-hour { min-height: 36px; background: color-mix(in srgb, var(--surface) 97%, transparent); }
+  .planner-time-label { width: 62px; flex-shrink: 0; padding: 8px 10px 8px 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-align: right; border-right: 1px solid var(--border-subtle); display: flex; align-items: flex-start; justify-content: flex-end; padding-top: 10px; }
+  .planner-time-label.half { color: transparent; font-size: 10px; }
+  .planner-slot { flex: 1; padding: 4px 8px; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px; min-height: inherit; position: relative; cursor: default; }
+  .planner-slot.empty:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); cursor: pointer; }
+  .planner-slot.empty:hover::after { content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: var(--accent-dim); opacity: 0.5; pointer-events: none; }
+  .planner-task-block { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--accent-surface); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 6px; font-size: 12px; color: var(--text); cursor: pointer; flex: 1; min-width: 0; max-width: 100%; }
+  .planner-task-block:hover { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+  .planner-task-block .task-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .planner-task-block .task-dur { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+  .planner-task-block .task-remove { font-size: 12px; color: var(--text-muted); flex-shrink: 0; padding: 0 2px; background: none; border: none; cursor: pointer; line-height: 1; }
+  .planner-task-block .task-remove:hover { color: var(--red); }
+  .planner-gcal-block { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: color-mix(in srgb, #3b82f6 15%, var(--surface)); border: 1px solid color-mix(in srgb, #3b82f6 30%, transparent); border-radius: 6px; font-size: 12px; color: #93c5fd; flex: 1; min-width: 0; max-width: 100%; }
+  .planner-gcal-block .gcal-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .planner-gcal-block .gcal-time { font-size: 10px; color: #60a5fa; flex-shrink: 0; }
+  .planner-now-line { position: absolute; left: 62px; right: 0; height: 2px; background: var(--red); z-index: 10; pointer-events: none; }
+  .planner-now-line::before { content: ''; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+  .planner-unscheduled { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; }
+  .planner-unscheduled-title { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .planner-unscheduled-task { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
+  .planner-unscheduled-task:last-child { border-bottom: none; }
+  .planner-slot-picker { position: absolute; inset: 0; background: var(--surface2); border: 1px solid var(--accent); border-radius: 6px; z-index: 20; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; min-height: 120px; }
+  .planner-slot-picker select { width: 100%; padding: 6px 8px; background: var(--surface3); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; cursor: pointer; }
+  .planner-slot-picker .picker-actions { display: flex; gap: 6px; }
+  .planner-slot-picker button { padding: 4px 10px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .planner-nav-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: background var(--dur-fast); }
+  .planner-nav-btn:hover { background: var(--surface3); color: var(--text); }
   /* Urgency/importance stepper buttons */
   .ui-step { display:inline-flex;gap:3px; }
   .ui-step button { width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:12px;font-weight:700;cursor:pointer;transition:background 0.1s,color 0.1s; }
@@ -1324,6 +1355,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span class="icon">✅</span> Tasks
         <span class="badge" id="task-count">0</span>
       </div>
+      <div class="nav-item" data-page="planner">
+        <span class="icon">🗓️</span> Planner
+      </div>
       <div class="nav-item" data-page="completed">
         <span class="icon">🏁</span> Completed
       </div>
@@ -1934,6 +1968,21 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <div class="page" id="page-review" style="max-width:720px;margin:0 auto;"></div>
 
+    <div class="page" id="page-planner" style="max-width:700px;margin:0 auto;">
+      <div class="page-header">
+        <h2 style="font-size:var(--text-xl);font-weight:700;margin-bottom:4px;">🗓️ Plan Your Day</h2>
+        <p style="color:var(--text-dim);font-size:13px;margin:0;">Time-block your tasks alongside your calendar</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <button class="planner-nav-btn" onclick="plannerPrevDay()">←</button>
+        <span id="planner-date" style="font-size:15px;font-weight:700;"></span>
+        <button class="planner-nav-btn" onclick="plannerNextDay()">→</button>
+        <button class="planner-nav-btn" onclick="plannerToday()" style="font-size:12px;padding:4px 10px;">Today</button>
+      </div>
+      <div id="planner-unscheduled" style="margin-bottom:16px;"></div>
+      <div id="planner-timeline" class="planner-timeline"></div>
+    </div>
+
     <div class="page" id="page-someday" style="max-width:700px;margin:0 auto;">
       <div class="page-header">
         <h1 class="page-title">💤 Someday / Maybe</h1>
@@ -2074,6 +2123,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" data-page="docs" onclick="mobileNavMore('docs')"><span class="icon">📁</span>Docs</div>
       <div class="mobile-more-item" data-page="growth" onclick="mobileNavMore('growth')"><span class="icon">🌱</span>Growth</div>
       <div class="mobile-more-item" data-page="ai-insights" onclick="mobileNavMore('ai-insights')"><span class="icon">💡</span>AI Ideas</div>
+      <div class="mobile-more-item" data-page="planner" onclick="mobileNavMore('planner')"><span class="icon">🗓️</span>Planner</div>
     </div>
   </div>
 </div>
@@ -2178,6 +2228,7 @@ async function loadData() {
       { id: 'sl-stale', name: 'Stale Tasks', icon: '⚠️', rules: { isStale: true } },
       { id: 'sl-unassigned', name: 'No Project', icon: '📭', rules: { project: '' } },
     ];
+    DATA.timeBlocks = d.timeBlocks || {};
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -2254,6 +2305,7 @@ function navigateTo(page) {
   if (page === 'waiting') renderWaitingFor();
   if (page === 'review') renderReviewPage();
   if (page === 'completed') renderCompleted();
+  if (page === 'planner') renderPlanner(window._plannerDate || getTodayStr());
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -8372,6 +8424,280 @@ window.createTaskFromCurrentLine = function(editor) {
   editor.chain().focus().toggleTaskList().run();
   showToast('✅ Task created: ' + lineText.slice(0, 40));
 };
+
+// ─── Time-Block Daily Planner ────────────────────────────────────────────────
+
+window._plannerDate = null;
+
+function formatHour(hour, min) {
+  const period = hour < 12 ? 'AM' : 'PM';
+  const h = hour % 12 === 0 ? 12 : hour % 12;
+  return h + ':' + String(min).padStart(2,'0') + ' ' + period;
+}
+
+function plannerPrevDay() {
+  const d = new Date((window._plannerDate || getTodayStr()) + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  window._plannerDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  renderPlanner(window._plannerDate);
+}
+
+function plannerNextDay() {
+  const d = new Date((window._plannerDate || getTodayStr()) + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  window._plannerDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  renderPlanner(window._plannerDate);
+}
+
+function plannerToday() {
+  window._plannerDate = getTodayStr();
+  renderPlanner(window._plannerDate);
+}
+
+function plannerGetProject(projectId) {
+  return (DATA.projects || []).find(p => p.id == projectId);
+}
+
+function plannerGetScheduledTaskIds(dateStr) {
+  const blocks = DATA.timeBlocks[dateStr] || [];
+  return new Set(blocks.map(b => b.taskId));
+}
+
+function plannerUnscheduledTasks(dateStr) {
+  const today = getTodayStr();
+  const scheduled = plannerGetScheduledTaskIds(dateStr);
+  return (DATA.tasks || [])
+    .filter(t => !t.done && t.dueDate === dateStr && !scheduled.has(t.id))
+    .sort((a, b) => computeTaskScore(b) - computeTaskScore(a))
+    .slice(0, 5);
+}
+
+function plannerAllUnscheduledTasks(dateStr) {
+  const scheduled = plannerGetScheduledTaskIds(dateStr);
+  return (DATA.tasks || [])
+    .filter(t => !t.done && !scheduled.has(t.id))
+    .sort((a, b) => computeTaskScore(b) - computeTaskScore(a));
+}
+
+async function plannerAssignTask(hour, min, dateStr, taskId) {
+  if (!DATA.timeBlocks) DATA.timeBlocks = {};
+  if (!DATA.timeBlocks[dateStr]) DATA.timeBlocks[dateStr] = [];
+  taskId = parseInt(taskId, 10);
+  DATA.timeBlocks[dateStr].push({ taskId, startHour: hour, startMin: min, durationMin: 30 });
+  await saveData();
+  renderPlanner(dateStr);
+  showToast('⏰ Task scheduled!');
+}
+
+async function plannerRemoveBlock(dateStr, taskId, hour, min) {
+  if (!DATA.timeBlocks || !DATA.timeBlocks[dateStr]) return;
+  DATA.timeBlocks[dateStr] = DATA.timeBlocks[dateStr].filter(
+    b => !(b.taskId == taskId && b.startHour === hour && b.startMin === min)
+  );
+  await saveData();
+  renderPlanner(dateStr);
+  showToast('🗑️ Removed from timeline');
+}
+
+function plannerShowSlotPicker(hour, min, dateStr, slotEl) {
+  // Close any existing picker
+  document.querySelectorAll('.planner-slot-picker').forEach(el => el.remove());
+  document.querySelectorAll('.planner-slot[data-picking]').forEach(el => {
+    el.removeAttribute('data-picking');
+    el.classList.add('empty');
+  });
+
+  const tasks = plannerAllUnscheduledTasks(dateStr);
+  if (tasks.length === 0) { showToast('No tasks to schedule — add tasks first!'); return; }
+
+  slotEl.classList.remove('empty');
+  slotEl.setAttribute('data-picking', '1');
+
+  const picker = document.createElement('div');
+  picker.className = 'planner-slot-picker';
+  picker.onclick = e => e.stopPropagation();
+
+  const sel = document.createElement('select');
+  sel.innerHTML = '<option value="">— pick a task —</option>' +
+    tasks.map(t => {
+      const proj = plannerGetProject(t.project);
+      const label = (t.text || '').slice(0, 50) + (proj ? ' [' + proj.name + ']' : '');
+      return '<option value="' + t.id + '">' + label.replace(/"/g,'&quot;') + '</option>';
+    }).join('');
+
+  const actions = document.createElement('div');
+  actions.className = 'picker-actions';
+
+  const btnOk = document.createElement('button');
+  btnOk.textContent = 'Assign';
+  btnOk.style.cssText = 'background:var(--accent);color:#fff;';
+  btnOk.onclick = () => {
+    if (!sel.value) { showToast('Select a task first'); return; }
+    plannerAssignTask(hour, min, dateStr, sel.value);
+  };
+
+  const btnCancel = document.createElement('button');
+  btnCancel.textContent = 'Cancel';
+  btnCancel.style.cssText = 'background:var(--surface3);color:var(--text-dim);';
+  btnCancel.onclick = () => {
+    picker.remove();
+    slotEl.removeAttribute('data-picking');
+    slotEl.classList.add('empty');
+  };
+
+  actions.appendChild(btnOk);
+  actions.appendChild(btnCancel);
+  picker.appendChild(sel);
+  picker.appendChild(actions);
+  slotEl.appendChild(picker);
+}
+
+function renderTimeRow(hour, min, dateStr) {
+  const isHalf = min === 30;
+  const row = document.createElement('div');
+  row.className = 'planner-row' + (isHalf ? ' half-hour' : '');
+
+  // Time label
+  const label = document.createElement('div');
+  label.className = 'planner-time-label' + (isHalf ? ' half' : '');
+  label.textContent = formatHour(hour, min);
+  row.appendChild(label);
+
+  // Slot
+  const slot = document.createElement('div');
+  slot.className = 'planner-slot';
+
+  const blocks = (DATA.timeBlocks[dateStr] || []).filter(b => b.startHour === hour && b.startMin === min);
+  const gcalEvents = (window._gcalEvents || []).filter(ev => {
+    if (ev.allDay || !ev.start) return false;
+    const h = ev.start.getHours(), m = ev.start.getMinutes();
+    return h === hour && m >= min && m < min + 30;
+  });
+
+  if (gcalEvents.length === 0 && blocks.length === 0) {
+    slot.classList.add('empty');
+    slot.onclick = () => plannerShowSlotPicker(hour, min, dateStr, slot);
+  }
+
+  gcalEvents.forEach(ev => {
+    const gb = document.createElement('div');
+    gb.className = 'planner-gcal-block';
+    const timeStr = ev.start.getHours() + ':' + String(ev.start.getMinutes()).padStart(2,'0');
+    gb.innerHTML = '<span class="gcal-text">' + (ev.title || 'Event').replace(/</g,'&lt;') + '</span>' +
+                   '<span class="gcal-time">' + timeStr + '</span>';
+    slot.appendChild(gb);
+  });
+
+  blocks.forEach(b => {
+    const task = (DATA.tasks || []).find(t => t.id == b.taskId);
+    if (!task) return;
+    const proj = plannerGetProject(task.project);
+    const tb = document.createElement('div');
+    tb.className = 'planner-task-block';
+    const projBadge = proj ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);flex-shrink:0;">' + proj.name.slice(0,12).replace(/</g,'&lt;') + '</span>' : '';
+    tb.innerHTML = '<span class="task-text">' + (task.text || '').replace(/</g,'&lt;') + '</span>' +
+                   projBadge +
+                   '<span class="task-dur">' + b.durationMin + 'm</span>' +
+                   '<button class="task-remove" title="Remove from timeline">✕</button>';
+    tb.querySelector('.task-text').onclick = () => openTaskModal(task.id);
+    tb.querySelector('.task-remove').onclick = (e) => {
+      e.stopPropagation();
+      plannerRemoveBlock(dateStr, b.taskId, hour, min);
+    };
+    slot.appendChild(tb);
+  });
+
+  // "+" hint when slot has gcal but no tasks
+  if (gcalEvents.length > 0 && blocks.length === 0) {
+    const addBtn = document.createElement('button');
+    addBtn.style.cssText = 'background:none;border:1px dashed var(--border);border-radius:4px;color:var(--text-muted);font-size:11px;padding:2px 8px;cursor:pointer;flex-shrink:0;';
+    addBtn.textContent = '+ task';
+    addBtn.onclick = () => plannerShowSlotPicker(hour, min, dateStr, slot);
+    slot.appendChild(addBtn);
+  }
+
+  row.appendChild(slot);
+  return row;
+}
+
+function renderPlanner(dateStr) {
+  if (!dateStr) dateStr = getTodayStr();
+  window._plannerDate = dateStr;
+  if (!DATA.timeBlocks) DATA.timeBlocks = {};
+
+  // Update date label
+  const dateLabel = document.getElementById('planner-date');
+  if (dateLabel) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = getTodayStr();
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const isToday = dateStr === today;
+    dateLabel.textContent = (isToday ? 'Today — ' : '') + days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  }
+
+  // Render unscheduled
+  const unschEl = document.getElementById('planner-unscheduled');
+  if (unschEl) {
+    const unsch = plannerUnscheduledTasks(dateStr);
+    if (unsch.length === 0) {
+      unschEl.innerHTML = '';
+    } else {
+      unschEl.innerHTML = '<div class="planner-unscheduled"><div class="planner-unscheduled-title">📋 Due Today — Not Yet Scheduled</div>' +
+        unsch.map(t => {
+          const proj = plannerGetProject(t.project);
+          const sc = computeTaskScore(t);
+          return '<div class="planner-unscheduled-task" onclick="openTaskModal(' + safeId(t.id) + ')" style="cursor:pointer;">' +
+            '<span style="font-size:11px;padding:1px 5px;border-radius:4px;' + 'background:var(--accent-surface);color:var(--accent);">' + scoreLabel(t) + '</span>' +
+            '<span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (t.text || '').replace(/</g,'&lt;') + '</span>' +
+            (proj ? '<span style="font-size:11px;color:var(--text-muted);">' + proj.name.replace(/</g,'&lt;') + '</span>' : '') +
+            '</div>';
+        }).join('') +
+        '</div>';
+    }
+  }
+
+  // Render timeline
+  const timeline = document.getElementById('planner-timeline');
+  if (!timeline) return;
+  timeline.innerHTML = '';
+
+  const now = new Date();
+  const todayStr = getTodayStr();
+  const isToday = dateStr === todayStr;
+
+  for (let hour = 6; hour <= 22; hour++) {
+    for (let min of [0, 30]) {
+      if (hour === 22 && min === 30) break;
+      const row = renderTimeRow(hour, min, dateStr);
+
+      // Current time indicator
+      if (isToday && now.getHours() === hour && now.getMinutes() >= min && now.getMinutes() < min + 30) {
+        const pct = (now.getMinutes() - min) / 30;
+        const indicator = document.createElement('div');
+        indicator.className = 'planner-now-line';
+        indicator.style.top = (pct * 100) + '%';
+        row.style.position = 'relative';
+        row.appendChild(indicator);
+      }
+
+      timeline.appendChild(row);
+    }
+  }
+}
+
+// Close pickers when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.planner-slot-picker') && !e.target.closest('.planner-slot[data-picking]')) {
+    document.querySelectorAll('.planner-slot-picker').forEach(el => el.remove());
+    document.querySelectorAll('.planner-slot[data-picking]').forEach(el => {
+      el.removeAttribute('data-picking');
+      el.classList.add('empty');
+    });
+  }
+});
+
+// ─── End Time-Block Daily Planner ────────────────────────────────────────────
 </script>
 <!-- Selection Toolbar -->
 <div class="selection-toolbar" id="selection-toolbar">
