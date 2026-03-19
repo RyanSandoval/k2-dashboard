@@ -1395,6 +1395,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Reference</div>
+      <div class="nav-item" data-page="accomplishments">
+        <span class="icon">🏆</span> Accomplishments
+      </div>
       <div class="nav-item" data-page="memory">
         <span class="icon">🧠</span> Memory
       </div>
@@ -1966,6 +1969,19 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="waiting-list"></div>
     </div>
 
+    <div class="page" id="page-accomplishments" style="max-width:860px;margin:0 auto;">
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 class="page-title">🏆 Accomplishments</h1>
+          <p style="color:var(--text-dim);font-size:13px;margin:0;">Your self-building brag doc. Pulls from completed tasks, decisions, and reflections.</p>
+        </div>
+        <button onclick="exportAccomplishments(window._acomplQ)" style="padding:10px 20px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Copy to Clipboard</button>
+      </div>
+      <div id="accomplishments-quarter-pills" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;"></div>
+      <div id="accomplishments-stats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;"></div>
+      <div id="accomplishments-body"></div>
+    </div>
+
     <div class="page" id="page-review" style="max-width:720px;margin:0 auto;"></div>
 
     <div class="page" id="page-planner" style="max-width:700px;margin:0 auto;">
@@ -2117,6 +2133,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" data-page="trading" onclick="mobileNavMore('trading')"><span class="icon">📈</span>Trading</div>
       <div class="mobile-more-item" data-page="decisions" onclick="mobileNavMore('decisions')"><span class="icon">⚖️</span>Decisions</div>
       <div class="mobile-more-item" data-page="discussions" onclick="mobileNavMore('discussions')"><span class="icon">💬</span>Chats</div>
+      <div class="mobile-more-item" data-page="accomplishments" onclick="mobileNavMore('accomplishments')"><span class="icon">🏆</span>Brag Doc</div>
       <div class="mobile-more-item" data-page="memory" onclick="mobileNavMore('memory')"><span class="icon">🧠</span>Memory</div>
       <div class="mobile-more-item" data-page="review" onclick="mobileNavMore('review')"><span class="icon">🔄</span>Review</div>
       <div class="mobile-more-item" data-page="mission" onclick="mobileNavMore('mission')"><span class="icon">🎯</span>Mission</div>
@@ -2219,6 +2236,8 @@ async function loadData() {
     DATA.docs = d.docs || [];
     DATA.weeklyReviews = d.weeklyReviews || [];
     DATA.lastReviewDate = d.lastReviewDate || null;
+    DATA.accomplishments = d.accomplishments || [];
+    DATA.growthAreas = d.growthAreas || [];
     DATA.contexts = d.contexts || ['@computer', '@phone', '@office', '@home', '@errands', '@email'];
     DATA.smartLists = d.smartLists || [
       { id: 'sl-focus', name: "Today's Focus", icon: '🎯', rules: { dueSoon: 0 } },
@@ -2306,6 +2325,7 @@ function navigateTo(page) {
   if (page === 'review') renderReviewPage();
   if (page === 'completed') renderCompleted();
   if (page === 'planner') renderPlanner(window._plannerDate || getTodayStr());
+  if (page === 'accomplishments') renderAccomplishments(window._acomplQ || getCurrentQuarter());
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -4750,6 +4770,10 @@ async function toggleTask(taskId) {
   task.done = !task.done;
   if (task.done) {
     task.completedAt = new Date().toISOString();
+    // Impact note prompt for high-priority tasks (score >= 9) without an existing note
+    if (taskScoreRaw(task) >= 9 && !task.impactNote) {
+      setTimeout(() => showImpactNotePrompt(task.id), 400);
+    }
   } else {
     delete task.completedAt;
   }
@@ -8322,6 +8346,387 @@ function completeWeeklyReview() {
   showToast('Weekly review saved! Great work. 🎉');
   renderReviewPage();
 }
+
+// ─── Accomplishments / Brag Doc ──────────────────────────────────────────────
+
+function getCurrentQuarter() {
+  var d = new Date();
+  var q = Math.floor(d.getMonth() / 3) + 1;
+  return 'Q' + q + ' ' + d.getFullYear();
+}
+
+function getQuarterRange(quarter) {
+  var parts = quarter.split(' ');
+  var q = parseInt(parts[0].replace('Q',''), 10);
+  var yr = parseInt(parts[1], 10);
+  var startMonth = (q - 1) * 3;
+  var start = new Date(yr, startMonth, 1);
+  var end = new Date(yr, startMonth + 3, 0, 23, 59, 59);
+  return { start: start.toISOString().slice(0,10), end: end.toISOString().slice(0,10) };
+}
+
+function isInQuarter(dateStr, quarter) {
+  if (!dateStr) return false;
+  var d = dateStr.slice(0, 10);
+  var range = getQuarterRange(quarter);
+  return d >= range.start && d <= range.end;
+}
+
+function getQuarterList() {
+  var d = new Date();
+  var yr = d.getFullYear();
+  var q = Math.floor(d.getMonth() / 3) + 1;
+  var result = [];
+  // Current quarter + 3 past quarters
+  for (var i = 0; i < 4; i++) {
+    var cq = q - i;
+    var cy = yr;
+    while (cq <= 0) { cq += 4; cy--; }
+    result.push('Q' + cq + ' ' + cy);
+  }
+  return result;
+}
+
+function renderAccomplishments(quarter) {
+  quarter = quarter || getCurrentQuarter();
+  window._acomplQ = quarter;
+
+  // Quarter pills
+  var pillsEl = document.getElementById('accomplishments-quarter-pills');
+  if (pillsEl) {
+    var quarters = getQuarterList();
+    pillsEl.innerHTML = quarters.map(function(qv) {
+      var active = qv === quarter ? 'background:var(--accent);color:var(--bg);' : 'background:var(--surface2);color:var(--text-dim);';
+      return '<button onclick="renderAccomplishments(\'' + qv + '\')" style="' + active + 'border:none;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">' + qv + '</button>';
+    }).join('');
+  }
+
+  // Completed tasks in this quarter
+  var doneTasks = (DATA.tasks || []).filter(function(t) {
+    return t.done && t.completedAt && isInQuarter(t.completedAt, quarter);
+  });
+
+  // Group by project
+  var byProject = {};
+  doneTasks.forEach(function(t) {
+    var proj = t.project || '__general__';
+    if (!byProject[proj]) byProject[proj] = [];
+    byProject[proj].push(t);
+  });
+
+  var projectNames = {};
+  (DATA.projects || []).forEach(function(p) { projectNames[p.id] = p.name; });
+
+  var projectKeys = Object.keys(byProject).sort(function(a, b) {
+    if (a === '__general__') return 1;
+    if (b === '__general__') return -1;
+    return (projectNames[a] || a).localeCompare(projectNames[b] || b);
+  });
+
+  var projectsTouched = projectKeys.filter(function(k) { return byProject[k].length > 0; }).length;
+
+  // Stats
+  var statsEl = document.getElementById('accomplishments-stats');
+  if (statsEl) {
+    var statStyle = 'padding:12px 20px;background:var(--surface2);border-radius:var(--radius-md);min-width:100px;text-align:center;';
+    statsEl.innerHTML =
+      '<div style="' + statStyle + '"><div style="font-size:22px;font-weight:700;color:var(--accent);">' + doneTasks.length + '</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Tasks Completed</div></div>' +
+      '<div style="' + statStyle + '"><div style="font-size:22px;font-weight:700;color:var(--green);">' + (DATA.accomplishments||[]).filter(function(a){return a.quarter===quarter;}).length + '</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Impact Notes</div></div>' +
+      '<div style="' + statStyle + '"><div style="font-size:22px;font-weight:700;color:var(--yellow);">' + projectsTouched + '</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Projects</div></div>';
+  }
+
+  var body = document.getElementById('accomplishments-body');
+  if (!body) return;
+  var html = '';
+
+  // ── Tasks by project ──────────────────────────────────────────────────────
+  html += '<div style="margin-bottom:32px;">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px;">Completed Work</div>';
+
+  if (projectKeys.length === 0) {
+    html += '<div style="color:var(--text-dim);font-style:italic;font-size:13px;">No completed tasks this quarter yet.</div>';
+  } else {
+    projectKeys.forEach(function(projId) {
+      var tasks = byProject[projId];
+      var name = projId === '__general__' ? 'General' : (projectNames[projId] || projId);
+      html += '<div style="margin-bottom:24px;">';
+      html += '<div style="font-weight:700;font-size:15px;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
+      html += '<span>' + escHTML(name) + '</span><span style="font-size:12px;color:var(--text-dim);font-weight:400;">(' + tasks.length + ' completed)</span>';
+      html += '</div>';
+      tasks.forEach(function(task) {
+        var dateStr = task.completedAt ? task.completedAt.slice(5,10).replace('-','/') : '';
+        html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle,var(--border));">';
+        html += '<span style="color:var(--green);flex-shrink:0;margin-top:1px;">✅</span>';
+        html += '<div style="flex:1;min-width:0;">';
+        html += '<span style="font-size:13px;">' + escHTML(task.text || task.title || '') + '</span>';
+        if (dateStr) html += ' <span style="font-size:11px;color:var(--text-dim);">[' + dateStr + ']</span>';
+        if (task.impactNote) html += '<div style="margin-top:3px;font-size:12px;color:var(--green);font-style:italic;">— ' + escHTML(task.impactNote) + '</div>';
+        html += '</div></div>';
+      });
+      // Add accomplishment for this project
+      html += '<div style="margin-top:8px;">';
+      html += '<button onclick="showAddAccomplishment(\'' + projId + '\',\'' + quarter + '\')" style="font-size:12px;color:var(--accent);background:none;border:1px dashed var(--accent);border-radius:var(--radius-sm);padding:4px 12px;cursor:pointer;font-family:inherit;">+ Add accomplishment note</button>';
+      html += '</div></div>';
+    });
+  }
+  html += '</div>';
+
+  // ── Weekly Reflections ────────────────────────────────────────────────────
+  var reviews = (DATA.weeklyReviews || []).filter(function(r) { return isInQuarter(r.date, quarter); })
+    .sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  html += '<div style="margin-bottom:32px;">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">Weekly Reflections</div>';
+  if (reviews.length === 0) {
+    html += '<div style="color:var(--text-dim);font-style:italic;font-size:13px;">No weekly reviews in this quarter yet.</div>';
+  } else {
+    reviews.forEach(function(r) {
+      var d = r.date ? r.date.slice(5).replace('-','/') : '';
+      var items = [];
+      if (r.reflections) {
+        if (r.reflections.wentWell) items.push({ label: '✅', text: r.reflections.wentWell });
+        if (r.reflections.didntGo) items.push({ label: '⚠️', text: r.reflections.didntGo });
+      }
+      if (items.length === 0) return;
+      html += '<div style="margin-bottom:8px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-md);">';
+      html += '<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600;">' + d + '</div>';
+      items.forEach(function(item) {
+        html += '<div style="font-size:13px;margin-bottom:4px;">' + item.label + ' ' + escHTML(item.text) + '</div>';
+      });
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  // ── Key Decisions ─────────────────────────────────────────────────────────
+  var decisions = (DATA.decisions || []).filter(function(dec) { return isInQuarter(dec.date, quarter); })
+    .sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  html += '<div style="margin-bottom:32px;">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">Key Decisions</div>';
+  if (decisions.length === 0) {
+    html += '<div style="color:var(--text-dim);font-style:italic;font-size:13px;">No decisions logged this quarter yet.</div>';
+  } else {
+    decisions.forEach(function(dec) {
+      var d = dec.date ? dec.date.slice(5).replace('-','/') : '';
+      html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle,var(--border));">';
+      html += '<span style="flex-shrink:0;">⚖️</span>';
+      html += '<div style="flex:1;">';
+      html += '<span style="font-size:13px;font-weight:600;">' + escHTML(dec.decision || '') + '</span>';
+      if (dec.rationale) html += ' <span style="font-size:12px;color:var(--text-dim);">— ' + escHTML(dec.rationale) + '</span>';
+      if (d) html += ' <span style="font-size:11px;color:var(--text-dim);">[' + d + ']</span>';
+      html += '</div></div>';
+    });
+  }
+  html += '</div>';
+
+  // ── Growth Areas ──────────────────────────────────────────────────────────
+  html += '<div style="margin-bottom:32px;">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">🔍 Areas for Growth</div>';
+  var growthAreas = DATA.growthAreas || [];
+  if (growthAreas.length === 0) {
+    html += '<div style="color:var(--text-dim);font-style:italic;font-size:13px;margin-bottom:10px;">No growth areas logged yet.</div>';
+  } else {
+    growthAreas.forEach(function(ga) {
+      var isResolved = ga.status === 'resolved';
+      var icon = isResolved ? '✅' : '📝';
+      var statusColor = isResolved ? 'var(--green)' : 'var(--yellow)';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-subtle,var(--border));">';
+      html += '<span>' + icon + '</span>';
+      html += '<div style="flex:1;font-size:13px;">' + escHTML(ga.text) + ' <span style="font-size:11px;color:' + statusColor + ';font-weight:600;">[' + (ga.status || 'active') + ']</span></div>';
+      html += '<button onclick="toggleGrowthArea(' + ga.id + ')" style="font-size:11px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-dim);font-family:inherit;">' + (isResolved ? 'Reopen' : 'Resolve') + '</button>';
+      html += '<button onclick="deleteGrowthArea(' + ga.id + ')" style="font-size:11px;padding:3px 8px;background:none;border:1px solid var(--red);border-radius:var(--radius-sm);cursor:pointer;color:var(--red);font-family:inherit;">Delete</button>';
+      html += '</div>';
+    });
+  }
+  // Add growth area input
+  html += '<div style="display:flex;gap:8px;margin-top:10px;">';
+  html += '<input id="growth-area-input" type="text" placeholder="Add growth area..." style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;" onkeydown="if(event.key===\'Enter\'){addGrowthArea(document.getElementById(\'growth-area-input\').value);}">';
+  html += '<button onclick="addGrowthArea(document.getElementById(\'growth-area-input\').value)" style="padding:8px 16px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Add</button>';
+  html += '</div>';
+  html += '</div>';
+
+  body.innerHTML = html;
+}
+
+function escHTML(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showAddAccomplishment(projId, quarter) {
+  var text = window.prompt('Add accomplishment note for this project (optional: describe impact):');
+  if (!text || !text.trim()) return;
+  addAccomplishment(text.trim(), projId === '__general__' ? '' : projId, quarter);
+}
+
+async function addAccomplishment(text, project, quarter) {
+  if (!DATA.accomplishments) DATA.accomplishments = [];
+  DATA.accomplishments.push({
+    id: Date.now(),
+    text: text,
+    project: project || '',
+    quarter: quarter || getCurrentQuarter(),
+    created: new Date().toISOString()
+  });
+  await saveData();
+  renderAccomplishments(window._acomplQ || getCurrentQuarter());
+}
+
+async function addGrowthArea(text) {
+  if (!text || !text.trim()) return;
+  if (!DATA.growthAreas) DATA.growthAreas = [];
+  DATA.growthAreas.push({
+    id: Date.now(),
+    text: text.trim(),
+    created: new Date().toISOString(),
+    status: 'active'
+  });
+  await saveData();
+  renderAccomplishments(window._acomplQ || getCurrentQuarter());
+}
+
+async function toggleGrowthArea(id) {
+  var ga = (DATA.growthAreas || []).find(function(g) { return g.id == id; });
+  if (!ga) return;
+  ga.status = ga.status === 'resolved' ? 'active' : 'resolved';
+  await saveData();
+  renderAccomplishments(window._acomplQ || getCurrentQuarter());
+}
+
+async function deleteGrowthArea(id) {
+  if (!confirm('Delete this growth area?')) return;
+  DATA.growthAreas = (DATA.growthAreas || []).filter(function(g) { return g.id != id; });
+  await saveData();
+  renderAccomplishments(window._acomplQ || getCurrentQuarter());
+}
+
+async function exportAccomplishments(quarter) {
+  quarter = quarter || getCurrentQuarter();
+  var lines = [];
+  lines.push(quarter + ' Performance Summary — Ryan Sandoval');
+  lines.push('');
+
+  // Tasks by project
+  var doneTasks = (DATA.tasks || []).filter(function(t) {
+    return t.done && t.completedAt && isInQuarter(t.completedAt, quarter);
+  });
+  var byProject = {};
+  doneTasks.forEach(function(t) {
+    var proj = t.project || '__general__';
+    if (!byProject[proj]) byProject[proj] = [];
+    byProject[proj].push(t);
+  });
+  var projectNames = {};
+  (DATA.projects || []).forEach(function(p) { projectNames[p.id] = p.name; });
+  var projectKeys = Object.keys(byProject).sort(function(a,b) {
+    if (a === '__general__') return 1;
+    if (b === '__general__') return -1;
+    return (projectNames[a]||a).localeCompare(projectNames[b]||b);
+  });
+
+  projectKeys.forEach(function(projId) {
+    var tasks = byProject[projId];
+    var name = projId === '__general__' ? 'General' : (projectNames[projId] || projId);
+    lines.push('## ' + name + ' (' + tasks.length + ' completed)');
+    tasks.forEach(function(task) {
+      var dateStr = task.completedAt ? task.completedAt.slice(5,10).replace('-','/') : '';
+      var line = '- ' + (task.text || task.title || '');
+      if (dateStr) line += ' (' + dateStr + ')';
+      if (task.impactNote) line += ' — ' + task.impactNote;
+      lines.push(line);
+    });
+    lines.push('');
+  });
+
+  // Key Decisions
+  var decisions = (DATA.decisions || []).filter(function(dec) { return isInQuarter(dec.date, quarter); })
+    .sort(function(a,b){return b.date.localeCompare(a.date);});
+  if (decisions.length > 0) {
+    lines.push('## Key Decisions');
+    decisions.forEach(function(dec) {
+      var line = '- ' + (dec.decision || '');
+      if (dec.rationale) line += ' — ' + dec.rationale;
+      lines.push(line);
+    });
+    lines.push('');
+  }
+
+  // Reflections
+  var reviews = (DATA.weeklyReviews || []).filter(function(r) { return isInQuarter(r.date, quarter); })
+    .sort(function(a,b){return b.date.localeCompare(a.date);});
+  var reflectionLines = [];
+  reviews.forEach(function(r) {
+    if (r.reflections) {
+      if (r.reflections.wentWell) reflectionLines.push('- ' + r.reflections.wentWell);
+      if (r.reflections.didntGo) reflectionLines.push('- ' + r.reflections.didntGo);
+    }
+  });
+  if (reflectionLines.length > 0) {
+    lines.push('## Reflections');
+    lines = lines.concat(reflectionLines);
+    lines.push('');
+  }
+
+  // Growth Areas
+  var growthAreas = DATA.growthAreas || [];
+  if (growthAreas.length > 0) {
+    lines.push('## Growth Areas');
+    growthAreas.forEach(function(ga) {
+      lines.push('- ' + ga.text + ' (' + (ga.status || 'active') + ')');
+    });
+    lines.push('');
+  }
+
+  var text = lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('📋 Copied to clipboard!');
+  } catch(e) {
+    window.prompt('Copy this text:', text);
+  }
+}
+
+function showImpactNotePrompt(taskId) {
+  var task = DATA.tasks.find(function(t) { return t.id == taskId; });
+  if (!task || !task.done) return;
+
+  // Find a task element to attach to, or show a toast-style prompt
+  var toastContainer = document.getElementById('toast-container') || document.body;
+  var promptId = 'impact-prompt-' + taskId;
+  if (document.getElementById(promptId)) return;
+
+  var div = document.createElement('div');
+  div.id = promptId;
+  div.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-md);padding:16px;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+  div.innerHTML =
+    '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">🏆 High-priority task completed!</div>' +
+    '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">What was the impact? <span style="font-weight:400;color:var(--text-dim)">(optional)</span></div>' +
+    '<input id="impact-input-' + taskId + '" type="text" placeholder="e.g. Reduced booking errors by 30%" style="width:100%;box-sizing:border-box;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;margin-bottom:10px;">' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+    '<button onclick="saveImpactNote(' + taskId + ')" style="padding:6px 16px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>' +
+    '<button onclick="document.getElementById(\'' + promptId + '\').remove()" style="padding:6px 14px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit;">Skip</button>' +
+    '</div>';
+  document.body.appendChild(div);
+  setTimeout(function() { var inp = document.getElementById('impact-input-' + taskId); if (inp) inp.focus(); }, 50);
+}
+
+async function saveImpactNote(taskId) {
+  var task = DATA.tasks.find(function(t) { return t.id == taskId; });
+  if (!task) return;
+  var inp = document.getElementById('impact-input-' + taskId);
+  var note = inp ? inp.value.trim() : '';
+  if (note) {
+    task.impactNote = note;
+    await saveData();
+    showToast('Impact note saved ✅');
+  }
+  var promptEl = document.getElementById('impact-prompt-' + taskId);
+  if (promptEl) promptEl.remove();
+  renderTasks();
+}
+
+// ─── End Accomplishments ──────────────────────────────────────────────────────
 
 async function activateSomedayItem(id) {
   const idx = (DATA.somedayMaybe || []).findIndex(i => i.id == id);
