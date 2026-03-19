@@ -6260,6 +6260,75 @@ function toggleShortcutsPanel() {
   if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
 }
 
+function generateDailyBrief() {
+  const today = getTodayStr();
+  const tasks = (DATA.tasks || []).filter(t => !t.done && !t.parentId);
+  const dueToday = tasks.filter(t => t.dueDate === today);
+  const overdue = tasks.filter(t => t.dueDate && t.dueDate < today);
+  const gcal = window._gcalEvents || [];
+  const todayEvents = gcal.filter(e => {
+    const d = new Date();
+    const ds = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    return e.dateStr === ds;
+  });
+
+  let html = '';
+
+  if (overdue.length > 0) {
+    html += '<h2>🔴 Overdue</h2><ul>';
+    overdue.forEach(t => { html += '<li><p>' + escapeHtml((t.text||'').slice(0,60)) + '</p></li>'; });
+    html += '</ul>';
+  }
+
+  if (dueToday.length > 0) {
+    html += '<h2>📋 Due Today</h2><ul>';
+    dueToday.forEach(t => { html += '<li><p>' + escapeHtml((t.text||'').slice(0,60)) + '</p></li>'; });
+    html += '</ul>';
+  }
+
+  if (todayEvents.length > 0) {
+    html += '<h2>📅 Calendar</h2><ul>';
+    todayEvents.forEach(ev => {
+      const time = ev.allDay ? 'All day' : (ev.start ? ev.start.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}) : '');
+      html += '<li><p>' + escapeHtml(time + ' — ' + (ev.title||'')) + '</p></li>';
+    });
+    html += '</ul>';
+  }
+
+  if (html) {
+    html += '<hr><p></p>';
+  }
+
+  return html;
+}
+
+function _scheduleEodAppend() {
+  // Append End-of-Day section if current hour >= 17, only once per jot
+  const hour = new Date().getHours();
+  if (hour < 17) return;
+  // Wait for editor to be ready, then check/append
+  const maxWait = 20; // attempts
+  let attempts = 0;
+  const check = setInterval(() => {
+    attempts++;
+    if (attempts > maxWait) { clearInterval(check); return; }
+    if (!window._todayEditor) return;
+    clearInterval(check);
+    const html = window._todayEditor.getHTML();
+    if (html && html.includes('End of Day')) return; // already present
+    const eodHtml = '<h2>🌅 End of Day</h2><p>What got done? What\'s carrying over?</p><p></p>';
+    try {
+      window._todayEditor.commands.insertContentAt(window._todayEditor.state.doc.content.size, eodHtml);
+    } catch(e) {
+      // Editor might not be fully ready; try setContent append
+      const current = window._todayEditor.getHTML();
+      if (!current.includes('End of Day')) {
+        window._todayEditor.commands.setContent(current + eodHtml);
+      }
+    }
+  }, 300);
+}
+
 function renderDailyDocs() {
   const today = getTodayStr();
   const dow = getDayName(today);
@@ -6270,12 +6339,16 @@ function renderDailyDocs() {
   // Ensure today's doc exists
   if (!DATA.dailyDocs) DATA.dailyDocs = {};
   if (!DATA.dailyDocs[today]) {
-    DATA.dailyDocs[today] = { content: '<p></p>', updatedAt: new Date().toISOString(), linkedProjects: [], linkedNotes: [] };
+    // New jot: auto-populate with daily brief
+    const brief = generateDailyBrief();
+    DATA.dailyDocs[today] = { content: brief || '<p></p>', updatedAt: new Date().toISOString(), linkedProjects: [], linkedNotes: [] };
   }
 
   // Initialize today's editor (only once)
   if (!window._todayEditor) {
     initTodayEditor(today);
+    // After editor initializes, check if EOD section should be appended
+    _scheduleEodAppend();
   } else {
     // Sync content: always update on date change, and rescue if editor is blank but data has content
     const doc = DATA.dailyDocs[today];
@@ -6287,6 +6360,8 @@ function renderDailyDocs() {
         window._todayEditorDate = today;
       }
     }
+    // Check EOD each time Jots renders (idempotent — only appends if missing)
+    _scheduleEodAppend();
   }
 
   // Render previous days
