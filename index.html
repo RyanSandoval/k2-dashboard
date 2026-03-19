@@ -4180,7 +4180,8 @@ function renderTaskRow(task) {
 
 function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   if (tasks.length === 0) return '';
-  var isOpen = !collapsed || !!window._focusSections[id];
+  // If user has explicitly toggled, respect that. Otherwise use default collapsed state.
+  var isOpen = (id in (window._focusSections || {})) ? !!window._focusSections[id] : !collapsed;
   var shown = (limit && !isOpen) ? tasks.slice(0, limit) : tasks;
   return '<div style="margin-bottom:20px;">' +
     '<div onclick="toggleFocusSection(\'' + id + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;user-select:none;">' +
