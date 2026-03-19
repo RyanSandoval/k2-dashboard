@@ -3881,6 +3881,7 @@ async function sendTaskMessage() {
   input.value = '';
   await saveData();
   openTaskModal(activeTaskId); // Re-render
+  showToast('📨 Message sent to K2 — I\'ll respond in your next session');
 }
 
 // Project Detail Modal
