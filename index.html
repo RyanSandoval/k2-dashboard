@@ -1444,6 +1444,17 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div id="morning-brief-content"></div>
       </div>
 
+      <!-- AI Focus Recommendation -->
+      <div class="card" style="margin-bottom:20px;" id="dash-ai-focus">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:700;">🤖 What Should I Work On?</div>
+          <button onclick="generateAIFocus()" id="ai-focus-btn" style="padding:5px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Generate</button>
+        </div>
+        <div id="ai-focus-content" style="font-size:13px;color:var(--text-dim);line-height:1.7;">
+          Click "Generate" to get a personalized recommendation based on your tasks, calendar, and priorities.
+        </div>
+      </div>
+
       <!-- Command Grid: Top Tasks + Today's Jot -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;" id="dash-grid">
         <div class="card" style="cursor:default;">
@@ -2655,6 +2666,7 @@ function renderDashboard() {
   // Google Calendar widget
   renderGCalWidget();
   renderTaskHeatmap();
+  generateAIFocus();
 }
 
 function renderMorningBrief(today) {
@@ -9178,6 +9190,99 @@ document.addEventListener('click', (e) => {
 });
 
 // ─── End Time-Block Daily Planner ────────────────────────────────────────────
+
+// ─── AI Focus Recommendation ─────────────────────────────────────────────────
+function generateAIFocus() {
+  const btn = document.getElementById('ai-focus-btn');
+  const content = document.getElementById('ai-focus-content');
+  if (!btn || !content) return;
+  btn.textContent = '⏳ Thinking...';
+  btn.disabled = true;
+
+  setTimeout(() => { // Small delay for perceived "thinking"
+    const today = getTodayStr();
+    const now = new Date();
+    const hour = now.getHours();
+    const tasks = (DATA.tasks || []).filter(t => !t.done && !t.parentId && !(t.hideUntil && t.hideUntil > today));
+    const projects = DATA.projects || [];
+    const gcal = window._gcalEvents || [];
+    const waiting = DATA.waitingFor || [];
+
+    // Score and sort
+    const scored = tasks.map(t => ({
+      ...t,
+      score: (t.urgency||2) * (t.importance||2) + (t.dueDate === today ? 4 : 0) + (t.dueDate && t.dueDate < today ? 6 : 0),
+      projName: (projects.find(p=>p.id===t.project)||{}).name || 'General'
+    })).sort((a,b) => b.score - a.score);
+
+    const overdue = scored.filter(t => t.dueDate && t.dueDate < today);
+    const dueToday = scored.filter(t => t.dueDate === today);
+    const top3 = scored.slice(0, 3);
+    const stale = tasks.filter(t => typeof isTaskStale === 'function' && isTaskStale(t));
+
+    // Count calendar events in next 2 hours
+    const upcoming = gcal.filter(ev => !ev.allDay && ev.start && ev.start > now && ev.start < new Date(now.getTime() + 2*60*60*1000));
+
+    // Build narrative
+    let narrative = '';
+
+    // Time-of-day context
+    if (hour < 10) narrative += '☀️ <strong>Morning focus time.</strong> ';
+    else if (hour < 12) narrative += '🔥 <strong>Mid-morning — peak productivity.</strong> ';
+    else if (hour < 14) narrative += '🍽️ <strong>Post-lunch.</strong> ';
+    else if (hour < 17) narrative += '⚡ <strong>Afternoon push.</strong> ';
+    else narrative += '🌅 <strong>Winding down.</strong> ';
+
+    // Calendar load
+    if (upcoming.length > 0) {
+      narrative += `You have ${upcoming.length} meeting${upcoming.length>1?'s':''} in the next 2 hours, so pick something you can make progress on in short bursts. `;
+    } else {
+      narrative += 'Your calendar is clear — good time for deep work. ';
+    }
+
+    // Overdue alert
+    if (overdue.length > 0) {
+      narrative += `<br><br>🔴 <strong>${overdue.length} overdue task${overdue.length>1?'s':''}.</strong> Start with: <strong>${escapeHtml((overdue[0].text||'').slice(0,50))}</strong> (${overdue[0].projName}). `;
+    }
+
+    // Top recommendation
+    if (top3.length > 0 && !(overdue.length > 0 && top3[0].id === overdue[0]?.id)) {
+      narrative += `<br><br>🎯 <strong>Top priority:</strong> <strong>${escapeHtml((top3[0].text||'').slice(0,50))}</strong> (${top3[0].projName}, score ${top3[0].score}). `;
+    }
+
+    // Next 2
+    if (top3.length > 1) {
+      narrative += '<br><br>📋 <strong>Then:</strong><br>';
+      top3.slice(1, 3).forEach((t, i) => {
+        narrative += `${i+2}. ${escapeHtml((t.text||'').slice(0,50))} — ${t.projName}<br>`;
+      });
+    }
+
+    // Waiting for nudge
+    const staleWaiting = (waiting || []).filter(w => {
+      const days = Math.floor((Date.now() - new Date(w.since||w.created).getTime()) / 86400000);
+      return days > 7;
+    });
+    if (staleWaiting.length > 0) {
+      narrative += `<br>⏳ <strong>Follow up:</strong> ${escapeHtml((staleWaiting[0].text||'').slice(0,40))} — waiting ${Math.floor((Date.now()-new Date(staleWaiting[0].since||staleWaiting[0].created).getTime())/86400000)} days.`;
+    }
+
+    // Stale triage nudge
+    if (stale.length > 3) {
+      narrative += `<br><br>⚠️ ${stale.length} tasks need triage (>14 days old). Consider a 5-min cleanup sweep.`;
+    }
+
+    // Empty state
+    if (!narrative.trim() || scored.length === 0) {
+      narrative = '✅ <strong>All clear!</strong> No pending tasks right now — good time to plan ahead or review your projects.';
+    }
+
+    content.innerHTML = narrative;
+    btn.textContent = '↻ Refresh';
+    btn.disabled = false;
+  }, 400);
+}
+// ─── End AI Focus Recommendation ─────────────────────────────────────────────
 </script>
 <!-- Selection Toolbar -->
 <div class="selection-toolbar" id="selection-toolbar">
