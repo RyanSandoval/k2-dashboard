@@ -1584,7 +1584,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span id="smart-list-indicator-label" style="font-size:13px;font-weight:600;color:var(--accent);flex:1;"></span>
         <button onclick="clearActiveSmartList()" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:13px;font-weight:700;padding:0 4px;" title="Clear smart list filter">✕ Clear</button>
       </div>
-      <div id="focus-filter-bar" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;flex-wrap:wrap;scrollbar-width:none;">
+      <div id="focus-filter-bar" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
         <!-- Populated by renderTasks(): project pills + context pills -->
       </div>
       <div id="focus-board">
@@ -4448,13 +4448,12 @@ function renderTaskRow(task) {
   const stale = isTaskStale(task);
   const staleAgeDays = stale ? Math.floor((new Date() - new Date(task.created)) / (1000 * 60 * 60 * 24)) : 0;
   const staleBanner = stale ? (
-    '<div style="flex:0 0 100%;width:100%;margin-top:6px;padding:6px 10px;background:color-mix(in srgb,#f59e0b 12%,transparent);border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-    '<span style="font-size:11px;color:#92400e;font-weight:500;flex:1;min-width:160px;">⚠️ This task is ' + staleAgeDays + ' days old. Still relevant?</span>' +
-    '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'keep\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#10b981;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Keep — remind again in 7 days">✓ Keep</button>' +
-    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'snooze\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#f59e0b;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Snooze 7 days — hide until then">⏰ Snooze 7d</button>' +
-    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'delete\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#ef4444;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Delete this task">🗑 Delete</button>' +
-    '</div></div>'
+    '<div style="flex:0 0 100%;width:100%;margin-top:4px;display:flex;align-items:center;gap:6px;">' +
+    '<span style="font-size:10px;color:var(--text-dim);">⚠️ ' + staleAgeDays + 'd old</span>' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'keep\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--green);border:1px solid var(--green);border-radius:4px;cursor:pointer;">Keep</button>' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'snooze\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--yellow);border:1px solid var(--yellow);border-radius:4px;cursor:pointer;">Snooze</button>' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'delete\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--red);border:1px solid var(--red);border-radius:4px;cursor:pointer;">Delete</button>' +
+    '</div>'
   ) : '';
   return '<li class="task-item" onclick="openTaskModal(' + taskId + ')" style="' + overdueStyle + 'flex-wrap:wrap;">' +
     leftEl +
