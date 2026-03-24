@@ -3975,7 +3975,7 @@ function openTaskModal(taskId) {
         <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📋 Subtasks${progressText}</div>
         ${subtaskRows}
         <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-          <input id="subtask-input-${safeId(task.id).replace(/'/g,'')}" type="text" placeholder="+ Add subtask…" style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;"
+          <input id="subtask-input-${String(safeId(task.id)).replace(/'/g,'')}" type="text" placeholder="+ Add subtask…" style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;"
             onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addSubtask(${safeId(task.id)},v);}}">
         </div>
       </div>`;
