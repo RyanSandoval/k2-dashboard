@@ -4448,7 +4448,7 @@ function renderTaskRow(task) {
   const stale = isTaskStale(task);
   const staleAgeDays = stale ? Math.floor((new Date() - new Date(task.created)) / (1000 * 60 * 60 * 24)) : 0;
   const staleBanner = stale ? (
-    '<div onclick="event.stopPropagation()" style="flex:0 0 100%;width:100%;margin-top:6px;padding:6px 10px;background:color-mix(in srgb,#f59e0b 12%,transparent);border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+    '<div style="flex:0 0 100%;width:100%;margin-top:6px;padding:6px 10px;background:color-mix(in srgb,#f59e0b 12%,transparent);border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
     '<span style="font-size:11px;color:#92400e;font-weight:500;flex:1;min-width:160px;">⚠️ This task is ' + staleAgeDays + ' days old. Still relevant?</span>' +
     '<div style="display:flex;gap:6px;flex-shrink:0;">' +
     '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'keep\')" style="padding:3px 10px;font-size:11px;font-weight:600;background:#10b981;color:#fff;border:none;border-radius:5px;cursor:pointer;" title="Keep — remind again in 7 days">✓ Keep</button>' +
