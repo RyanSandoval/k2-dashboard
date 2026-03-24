@@ -4107,12 +4107,34 @@ function openTaskModal(taskId) {
 }
 
 async function deleteTask(taskId) {
-  if (!confirm('Delete this task?')) return;
-  DATA.tasks = DATA.tasks.filter(t => t.id != taskId);
-  await saveData();
-  closeTaskModal();
-  renderTasks();
-  renderProjects();
+  // Replace delete button with inline confirm
+  const btn = document.querySelector(`button[onclick*="deleteTask"]`);
+  if (!btn) return;
+  if (btn.dataset.confirming === 'true') {
+    // Second click — confirmed
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    DATA.tasks = DATA.tasks.filter(t => t.id != taskId);
+    await saveData();
+    closeTaskModal();
+    renderTasks();
+    renderProjects();
+  } else {
+    // First click — ask for confirmation inline
+    btn.dataset.confirming = 'true';
+    btn.textContent = '⚠️ Confirm delete?';
+    btn.style.background = 'var(--red)';
+    btn.style.color = '#fff';
+    // Auto-reset after 3s if no second click
+    setTimeout(() => {
+      if (btn.dataset.confirming === 'true') {
+        btn.dataset.confirming = '';
+        btn.textContent = '🗑 Delete';
+        btn.style.background = 'var(--red-dim)';
+        btn.style.color = 'var(--red)';
+      }
+    }, 3000);
+  }
 }
 
 async function taskToSomeday(taskId) {
