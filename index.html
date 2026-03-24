@@ -4065,6 +4065,45 @@ function openTaskModal(taskId) {
     const thread = document.getElementById('task-thread');
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, 50);
+
+  // Auto-poll for K2 replies every 30s while modal is open
+  if (window._taskModalPollInterval) clearInterval(window._taskModalPollInterval);
+  window._taskModalPollInterval = setInterval(async () => {
+    if (document.getElementById('task-modal').style.display === 'none') {
+      clearInterval(window._taskModalPollInterval);
+      return;
+    }
+    // Reload data from GitHub silently
+    try {
+      const res = await fetch(`https://api.github.com/repos/RyanSandoval/k2-data/contents/data.json`, { headers: ghHeaders() });
+      if (!res.ok) return;
+      const file = await res.json();
+      const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, '')), c => c.charCodeAt(0))));
+      const freshTask = (d.tasks || []).find(t => t.id == taskId);
+      if (!freshTask) return;
+      const currentTask = DATA.tasks.find(t => t.id == taskId);
+      const currentMsgCount = (currentTask?.messages || []).length;
+      const freshMsgCount = (freshTask.messages || []).length;
+      if (freshMsgCount > currentMsgCount) {
+        // New messages — update data and re-render thread only
+        if (currentTask) currentTask.messages = freshTask.messages;
+        GH_SHA = file.sha;
+        const thread = document.getElementById('task-thread');
+        if (thread) {
+          thread.innerHTML = freshTask.messages.map(m => `
+            <div style="display:flex;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;${m.from === 'k2' ? 'border-left:3px solid var(--accent)' : 'border-left:3px solid var(--green)'};">
+              <div style="flex-shrink:0;font-size:14px;">${m.from === 'k2' ? '🤖' : '👤'}</div>
+              <div style="flex:1;">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:2px;">${m.from === 'k2' ? 'K-2' : 'Ryan'} · ${m.time}</div>
+                <div style="font-size:13px;line-height:1.5;">${m.text}</div>
+              </div>
+            </div>
+          `).join('');
+          thread.scrollTop = thread.scrollHeight;
+        }
+      }
+    } catch(e) { /* silent */ }
+  }, 30000);
 }
 
 async function deleteTask(taskId) {
@@ -4098,6 +4137,7 @@ function closeTaskModal() {
   document.getElementById('task-modal').style.display = 'none';
   document.body.style.overflow = '';
   activeTaskId = null;
+  if (window._taskModalPollInterval) { clearInterval(window._taskModalPollInterval); window._taskModalPollInterval = null; }
 }
 
 function navigateToJotSource(date) {
