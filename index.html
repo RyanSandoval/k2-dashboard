@@ -95,6 +95,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.5;
     font-weight: 400;
+    overflow-x: hidden;
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -173,6 +174,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .main {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--sp-8);
   }
   .page { display: none; }
@@ -468,6 +470,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     padding: var(--sp-3) var(--sp-4);
     border-bottom: 1px solid var(--border-subtle);
     font-size: var(--text-sm);
+    cursor: pointer;
   }
   .task-item:last-child { border-bottom: none; }
   .task-check {
@@ -485,7 +488,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .task-check:hover { border-color: var(--accent); }
   .task-check.done { background: var(--green); border-color: var(--green); }
   .task-check.done::after { content: "✓"; color: var(--bg); font-size: 12px; font-weight: 700; }
-  .task-content { flex: 1; }
+  .task-content { flex: 1; min-width: 0; overflow: hidden; }
   .task-content.done { text-decoration: line-through; color: var(--text-dim); }
   .task-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
   .task-priority {
