@@ -1339,16 +1339,14 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
     </div>
     <div class="nav-section">
-      <div class="nav-section-title">Overview</div>
       <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
-      <!-- Viking AI Insights lives in Notes page -->
-    </div>
-    <div class="nav-section">
       <div class="nav-item active" data-page="jots">
         <span class="icon">✏️</span> Jots
       </div>
+    </div>
+    <div class="nav-section">
       <div class="nav-section-title">Work</div>
       <div class="nav-item" data-page="projects">
         <span class="icon">🚀</span> Projects
@@ -1360,9 +1358,6 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
       <div class="nav-item" data-page="planner">
         <span class="icon">🗓️</span> Planner
-      </div>
-      <div class="nav-item" data-page="completed">
-        <span class="icon">🏁</span> Completed
       </div>
       <div class="nav-item" data-page="inbox">
         <span class="icon">📥</span> Inbox <span class="badge" id="inbox-badge" style="display:none"></span>
@@ -1377,15 +1372,22 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-item" data-page="review">
         <span class="icon">🔄</span> Weekly Review <span id="review-overdue-badge" style="display:none;margin-left:4px;font-size:11px;" title="Review overdue">⚠️</span>
       </div>
-      <div class="nav-item" data-page="discussions">
-        <span class="icon">💬</span> Discussions
+      <!-- Collapsed work items -->
+      <div id="nav-work-more" style="display:none;">
+        <div class="nav-item" data-page="completed">
+          <span class="icon">🏁</span> Completed
+        </div>
+        <div class="nav-item" data-page="discussions">
+          <span class="icon">💬</span> Discussions
+        </div>
+        <div class="nav-item" data-page="trading">
+          <span class="icon">📈</span> Trading
+        </div>
+        <div class="nav-item" data-page="growth">
+          <span class="icon">🎯</span> Growth
+        </div>
       </div>
-      <div class="nav-item" data-page="trading">
-        <span class="icon">📈</span> Trading
-      </div>
-      <div class="nav-item" data-page="growth">
-        <span class="icon">🎯</span> Growth
-      </div>
+      <div onclick="toggleNavMore('work')" style="font-size:11px;color:var(--text-dim);padding:4px 12px;cursor:pointer;user-select:none;" id="nav-work-more-btn">▸ More</div>
     </div>
     <div class="nav-section" id="smart-lists-nav-section">
       <div class="nav-section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:4px;">
@@ -1398,14 +1400,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <div class="nav-section">
       <div class="nav-section-title">Reference</div>
-      <div class="nav-item" data-page="accomplishments">
-        <span class="icon">🏆</span> Accomplishments
-      </div>
-      <div class="nav-item" data-page="memory">
-        <span class="icon">🧠</span> Memory
-      </div>
-      <div class="nav-item" data-page="mission">
-        <span class="icon">🎯</span> Mission
+      <div class="nav-item" data-page="notes">
+        <span class="icon">📝</span> Notes
       </div>
       <div class="nav-item" data-page="docs">
         <span class="icon">📁</span> Docs
@@ -1413,13 +1409,23 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-item" data-page="decisions">
         <span class="icon">⚖️</span> Decisions
       </div>
-      <div class="nav-item" data-page="notes">
-        <span class="icon">📝</span> Notes
+      <!-- Collapsed reference items -->
+      <div id="nav-ref-more" style="display:none;">
+        <div class="nav-item" data-page="accomplishments">
+          <span class="icon">🏆</span> Accomplishments
+        </div>
+        <div class="nav-item" data-page="memory">
+          <span class="icon">🧠</span> Memory
+        </div>
+        <div class="nav-item" data-page="mission">
+          <span class="icon">🎯</span> Mission
+        </div>
+        <div class="nav-item" data-page="ai-insights">
+          <span class="icon">🚀</span> AI Insights
+          <span class="badge" id="ai-insights-badge">0</span>
+        </div>
       </div>
-      <div class="nav-item" data-page="ai-insights">
-        <span class="icon">🚀</span> AI Insights
-        <span class="badge" id="ai-insights-badge">0</span>
-      </div>
+      <div onclick="toggleNavMore('ref')" style="font-size:11px;color:var(--text-dim);padding:4px 12px;cursor:pointer;user-select:none;" id="nav-ref-more-btn">▸ More</div>
     </div>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
@@ -2310,7 +2316,25 @@ function renderAll() {
 }
 
 // Navigation
+function toggleNavMore(section) {
+  const el = document.getElementById('nav-' + section + '-more');
+  const btn = document.getElementById('nav-' + section + '-more-btn');
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? '▸ More' : '▴ Less';
+}
+
 function navigateTo(page) {
+  // If the page is in a collapsed section, expand it
+  const hiddenPages = { work: ['completed','discussions','trading','growth'], ref: ['accomplishments','memory','mission','ai-insights'] };
+  for (const [section, pages] of Object.entries(hiddenPages)) {
+    if (pages.includes(page)) {
+      const el = document.getElementById('nav-' + section + '-more');
+      const btn = document.getElementById('nav-' + section + '-more-btn');
+      if (el && el.style.display === 'none') { el.style.display = 'block'; btn.textContent = '▴ Less'; }
+    }
+  }
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (navItem) navItem.classList.add('active');
