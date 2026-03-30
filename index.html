@@ -1234,6 +1234,51 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     border: 1px solid var(--border);
     font-size: 10px;
   }
+
+  /* ── Clips ── */
+  .clips-filters { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+  .clips-filter-btn {
+    padding:5px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-subtle);
+    background:var(--surface); color:var(--text-dim); font-size:var(--text-xs); font-weight:600;
+    cursor:pointer; transition:all var(--dur-fast);
+  }
+  .clips-filter-btn:hover { border-color:var(--accent-dim); color:var(--text); }
+  .clips-filter-btn.active { background:var(--accent-surface); border-color:var(--accent-dim); color:var(--accent); }
+  .clip-card {
+    display:flex; gap:12px; align-items:flex-start; padding:12px 14px;
+    background:var(--surface); border:1px solid var(--border-subtle); border-radius:var(--radius-md);
+    margin-bottom:8px; transition:border-color var(--dur-fast);
+  }
+  .clip-card:hover { border-color:var(--border); }
+  .clip-card.read { opacity:0.7; }
+  .clip-card.archived { opacity:0.5; }
+  .clip-favicon { width:24px; height:24px; border-radius:4px; flex-shrink:0; margin-top:2px; }
+  .clip-body { flex:1; min-width:0; }
+  .clip-title {
+    font-size:var(--text-sm); font-weight:600; color:var(--text);
+    text-decoration:none; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .clip-title:hover { color:var(--accent); }
+  .clip-domain { font-size:var(--text-xs); color:var(--text-muted); margin-top:1px; }
+  .clip-desc { font-size:var(--text-xs); color:var(--text-dim); margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .clip-meta { display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap; }
+  .clip-tag {
+    font-size:10px; padding:1px 7px; border-radius:10px;
+    background:var(--surface3); color:var(--text-dim); font-weight:500;
+  }
+  .clip-time { font-size:10px; color:var(--text-muted); }
+  .clip-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; }
+  .clip-action-btn {
+    background:none; border:1px solid transparent; border-radius:var(--radius-sm);
+    color:var(--text-muted); cursor:pointer; font-size:13px; padding:3px 6px; line-height:1;
+    transition:all var(--dur-fast);
+  }
+  .clip-action-btn:hover { background:var(--surface2); border-color:var(--border-subtle); color:var(--text); }
+  .clip-action-btn.danger:hover { color:var(--red); }
+  .clip-empty {
+    text-align:center; padding:48px 20px; color:var(--text-muted);
+    font-size:var(--text-sm);
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
@@ -1330,10 +1375,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div style="display:flex;gap:6px;">
         <input id="sidebar-capture-input" type="text" placeholder="⚡ Capture…"
           style="flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border-color var(--dur-fast);"
-          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);this.value='';this.blur();showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}}"
+          onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){if(v.match(/^https?:\/\//)){quickCaptureClip(v);this.value='';this.blur();}else{const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);this.value='';this.blur();showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}}}"
           onfocus="this.style.borderColor='var(--accent)'"
           onblur="this.style.borderColor='var(--border-subtle)'">
-        <button onclick="(function(){const v=document.getElementById('sidebar-capture-input').value.trim();if(v){const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);document.getElementById('sidebar-capture-input').value='';showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}})()"
+        <button onclick="(function(){const v=document.getElementById('sidebar-capture-input').value.trim();if(v){if(v.match(/^https?:\/\//)){quickCaptureClip(v);document.getElementById('sidebar-capture-input').value='';return;}const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);document.getElementById('sidebar-capture-input').value='';showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}})()"
           style="padding:7px 10px;background:var(--accent-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--accent);font-size:14px;cursor:pointer;line-height:1;font-weight:700;"
           title="Capture to inbox (⌘I)">+</button>
       </div>
@@ -1402,6 +1447,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-section-title">Reference</div>
       <div class="nav-item" data-page="notes">
         <span class="icon">📝</span> Notes
+      </div>
+      <div class="nav-item" data-page="clips">
+        <span class="icon">🔗</span> Clips
+        <span class="badge" id="clips-unread-badge" style="display:none">0</span>
       </div>
       <div class="nav-item" data-page="docs">
         <span class="icon">📁</span> Docs
@@ -2004,6 +2053,22 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <div class="page" id="page-review" style="max-width:720px;margin:0 auto;"></div>
 
+    <div class="page" id="page-clips" style="max-width:760px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h1 class="page-title">🔗 Clips</h1>
+          <button onclick="openAddClipModal()" style="padding:6px 14px;background:var(--accent-surface);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--accent);font-size:var(--text-sm);font-weight:600;cursor:pointer;">+ Add</button>
+        </div>
+      </div>
+      <div class="clips-filters" id="clips-filters">
+        <button class="clips-filter-btn active" data-filter="all" onclick="setClipsFilter('all',this)">All</button>
+        <button class="clips-filter-btn" data-filter="unread" onclick="setClipsFilter('unread',this)">Unread</button>
+        <button class="clips-filter-btn" data-filter="read" onclick="setClipsFilter('read',this)">Read</button>
+        <button class="clips-filter-btn" data-filter="archived" onclick="setClipsFilter('archived',this)">Archived</button>
+      </div>
+      <div id="clips-list"></div>
+    </div>
+
     <div class="page" id="page-planner" style="max-width:700px;margin:0 auto;">
       <div class="page-header">
         <h2 style="font-size:var(--text-xl);font-weight:700;margin-bottom:4px;">🗓️ Plan Your Day</h2>
@@ -2157,6 +2222,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" data-page="memory" onclick="mobileNavMore('memory')"><span class="icon">🧠</span>Memory</div>
       <div class="mobile-more-item" data-page="review" onclick="mobileNavMore('review')"><span class="icon">🔄</span>Review</div>
       <div class="mobile-more-item" data-page="mission" onclick="mobileNavMore('mission')"><span class="icon">🎯</span>Mission</div>
+      <div class="mobile-more-item" data-page="clips" onclick="mobileNavMore('clips')"><span class="icon">🔗</span>Clips</div>
       <div class="mobile-more-item" data-page="docs" onclick="mobileNavMore('docs')"><span class="icon">📁</span>Docs</div>
       <div class="mobile-more-item" data-page="growth" onclick="mobileNavMore('growth')"><span class="icon">🌱</span>Growth</div>
       <div class="mobile-more-item" data-page="ai-insights" onclick="mobileNavMore('ai-insights')"><span class="icon">💡</span>AI Ideas</div>
@@ -2195,7 +2261,7 @@ function mobileNavMore(page) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [] };
 window.DATA = DATA; // keep module scripts in sync
 
 // ============================================================
@@ -2268,6 +2334,7 @@ async function loadData() {
       { id: 'sl-unassigned', name: 'No Project', icon: '📭', rules: { project: '' } },
     ];
     DATA.timeBlocks = d.timeBlocks || {};
+    DATA.bookmarks = d.bookmarks || [];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -2309,7 +2376,7 @@ async function saveData() {
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -2658,7 +2725,8 @@ function renderDashboard() {
     <div class="stat-card" style="cursor:pointer" onclick="navigateTo('projects')"><div class="label">Active Projects</div><div class="value" style="color:var(--accent)">${activeProjects}</div></div>
     <div class="stat-card" style="cursor:pointer" onclick="navigateTo('tasks')"><div class="label">Pending Tasks</div><div class="value" style="color:var(--yellow)">${pendingCount}</div></div>
     <div class="stat-card" style="cursor:pointer" onclick="navigateTo('decisions')"><div class="label">Decisions</div><div class="value" style="color:var(--green)">${totalDecisions}</div></div>
-    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('discussions')"><div class="label">Open Questions</div><div class="value" style="color:var(--orange)">${openQuestions}</div></div>`;
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('discussions')"><div class="label">Open Questions</div><div class="value" style="color:var(--orange)">${openQuestions}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="navigateTo('clips')"><div class="label">Unread Clips</div><div class="value" style="color:var(--accent2)">${(DATA.bookmarks||[]).filter(b=>b.status==='unread').length}</div></div>`;
 
   // Stale tasks alert widget
   const staleCount = getStaleTaskCount();
@@ -5416,6 +5484,301 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     navigateTo('tasks');
     openContextPicker();
+  }
+});
+
+// ============================================================
+// CLIPS — Read Later / URL Bookmarks
+// ============================================================
+
+let _clipsFilter = 'all';
+
+function setClipsFilter(filter, btn) {
+  _clipsFilter = filter;
+  document.querySelectorAll('.clips-filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderClipsList();
+}
+
+function renderClips() {
+  updateClipsBadge();
+  renderClipsList();
+}
+
+function updateClipsBadge() {
+  const unread = (DATA.bookmarks || []).filter(b => b.status === 'unread').length;
+  const badge = document.getElementById('clips-unread-badge');
+  if (badge) {
+    badge.textContent = unread;
+    badge.style.display = unread > 0 ? '' : 'none';
+  }
+}
+
+function renderClipsList() {
+  const container = document.getElementById('clips-list');
+  if (!container) return;
+  let clips = [...(DATA.bookmarks || [])].sort((a, b) => b.id - a.id);
+  if (_clipsFilter !== 'all') clips = clips.filter(c => c.status === _clipsFilter);
+
+  if (clips.length === 0) {
+    container.innerHTML = `<div class="clip-empty">
+      <div style="font-size:32px;margin-bottom:8px;">🔗</div>
+      <div>${_clipsFilter === 'all' ? 'No clips yet — save a URL to get started' : 'No ' + _clipsFilter + ' clips'}</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = clips.map(clip => {
+    let domain = '';
+    try { domain = new URL(clip.url).hostname.replace(/^www\./, ''); } catch(e) {}
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    const statusClass = clip.status !== 'unread' ? clip.status : '';
+    const readBtn = clip.status === 'unread'
+      ? `<button class="clip-action-btn" onclick="toggleClipRead(${clip.id})" title="Mark read">✓</button>`
+      : clip.status === 'read'
+        ? `<button class="clip-action-btn" onclick="toggleClipRead(${clip.id})" title="Mark unread">○</button>`
+        : '';
+    const archiveBtn = clip.status !== 'archived'
+      ? `<button class="clip-action-btn" onclick="archiveClip(${clip.id})" title="Archive">📦</button>`
+      : `<button class="clip-action-btn" onclick="unarchiveClip(${clip.id})" title="Unarchive">📤</button>`;
+    const tags = (clip.tags || []).map(t => `<span class="clip-tag">${escapeHTML(t)}</span>`).join('');
+
+    return `<div class="clip-card ${statusClass}">
+      <img class="clip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">
+      <div class="clip-body">
+        <a class="clip-title" href="${escapeHTML(clip.url)}" target="_blank" rel="noopener">${escapeHTML(clip.title || clip.url)}</a>
+        <div class="clip-domain">${escapeHTML(domain)}</div>
+        ${clip.description ? `<div class="clip-desc">${escapeHTML(clip.description)}</div>` : ''}
+        <div class="clip-meta">
+          ${tags}
+          <span class="clip-time">${clipRelativeTime(clip.created)}</span>
+        </div>
+      </div>
+      <div class="clip-actions">
+        ${readBtn}
+        ${archiveBtn}
+        <button class="clip-action-btn danger" onclick="deleteClip(${clip.id})" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clipRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const now = new Date();
+  const d = new Date(dateStr.replace(' ', 'T'));
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return d.toLocaleDateString();
+}
+
+function escapeHTML(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleClipRead(id) {
+  const clip = (DATA.bookmarks || []).find(b => b.id === id);
+  if (!clip) return;
+  if (clip.status === 'unread') {
+    clip.status = 'read';
+    clip.readAt = new Date().toISOString().slice(0,16).replace('T',' ');
+  } else {
+    clip.status = 'unread';
+    clip.readAt = null;
+  }
+  renderClips();
+  saveData();
+}
+
+function archiveClip(id) {
+  const clip = (DATA.bookmarks || []).find(b => b.id === id);
+  if (!clip) return;
+  clip.status = 'archived';
+  renderClips();
+  saveData();
+}
+
+function unarchiveClip(id) {
+  const clip = (DATA.bookmarks || []).find(b => b.id === id);
+  if (!clip) return;
+  clip.status = 'unread';
+  clip.readAt = null;
+  renderClips();
+  saveData();
+}
+
+function deleteClip(id) {
+  const btn = event.currentTarget;
+  if (btn.dataset.confirm) {
+    DATA.bookmarks = (DATA.bookmarks || []).filter(b => b.id !== id);
+    renderClips();
+    renderDashboard();
+    saveData();
+    return;
+  }
+  btn.dataset.confirm = '1';
+  btn.textContent = '⚠';
+  btn.title = 'Click again to confirm delete';
+  setTimeout(() => { btn.removeAttribute('data-confirm'); btn.textContent = '✕'; btn.title = 'Delete'; }, 3000);
+}
+
+function openAddClipModal(prefillUrl) {
+  let overlay = document.getElementById('clip-modal-overlay');
+  if (overlay) { overlay.style.display = 'flex'; }
+  else {
+    overlay = document.createElement('div');
+    overlay.id = 'clip-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAddClipModal(); };
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">🔗 Add Clip</div>
+        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">URL *</label>
+        <input id="clip-url-input" type="url" placeholder="https://..."
+          style="width:100%;padding:10px 12px;margin:4px 0 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;font-family:inherit;"
+          oninput="clipUrlChanged(this.value)">
+        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">Title</label>
+        <input id="clip-title-input" type="text" placeholder="Auto-fetched or enter manually"
+          style="width:100%;padding:10px 12px;margin:4px 0 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;font-family:inherit;">
+        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+        <textarea id="clip-desc-input" rows="2" placeholder="Brief description..."
+          style="width:100%;padding:10px 12px;margin:4px 0 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;resize:vertical;"></textarea>
+        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">Tags <span style="font-weight:400;color:var(--text-muted)">(comma-separated)</span></label>
+        <input id="clip-tags-input" type="text" placeholder="e.g. design, reference"
+          style="width:100%;padding:10px 12px;margin:4px 0 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+        <div id="clip-existing-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onclick="closeAddClipModal()" style="padding:8px 16px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text-dim);font-size:13px;cursor:pointer;">Cancel</button>
+          <button onclick="saveNewClip()" style="padding:8px 16px;background:var(--accent-surface);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">Save Clip</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  // Reset fields
+  document.getElementById('clip-url-input').value = prefillUrl || '';
+  document.getElementById('clip-title-input').value = '';
+  document.getElementById('clip-desc-input').value = '';
+  document.getElementById('clip-tags-input').value = '';
+
+  // Show existing tags for quick selection
+  const allTags = [...new Set((DATA.bookmarks || []).flatMap(b => b.tags || []))];
+  const tagContainer = document.getElementById('clip-existing-tags');
+  tagContainer.innerHTML = allTags.map(t =>
+    `<span class="clip-tag" style="cursor:pointer;" onclick="addTagToClipInput('${escapeHTML(t)}')">${escapeHTML(t)}</span>`
+  ).join('');
+
+  setTimeout(() => {
+    const urlInput = document.getElementById('clip-url-input');
+    urlInput.focus();
+    if (prefillUrl) clipUrlChanged(prefillUrl);
+  }, 50);
+}
+
+function closeAddClipModal() {
+  const overlay = document.getElementById('clip-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function addTagToClipInput(tag) {
+  const inp = document.getElementById('clip-tags-input');
+  const existing = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!existing.includes(tag)) {
+    existing.push(tag);
+    inp.value = existing.join(', ');
+  }
+}
+
+let _clipFetchTimeout = null;
+function clipUrlChanged(url) {
+  clearTimeout(_clipFetchTimeout);
+  if (!url || !url.match(/^https?:\/\//)) return;
+  _clipFetchTimeout = setTimeout(() => fetchClipTitle(url), 500);
+}
+
+async function fetchClipTitle(url) {
+  const titleInput = document.getElementById('clip-title-input');
+  if (!titleInput || titleInput.value.trim()) return; // don't overwrite manual entry
+  try {
+    const resp = await fetch('https://corsproxy.io/?' + encodeURIComponent(url), { signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) return;
+    const html = await resp.text();
+    const m = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (m && m[1] && titleInput && !titleInput.value.trim()) {
+      titleInput.value = m[1].trim().replace(/\s+/g, ' ');
+    }
+  } catch(e) { /* silent fail — user enters title manually */ }
+}
+
+function saveNewClip() {
+  const url = document.getElementById('clip-url-input').value.trim();
+  if (!url) { showToast('URL is required'); return; }
+  const title = document.getElementById('clip-title-input').value.trim();
+  const description = document.getElementById('clip-desc-input').value.trim();
+  const tagsRaw = document.getElementById('clip-tags-input').value;
+  const tags = tagsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+  if (!DATA.bookmarks) DATA.bookmarks = [];
+  DATA.bookmarks.push({
+    id: Date.now(),
+    url,
+    title: title || url,
+    description: description || undefined,
+    tags: tags.length ? tags : undefined,
+    status: 'unread',
+    created: new Date().toISOString().slice(0,16).replace('T',' '),
+    readAt: null
+  });
+
+  closeAddClipModal();
+  renderClips();
+  renderDashboard();
+  saveData();
+  showToast('🔗 Clip saved');
+}
+
+function quickCaptureClip(url) {
+  if (!DATA.bookmarks) DATA.bookmarks = [];
+  const clip = {
+    id: Date.now(), url, title: url, status: 'unread',
+    created: new Date().toISOString().slice(0,16).replace('T',' '), readAt: null
+  };
+  DATA.bookmarks.push(clip);
+  renderClips();
+  renderDashboard();
+  saveData();
+  showToast('🔗 Clip saved');
+  // Fetch title in background and update the clip
+  fetch('https://corsproxy.io/?' + encodeURIComponent(url), { signal: AbortSignal.timeout(6000) })
+    .then(r => r.ok ? r.text() : '')
+    .then(html => {
+      const m = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (m && m[1]) {
+        const c = DATA.bookmarks.find(b => b.id === clip.id);
+        if (c) { c.title = m[1].trim().replace(/\s+/g, ' '); renderClips(); saveData(); }
+      }
+    }).catch(() => {});
+}
+
+// Cmd+Shift+B — open Add Clip modal
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'b' || e.key === 'B')) {
+    e.preventDefault();
+    openAddClipModal();
+    // Try reading clipboard for URL
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(text => {
+        text = (text || '').trim();
+        if (text.match(/^https?:\/\//)) {
+          const inp = document.getElementById('clip-url-input');
+          if (inp && !inp.value) { inp.value = text; clipUrlChanged(text); }
+        }
+      }).catch(() => {});
+    }
   }
 });
 
