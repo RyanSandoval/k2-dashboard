@@ -8219,7 +8219,30 @@ document.addEventListener('DOMContentLoaded', () => {
     GH_TOKEN = localStorage.getItem('gh_token');
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
-    loadData();
+    loadData().then(() => {
+      // Handle bookmarklet clip param
+      const params = new URLSearchParams(window.location.search);
+      const clipUrl = params.get('clip');
+      const clipTitle = params.get('title');
+      if (clipUrl) {
+        if (!DATA.bookmarks) DATA.bookmarks = [];
+        // Deduplicate — don't add if same URL saved in last 60s
+        const dup = DATA.bookmarks.find(b => b.url === clipUrl && (Date.now() - b.id) < 60000);
+        if (!dup) {
+          DATA.bookmarks.push({
+            id: Date.now(), url: clipUrl, title: clipTitle || clipUrl,
+            status: 'unread', created: new Date().toISOString().slice(0,16).replace('T',' '), readAt: null
+          });
+          saveData();
+          renderClips();
+          renderDashboard();
+        }
+        // Clean URL and navigate to clips
+        window.history.replaceState({}, '', window.location.pathname);
+        navigateTo('clips');
+        showToast('🔗 Clipped: ' + (clipTitle || clipUrl).slice(0, 50));
+      }
+    });
     initSelectionToolbar();
     initKeyboardShortcuts();
     fetchGCalEvents().then(() => renderGCalWidget());
