@@ -1279,6 +1279,11 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     text-align:center; padding:48px 20px; color:var(--text-muted);
     font-size:var(--text-sm);
   }
+  .clip-send-option {
+    padding:6px 10px; font-size:12px; color:var(--text-dim); cursor:pointer;
+    border-radius:var(--radius-sm); white-space:nowrap;
+  }
+  .clip-send-option:hover { background:var(--surface3); color:var(--text); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
@@ -5555,6 +5560,18 @@ function renderClipsList() {
         </div>
       </div>
       <div class="clip-actions">
+        <div style="position:relative;">
+          <button class="clip-action-btn" onclick="toggleClipSendMenu(${clip.id},this)" title="Send to…">→</button>
+          <div class="clip-send-menu" id="clip-send-menu-${clip.id}" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+            <div class="clip-send-option" onclick="clipToTask(${clip.id})">✅ Create Task</div>
+            <div class="clip-send-option" onclick="clipToNote(${clip.id})">📝 Create Note</div>
+            <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
+            <div style="padding:4px 10px;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Add to Project</div>
+            ${(DATA.projects||[]).filter(p=>p.status!=='done').map(p=>
+              `<div class="clip-send-option" onclick="clipToProject(${clip.id},'${p.id}')">🚀 ${escapeHTML(p.name)}</div>`
+            ).join('')}
+          </div>
+        </div>
         ${readBtn}
         ${archiveBtn}
         <button class="clip-action-btn danger" onclick="deleteClip(${clip.id})" title="Delete">✕</button>
@@ -5624,6 +5641,63 @@ function deleteClip(id) {
   btn.textContent = '⚠';
   btn.title = 'Click again to confirm delete';
   setTimeout(() => { btn.removeAttribute('data-confirm'); btn.textContent = '✕'; btn.title = 'Delete'; }, 3000);
+}
+
+function toggleClipSendMenu(clipId, btn) {
+  const menu = document.getElementById('clip-send-menu-' + clipId);
+  if (!menu) return;
+  // Close all other menus first
+  document.querySelectorAll('.clip-send-menu').forEach(m => { if (m !== menu) m.style.display = 'none'; });
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  // Close on outside click
+  if (menu.style.display === 'block') {
+    const close = (e) => { if (!menu.contains(e.target) && e.target !== btn) { menu.style.display = 'none'; document.removeEventListener('click', close); } };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+
+function clipToTask(clipId) {
+  const clip = (DATA.bookmarks || []).find(b => b.id === clipId);
+  if (!clip) return;
+  const dateStr = new Date().toISOString().slice(0,10);
+  DATA.tasks.push({
+    id: Date.now(), text: clip.title + ' — ' + clip.url, urgency: 2, importance: 2,
+    priority: 'medium', project: '', owner: 'ryan', done: false, created: dateStr, messages: []
+  });
+  clip.status = 'read';
+  clip.readAt = new Date().toISOString().slice(0,16).replace('T',' ');
+  renderClips(); renderTasks(); renderDashboard(); saveData();
+  showToast('✅ Task created from clip');
+}
+
+function clipToNote(clipId) {
+  const clip = (DATA.bookmarks || []).find(b => b.id === clipId);
+  if (!clip) return;
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0,10) + ' ' + now.toTimeString().slice(0,5);
+  const noteHtml = `<h1>${escapeHTML(clip.title || 'Untitled')}</h1><p><a href="${escapeHTML(clip.url)}">${escapeHTML(clip.url)}</a></p>${clip.description ? '<p>' + escapeHTML(clip.description) + '</p>' : ''}<p></p>`;
+  const note = { id: 'note-' + Date.now(), title: clip.title || 'Clip Note', text: noteHtml, created: dateStr };
+  DATA.notes.push(note);
+  clip.status = 'read';
+  clip.readAt = new Date().toISOString().slice(0,16).replace('T',' ');
+  renderClips(); renderNotes(); renderDashboard(); saveData();
+  showToast('📝 Note created from clip');
+  setTimeout(() => { navigateTo('notes'); openNoteEditor(note.id); }, 200);
+}
+
+function clipToProject(clipId, projectId) {
+  const clip = (DATA.bookmarks || []).find(b => b.id === clipId);
+  const project = (DATA.projects || []).find(p => p.id === projectId);
+  if (!clip || !project) return;
+  if (!project.links) project.links = [];
+  project.links.push({ label: clip.title || clip.url, path: clip.url });
+  if (!project.notes) project.notes = [];
+  const dateStr = new Date().toISOString().slice(0,10);
+  project.notes.push({ text: '🔗 Clipped: [' + (clip.title || clip.url) + '](' + clip.url + ')', date: dateStr, author: 'K2' });
+  clip.status = 'read';
+  clip.readAt = new Date().toISOString().slice(0,16).replace('T',' ');
+  renderClips(); renderProjects(); renderDashboard(); saveData();
+  showToast('🚀 Added to ' + project.name);
 }
 
 function openAddClipModal(prefillUrl) {
