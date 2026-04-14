@@ -1311,7 +1311,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   </div>
 </div>
 <script>
-  const ACCESS_HASH = "5c227bea61bb373117d2b9a4e321fb9c817fcbb8bce123d02b1b80bb555b6202"; // SHA-256 of access code
+  const ACCESS_HASH = "b72653265c6bad2943d9235c8725b57920e6e5e1ff76165410094e7ae3c9bb99"; // SHA-256 of access code
   async function sha256(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
