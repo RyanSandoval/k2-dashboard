@@ -1650,6 +1650,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="focus-filter-bar" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 12px;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
         <!-- Populated by renderTasks(): project pills + context pills -->
       </div>
+      <div id="task-sort-bar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:8px;"></div>
       <div id="focus-board">
         <!-- Populated by renderTasks() -->
       </div>
@@ -4657,7 +4658,33 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
     '</div>';
 }
 
-function renderTasks() {
+
+  // Task sort mode toggle
+  function setSortMode(mode) {
+    window._taskSortMode = mode;
+    renderTasks();
+  }
+
+  function sortTasksByDate(tasks) {
+    return [...tasks].sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return aTime - bTime;
+    });
+  }
+
+  function sortTasksByScore(tasks) {
+    return [...tasks].sort((a, b) => taskScoreRaw(b) - taskScoreRaw(a));
+  }
+
+  function applyTaskSort(tasks) {
+    const mode = window._taskSortMode || 'score';
+    if (mode === 'date') return sortTasksByDate(tasks);
+    return sortTasksByScore(tasks);
+  }
+
+
+  function renderTasks() {
   const board = document.getElementById('focus-board');
   if (!board) return;
 
@@ -4737,27 +4764,40 @@ function renderTasks() {
   // Render context filter bar (legacy, for compatibility)
   renderContextFilterBar();
 
+
+  // Render sort toggle  
+  const sortBar = document.getElementById('task-sort-bar');
+  if (sortBar) {
+    const currentSort = window._taskSortMode || 'score';
+    sortBar.innerHTML = 
+      '<span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-right:8px;">Sort:</span>' +
+      '<button onclick="setSortMode(\'score\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (currentSort === 'score' ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">Priority</button>' +
+      '<button onclick="setSortMode(\'date\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (currentSort === 'date' ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">Recently Added</button>';
+  }
+
   // Bucket logic
   const scheduled = tasks.filter(t => t.hideUntil && t.hideUntil > today);
   const visible = tasks.filter(t => !(t.hideUntil && t.hideUntil > today));
+  // Apply sort mode
+  const visibleTasks = applyTaskSort(visible);
 
-  const doToday = visible.filter(t => {
+  const doToday = visibleTasks.filter(t => {
     const score = (t.urgency||2) * (t.importance||2);
     return score >= 12 || t.dueDate === today || (t.dueDate && t.dueDate < today);
   });
   const todayIds = new Set(doToday.map(t => t.id));
 
-  const thisWeek = visible.filter(t => {
+  const thisWeek = visibleTasks.filter(t => {
     if (todayIds.has(t.id)) return false;
     const score = (t.urgency||2) * (t.importance||2);
     return score >= 6 || (t.dueDate && t.dueDate <= weekStr && t.dueDate > today);
   });
   const weekIds = new Set(thisWeek.map(t => t.id));
 
-  const needsTriage = visible.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && (isTaskStale(t) || !t.project || (t.text||'').length < 10));
+  const needsTriage = visibleTasks.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && (isTaskStale(t) || !t.project || (t.text||'').length < 10));
   const triageIds = new Set(needsTriage.map(t => t.id));
 
-  const backlog = visible.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && !triageIds.has(t.id));
+  const backlog = visibleTasks.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && !triageIds.has(t.id));
 
   // Render sections
   board.innerHTML =
