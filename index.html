@@ -4667,8 +4667,9 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
 
   function sortTasksByDate(tasks) {
     return [...tasks].sort((a, b) => {
-      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      // Try createdAt (ISO timestamp), fallback to created (YYYY-MM-DD date string)
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : (a.created ? new Date(a.created).getTime() : 0);
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : (b.created ? new Date(b.created).getTime() : 0);
       return aTime - bTime;
     });
   }
