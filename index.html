@@ -7297,13 +7297,27 @@ function extractAndCreateTasks(text, projectId, options) {
   options = options || {};
 
   // Match both unchecked [] and checked [x] tasks  
-  const taskMatches = text.match(/\[[x\s]*\][^\n]*/gi) || [];
+  const taskMatches = text.match(/\[\[x\\s\]*\\][^\\n]*/gi) || [];
+  // Also catch ☐ (unchecked) and ☑/☒ (checked) symbols for robustness
+  const symbolMatches = text.match(/[☐☑☒][^\n]*/g) || [];
+  const allMatches = [...taskMatches, ...symbolMatches];
+  // Deduplicate by converting to Set of trimmed text
+  const seenTexts = new Set();
+  const uniqueMatches = [];
+  for (const match of allMatches) {
+    const trimmed = match.replace(/^[\s\[\]x☐☑☒]+/i, '').trim();
+    if (trimmed && !seenTexts.has(trimmed)) {
+      seenTexts.add(trimmed);
+      uniqueMatches.push(match);
+    }
+  }
+  const taskMatches = uniqueMatches;
   let createdCount = 0;
   let updatedCount = 0;
   const activeTexts = new Set(); // canonical task texts present in this text
   
   taskMatches.forEach(match => {
-    const isChecked = /\[x\]/i.test(match);
+    const isChecked = /\[x\]/i.test(match) || /[☑☒]/.test(match);
     let rawText = match.replace(/\[[x\s]*\]/gi, '').trim();
 
     // Parse due date before stripping @mentions (which would eat @YYYY-MM-DD)
