@@ -7311,7 +7311,7 @@ function extractAndCreateTasks(text, projectId, options) {
       uniqueMatches.push(match);
     }
   }
-  const taskMatches = uniqueMatches;
+  taskMatches = uniqueMatches;
   let createdCount = 0;
   let updatedCount = 0;
   const activeTexts = new Set(); // canonical task texts present in this text
