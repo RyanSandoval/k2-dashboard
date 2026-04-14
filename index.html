@@ -6629,10 +6629,20 @@ function convertHTMLToText(html) {
         if (element.hasAttribute('data-type') && element.getAttribute('data-type') === 'taskList') {
           // Task list
           Array.from(element.children).forEach(li => {
-            const isChecked = li.getAttribute('data-checked') === 'true';
+            // Check for data-checked attribute OR look for <input type="checkbox">
+            let isChecked = li.getAttribute('data-checked') === 'true';
+            if (!isChecked) {
+              const checkbox = li.querySelector('input[type="checkbox"]');
+              if (checkbox) isChecked = checkbox.checked;
+            }
             const checkbox = isChecked ? '[x]' : '[]';
-            const text = li.textContent || '';
-            result.push(`${checkbox} ${text}`);
+            // Extract text, skipping the checkbox element
+            const textContent = Array.from(li.childNodes)
+              .filter(node => node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'INPUT'))
+              .map(node => node.textContent || '')
+              .join('')
+              .trim();
+            result.push(`${checkbox} ${textContent}`);
           });
         } else {
           // Regular bullet list
