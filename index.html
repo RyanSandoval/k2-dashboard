@@ -2351,7 +2351,8 @@ async function loadData() {
 }
 
 async function saveData() {
-  if (!GH_TOKEN) return;
+  if (!GH_TOKEN) { console.warn('[K2] saveData: No GH_TOKEN set'); return; }
+  console.log('[K2] saveData: Starting save, tasks count:', DATA.tasks.length);
   const syncEl = document.getElementById('last-sync');
   if (syncEl) syncEl.innerHTML = '<span style="color:var(--yellow);">⏳ Saving...</span>';
   try {
@@ -2373,8 +2374,9 @@ async function saveData() {
     const result = await res.json();
     GH_SHA = result.content.sha;
     if (syncEl) syncEl.innerHTML = `<span style="color:var(--green);">✓</span> ${new Date().toLocaleTimeString()}`;
+    console.log('[K2] saveData: Success! SHA:', GH_SHA);
   } catch(e) {
-    console.error('Failed to save data:', e);
+    console.error('[K2] saveData failed:', e);
     if (syncEl) syncEl.innerHTML = '<span style="color:var(--red);">✕ Save failed</span>';
   }
 }
