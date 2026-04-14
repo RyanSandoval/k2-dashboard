@@ -4787,10 +4787,11 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   }
 
   // Bucket logic
-  const scheduled = tasks.filter(t => t.hideUntil && t.hideUntil > today);
+  let scheduled = tasks.filter(t => t.hideUntil && t.hideUntil > today);
   const visible = tasks.filter(t => !(t.hideUntil && t.hideUntil > today));
   // Apply sort mode
   const visibleTasks = applyTaskSort(visible);
+  scheduled = applyTaskSort(scheduled);  // Also sort scheduled tasks
 
   const doToday = visibleTasks.filter(t => {
     const score = (t.urgency||2) * (t.importance||2);
