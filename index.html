@@ -4791,27 +4791,32 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   // Bucket logic
   let scheduled = tasks.filter(t => t.hideUntil && t.hideUntil > today);
   const visible = tasks.filter(t => !(t.hideUntil && t.hideUntil > today));
-  // Apply sort mode
-  const visibleTasks = applyTaskSort(visible);
-  scheduled = applyTaskSort(scheduled);  // Also sort scheduled tasks
 
-  const doToday = visibleTasks.filter(t => {
+  // Create buckets FIRST (before sorting)
+  const doTodayUnsorted = visible.filter(t => {
     const score = (t.urgency||2) * (t.importance||2);
     return score >= 12 || t.dueDate === today || (t.dueDate && t.dueDate < today);
   });
-  const todayIds = new Set(doToday.map(t => t.id));
+  const todayIds = new Set(doTodayUnsorted.map(t => t.id));
 
-  const thisWeek = visibleTasks.filter(t => {
+  const thisWeekUnsorted = visible.filter(t => {
     if (todayIds.has(t.id)) return false;
     const score = (t.urgency||2) * (t.importance||2);
     return score >= 6 || (t.dueDate && t.dueDate <= weekStr && t.dueDate > today);
   });
-  const weekIds = new Set(thisWeek.map(t => t.id));
+  const weekIds = new Set(thisWeekUnsorted.map(t => t.id));
 
-  const needsTriage = visibleTasks.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && (isTaskStale(t) || !t.project || (t.text||'').length < 10));
-  const triageIds = new Set(needsTriage.map(t => t.id));
+  const needsTriageUnsorted = visible.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && (isTaskStale(t) || !t.project || (t.text||'').length < 10));
+  const triageIds = new Set(needsTriageUnsorted.map(t => t.id));
 
-  const backlog = visibleTasks.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && !triageIds.has(t.id));
+  const backlogUnsorted = visible.filter(t => !todayIds.has(t.id) && !weekIds.has(t.id) && !triageIds.has(t.id));
+
+  // NOW apply sort to each bucket
+  const doToday = applyTaskSort(doTodayUnsorted);
+  const thisWeek = applyTaskSort(thisWeekUnsorted);
+  const needsTriage = applyTaskSort(needsTriageUnsorted);
+  const backlog = applyTaskSort(backlogUnsorted);
+  scheduled = applyTaskSort(scheduled);
 
   // Render sections
   board.innerHTML =
