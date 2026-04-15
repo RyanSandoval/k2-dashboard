@@ -4682,7 +4682,7 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
       else if (b.sourceDate) bTime = new Date(b.sourceDate).getTime();
       else if (b.created) bTime = new Date(b.created).getTime();
       
-      return aTime - bTime;  // Oldest first
+      return bTime - aTime;  // Newest first
     });
   }
 
