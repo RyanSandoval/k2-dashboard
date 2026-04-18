@@ -1651,6 +1651,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <!-- Populated by renderTasks(): project pills + context pills -->
       </div>
       <div id="task-sort-bar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:8px;"></div>
+      <div id="viking-only-toggle" style="display:flex;gap:6px;align-items:center;padding:0 8px;border-left:1px solid var(--border-subtle);margin-left:8px;"></div>
       <div id="focus-board">
         <!-- Populated by renderTasks() -->
       </div>
@@ -4697,6 +4698,16 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   }
 
 
+  
+  // Viking-only filter mode
+  window._vikingOnly = false;
+  
+  function toggleVikingOnly() {
+    window._vikingOnly = !window._vikingOnly;
+    localStorage.setItem('viking_only_mode', window._vikingOnly);
+    renderTasks();
+  }
+
   function renderTasks() {
   const board = document.getElementById('focus-board');
   if (!board) return;
@@ -4722,6 +4733,11 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
 
   // Base: all open tasks (top-level only — subtasks shown inside parent modals)
   let tasks = DATA.tasks.filter(t => !(t.done || t.status === 'done') && !t.parentId);
+  
+  // Apply Viking-only filter if enabled
+  if (window._vikingOnly) {
+    tasks = tasks.filter(t => t.project === 'pricing-automation');
+  }
 
   // Smart list filter
   const slIndicator = document.getElementById('smart-list-indicator');
@@ -4748,6 +4764,13 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   // Context filter
   if (window._activeContext) {
     tasks = tasks.filter(t => t.context === window._activeContext);
+  }
+
+  // Render Viking-only toggle
+  const vikingToggleBtn = document.getElementById('viking-only-toggle');
+  if (vikingToggleBtn) {
+    const isVikingOnly = window._vikingOnly || false;
+    vikingToggleBtn.innerHTML = '<button onclick="toggleVikingOnly()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (isVikingOnly ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">🚢 Viking Only</button>';
   }
 
   // Render filter bar (project pills + context pills)
