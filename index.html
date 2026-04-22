@@ -8399,6 +8399,20 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('clips');
         showToast('🔗 Clipped: ' + (clipTitle || clipUrl).slice(0, 50));
       }
+      // Deep-link to a specific task: ?task=ID
+      const taskParam = params.get('task');
+      if (taskParam) {
+        const tid = /^\d+$/.test(taskParam) ? parseInt(taskParam, 10) : taskParam;
+        const task = (DATA.tasks || []).find(t => String(t.id) === String(tid));
+        if (task) {
+          navigateTo('tasks');
+          setTimeout(() => openTaskModal(tid), 50);
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          showToast('Task #' + taskParam + ' not found');
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
     });
     initSelectionToolbar();
     initKeyboardShortcuts();
