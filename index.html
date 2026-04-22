@@ -7106,8 +7106,29 @@ function debouncedSavePreviousDoc(date) {
     if (!editor) return;
     if (!DATA.dailyDocs) DATA.dailyDocs = {};
     if (!DATA.dailyDocs[date]) DATA.dailyDocs[date] = {};
-    DATA.dailyDocs[date].content = editor.getHTML();
+    const html = editor.getHTML();
+    DATA.dailyDocs[date].content = html;
     DATA.dailyDocs[date].updatedAt = new Date().toISOString();
+
+    // Mirror runDailyDocSave: extract tasks from this day's doc and sync done/text
+    // state back to DATA.tasks. Without this, toggling a checkbox in a past day's
+    // Jot updated the HTML but left DATA.tasks stale (tasks kept showing as open).
+    const plainText = convertHTMLToText(html);
+    const { created, updated, activeTexts } = extractAndCreateTasks(plainText || '', null, { sourceDate: date });
+
+    const before = DATA.tasks.length;
+    DATA.tasks = DATA.tasks.filter(t => {
+      if (t.source !== 'jot') return true;
+      const taskDay = t.sourceDate || t.created;
+      if (taskDay !== date) return true;
+      return activeTexts.has(t.text);
+    });
+    const removed = before - DATA.tasks.length;
+
+    if (created > 0 || updated > 0 || removed > 0) {
+      renderTasks();
+    }
+
     await saveData();
   }, 1500);
 }
