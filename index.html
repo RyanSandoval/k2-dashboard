@@ -7559,7 +7559,7 @@ function extractAndCreateTasks(text, projectId, options) {
   options = options || {};
 
   // Match both unchecked [] and checked [x] tasks  
-  let taskMatches = text.match(/\[\[x\\s\]*\\][^\\n]*/gi) || [];
+  let taskMatches = text.match(/\[[x\s]*\][^\n]*/gi) || [];
   // Also catch ☐ (unchecked) and ☑/☒ (checked) symbols for robustness
   const symbolMatches = text.match(/[☐☑☒][^\n]*/g) || [];
   const allMatches = [...taskMatches, ...symbolMatches];
