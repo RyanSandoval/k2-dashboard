@@ -10582,7 +10582,7 @@ import Link from 'https://esm.sh/@tiptap/extension-link@2.11.5';
 
 import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.11.5';
 import Typography from 'https://esm.sh/@tiptap/extension-typography@2.11.5';
-import { Node, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.11.5';
+import { Node, Extension, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.11.5';
 import { PluginKey, Plugin } from 'https://esm.sh/@tiptap/pm@2.11.5/state';
 
 // Make TipTap available globally for note editors
@@ -11235,6 +11235,31 @@ function handleEditorUpdate(editor) {
 }
 
 // Create editor instance
+const EmptyItemBackspace = Extension.create({
+  name: 'emptyItemBackspace',
+  addKeyboardShortcuts() {
+    return {
+      Backspace: ({ editor }) => {
+        const { state } = editor;
+        const { $from, from, to } = state.selection;
+        if (from !== to) return false;
+        if ($from.parentOffset !== 0) return false;
+        if ($from.parent.content.size !== 0) return false;
+        if ($from.depth < 2) return false;
+        const wrapper = $from.node($from.depth - 1);
+        if (!wrapper) return false;
+        if (wrapper.type.name === 'listItem') {
+          return editor.commands.liftListItem('listItem');
+        }
+        if (wrapper.type.name === 'taskItem') {
+          return editor.commands.liftListItem('taskItem');
+        }
+        return false;
+      },
+    };
+  },
+});
+
 function createEditor(element, content, options = {}) {
   const extensions = [
     StarterKit.configure({
@@ -11242,6 +11267,7 @@ function createEditor(element, content, options = {}) {
     }),
     TaskList,
     TaskItem.configure({ nested: true }),
+    EmptyItemBackspace,
     Link.configure({ openOnClick: true, autolink: true, HTMLAttributes: { class: 'note-link', style: 'color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all;' } }),
     Placeholder.configure({ placeholder: options.placeholder || 'Start typing...' }),
     Typography,
