@@ -6257,11 +6257,13 @@ function renderNotes(page = 0) {
               ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
               ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
               ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
-              <button onclick="openNoteEditor('${noteId}'); event.stopPropagation();" 
+              <button onclick="openNoteEditor('${noteId}'); event.stopPropagation();"
                       style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Expand">⤢</button>
-              <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();" 
+              <button onclick="copyNoteLink('${noteId}', event);"
+                      style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Copy link">🔗</button>
+              <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();"
                       style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px;">🤖</button>
-              <button onclick="deleteNote('${noteId}'); event.stopPropagation();" 
+              <button onclick="deleteNote('${noteId}'); event.stopPropagation();"
                       style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;">🗑</button>
             </div>
           </div>
@@ -6362,6 +6364,26 @@ function renderBacklinks(noteId) {
   }).join('');
 }
 
+function copyNoteLink(noteId, evt) {
+  if (evt) evt.stopPropagation();
+  if (!noteId) return;
+  const url = window.location.origin + window.location.pathname + '?note=' + encodeURIComponent(noteId);
+  const done = () => showToast('🔗 Note link copied');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch {}
+      document.body.removeChild(ta);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch {}
+    document.body.removeChild(ta);
+  }
+}
+
 function openNoteEditor(noteId) {
   let note;
   if (noteId) {
@@ -6374,6 +6396,13 @@ function openNoteEditor(noteId) {
     DATA.notes.push(note);
   }
   activeNoteId = note.id;
+
+  // Reflect the active note in the URL for shareable deep links
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('note', note.id);
+    window.history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
+  } catch {}
 
   // Show editor, hide list
   document.getElementById('note-editor-view').style.display = 'block';
@@ -6531,6 +6560,8 @@ async function closeNoteEditor() {
     }
   }
   activeNoteId = null;
+  // Strip ?note=ID from the URL when leaving the note view
+  try { window.history.replaceState({}, '', window.location.pathname); } catch {}
   document.getElementById('note-editor-view').style.display = 'none';
   document.querySelector('#page-notes > .page-header').style.display = '';
   document.getElementById('notes-list').style.display = '';
