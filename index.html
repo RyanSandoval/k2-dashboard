@@ -8705,6 +8705,18 @@ document.addEventListener('DOMContentLoaded', () => {
           window.history.replaceState({}, '', window.location.pathname);
         }
       }
+      // Deep-link to a specific note: ?note=ID
+      const noteParam = params.get('note');
+      if (noteParam) {
+        const note = (DATA.notes || []).find(n => String(n.id) === String(noteParam));
+        if (note) {
+          navigateToNoteSource(note.id);
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          showToast('Note ' + noteParam + ' not found');
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
     });
     initSelectionToolbar();
     initKeyboardShortcuts();
