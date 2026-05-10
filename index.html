@@ -3836,7 +3836,7 @@ function renderProjects() {
                 ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
               </div>
               <div class="kanban-card-meta">
-                <span class="kanban-card-date">Since ${p.started}</span>
+                <span class="kanban-card-date">Since ${p.started || '—'}</span>
                 ${taskCounts[i].total > 0 ? `
                   <span class="kanban-card-tasks">✅ ${taskCounts[i].done}/${taskCounts[i].total}</span>
                 ` : ''}
