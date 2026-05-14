@@ -1284,6 +1284,176 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     border-radius:var(--radius-sm); white-space:nowrap;
   }
   .clip-send-option:hover { background:var(--surface3); color:var(--text); }
+
+  /* ═══ Work Mode Presets ═══ */
+  /* Preset switcher in sidebar */
+  .preset-switcher {
+    margin: 6px 10px 8px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .preset-switcher-trigger {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+    padding: 6px 10px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color var(--dur-fast);
+    min-width: 0;
+  }
+  .preset-switcher-trigger:hover { border-color: var(--accent); }
+  .preset-switcher-trigger .preset-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preset-switcher-trigger .preset-caret { color: var(--text-dim); font-size: 10px; }
+  .preset-switcher-manage {
+    background: var(--surface2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .preset-switcher-manage:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Preset popover (list of presets) */
+  .preset-popover {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    padding: 6px;
+    min-width: 200px;
+    max-width: 240px;
+    z-index: 9998;
+    display: none;
+  }
+  .preset-popover.visible { display: block; }
+  .preset-popover-item {
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    cursor: pointer;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.3;
+  }
+  .preset-popover-item:hover { background: var(--surface2); }
+  .preset-popover-item.active { background: var(--accent-surface); color: var(--accent); font-weight: 600; }
+  .preset-popover-item .preset-icon { font-size: 14px; flex-shrink: 0; }
+  .preset-popover-item .preset-desc { font-size: 11px; color: var(--text-dim); margin-top: 1px; font-weight: normal; }
+  .preset-popover-divider { height: 1px; background: var(--border-subtle); margin: 4px 6px; }
+
+  /* Sidebar collapsed (Meeting / Deep Work modes) */
+  body.preset-sidebar-collapsed .sidebar {
+    width: 56px;
+    padding: var(--sp-3) 0;
+    overflow-x: hidden;
+  }
+  body.preset-sidebar-collapsed .sidebar-header,
+  body.preset-sidebar-collapsed .sidebar-footer,
+  body.preset-sidebar-collapsed .search-trigger,
+  body.preset-sidebar-collapsed .nav-section-title,
+  body.preset-sidebar-collapsed .nav-item .badge,
+  body.preset-sidebar-collapsed #sidebar-capture-row,
+  body.preset-sidebar-collapsed .preset-switcher,
+  body.preset-sidebar-collapsed [id$="-more-btn"],
+  body.preset-sidebar-collapsed #nav-work-more,
+  body.preset-sidebar-collapsed #nav-ref-more,
+  body.preset-sidebar-collapsed #smart-lists-nav-section {
+    display: none !important;
+  }
+  /* nav-items have raw text nodes (no wrapping span) — kill text via font-size:0,
+     restore icons via .icon's own rule */
+  body.preset-sidebar-collapsed .nav-item {
+    font-size: 0;
+    justify-content: center;
+    padding: 8px 0;
+    gap: 0;
+  }
+  body.preset-sidebar-collapsed .nav-item .icon {
+    font-size: 18px;
+    width: auto;
+  }
+  body.preset-sidebar-collapsed .nav-item #review-overdue-badge {
+    font-size: 11px;
+  }
+
+  /* Focus mode (Deep Work) — minimize chrome, hide most surfacing */
+  body.preset-focus-mode .main { padding: var(--sp-4); }
+  body.preset-focus-mode .page-header { margin-bottom: var(--sp-3); }
+
+  /* Hidden panels (driven by JS via inline display:none on each ID) — rule kept for compat */
+  .preset-panel-hidden { display: none !important; }
+
+  /* Active preset accent on switcher */
+  body.preset-active-meeting .preset-switcher-trigger { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  body.preset-active-deepwork .preset-switcher-trigger { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  body.preset-active-review .preset-switcher-trigger { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+
+  /* Manage modal preset row */
+  .preset-manage-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    background: var(--surface2);
+  }
+  .preset-manage-row .preset-row-icon { font-size: 18px; flex-shrink: 0; }
+  .preset-manage-row .preset-row-body { flex: 1; min-width: 0; }
+  .preset-manage-row .preset-row-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .preset-manage-row .preset-row-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+  .preset-manage-row .preset-row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .preset-manage-row .preset-row-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .preset-manage-row .preset-row-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .preset-manage-row .preset-row-btn.danger:hover { color: var(--red); border-color: var(--red); }
+  .preset-manage-row .preset-row-builtin { font-size: 10px; color: var(--text-muted); padding: 1px 6px; background: var(--surface3); border-radius: 8px; }
+
+  .preset-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .preset-edit-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .preset-edit-checkbox input { margin: 0; cursor: pointer; }
+
+  @media (max-width: 768px) {
+    .preset-switcher { display: none; }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
@@ -1372,11 +1542,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <h1>🤖 <span>K2</span> HQ</h1>
       <p>Command Center</p>
     </div>
+    <div class="preset-switcher" id="preset-switcher" title="Work mode (⌘⇧M to cycle)">
+      <button class="preset-switcher-trigger" id="preset-switcher-trigger" onclick="togglePresetPopover(event)" type="button">
+        <span class="preset-icon" id="preset-switcher-icon">🎛️</span>
+        <span class="preset-name" id="preset-switcher-name">Default</span>
+        <span class="preset-caret">▾</span>
+      </button>
+      <button class="preset-switcher-manage" onclick="openPresetsManager()" type="button" title="Manage presets">⚙</button>
+    </div>
+    <div class="preset-popover" id="preset-popover" onclick="event.stopPropagation()"></div>
     <div class="search-trigger" onclick="openSearch()">
       <span>🔍</span> Search...
       <span class="search-kbd">⌘/</span>
     </div>
-    <div style="padding:0 10px 6px;">
+    <div id="sidebar-capture-row" style="padding:0 10px 6px;">
       <div style="display:flex;gap:6px;">
         <input id="sidebar-capture-input" type="text" placeholder="⚡ Capture…"
           style="flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border-color var(--dur-fast);"
@@ -1499,7 +1678,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="dash-heatmap" style="margin-bottom:16px;"></div>
 
       <!-- Morning Brief -->
-      <div class="card" style="margin-bottom:20px;border-left:3px solid var(--accent);">
+      <div class="card" id="dash-morning-brief" style="margin-bottom:20px;border-left:3px solid var(--accent);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div style="font-size:14px;font-weight:700;">☀️ Morning Brief</div>
           <button onclick="renderDashboard()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--text-dim);cursor:pointer;">↺ Refresh</button>
@@ -1543,7 +1722,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
 
       <!-- Quick Actions -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+      <div id="dash-quick-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
         <button onclick="navigateTo('tasks')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">✅ + Task</button>
         <button onclick="navigateTo('jots')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">✏️ Open Jot</button>
         <button onclick="navigateTo('notes')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">📄 New Note</button>
@@ -11436,6 +11615,40 @@ setTimeout(() => {
 }, 500);
 </script>
 
+<!-- Work Mode Presets — Manage Modal -->
+<div id="presets-manage-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;max-width:520px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:700;">🎛️ Work Mode Presets</div>
+      <button onclick="closePresetsManager()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:0;">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+      Saved layouts inspired by Craft and Obsidian workspaces. Switch instantly to focus on what matters in this moment. Press <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:monospace;font-size:11px;">⌘⇧M</kbd> to cycle.
+    </div>
+    <div id="presets-manage-list"></div>
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-subtle);">
+      <button onclick="startNewPreset()" style="background:var(--accent-surface);border:1px solid var(--accent);border-radius:var(--radius-sm);color:var(--accent);padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600;font-family:inherit;">+ New preset</button>
+      <button onclick="closePresetsManager()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:7px 16px;font-size:12px;cursor:pointer;font-family:inherit;">Done</button>
+    </div>
+    <!-- Edit form (hidden until New / Edit) -->
+    <div id="preset-edit-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-subtle);">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;" id="preset-edit-title">New preset</div>
+      <div style="display:grid;grid-template-columns:60px 1fr;gap:8px;margin-bottom:10px;">
+        <input id="preset-edit-icon" maxlength="2" placeholder="🎛️" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:7px;font-size:14px;text-align:center;outline:none;font-family:inherit;">
+        <input id="preset-edit-name" placeholder="Preset name" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:7px 10px;font-size:13px;outline:none;font-family:inherit;">
+      </div>
+      <label class="preset-edit-checkbox"><input type="checkbox" id="preset-edit-sidebar"> Collapse sidebar</label>
+      <label class="preset-edit-checkbox"><input type="checkbox" id="preset-edit-focus"> Focus mode (minimize chrome)</label>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:10px;margin-bottom:4px;">Hide dashboard panels:</div>
+      <div class="preset-edit-grid" id="preset-edit-panels"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <button onclick="cancelPresetEdit()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button onclick="savePresetEdit()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;padding:7px 16px;font-size:12px;cursor:pointer;font-family:inherit;">Save preset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Settings Modal -->
 <div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;max-width:480px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto;">
@@ -11454,5 +11667,400 @@ setTimeout(() => {
     </div>
   </div>
 </div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Work Mode Presets / Context Profiles
+   Inspired by Craft Notes and Obsidian workspaces — saved
+   dashboard layouts you can switch with one click or ⌘⇧M.
+   ═══════════════════════════════════════════════════════════════ */
+(function() {
+  const STORAGE_KEY = 'k2_presets';
+  const ACTIVE_KEY = 'k2_active_preset';
+
+  // Panels that can be hidden via preset (id → label)
+  const PANELS = [
+    { id: 'dash-greeting',           label: 'Greeting' },
+    { id: 'dash-heatmap',            label: 'Heatmap' },
+    { id: 'dash-morning-brief',      label: 'Morning Brief' },
+    { id: 'dash-daily-advisor',      label: 'Daily Advisor' },
+    { id: 'dash-jot-interpreter',    label: 'Jot Interpreter' },
+    { id: 'dash-ai-focus',           label: 'AI Focus' },
+    { id: 'dash-grid',               label: 'Top Tasks + Today’s Jot' },
+    { id: 'dash-quick-actions',      label: 'Quick Actions' },
+    { id: 'stats-row',               label: 'Stats Row' },
+    { id: 'dash-decision-resurfacer',label: 'Decision Resurfacer' },
+    { id: 'dash-bottom-grid',        label: 'Projects + Activity' },
+    { id: 'dash-gcal-card',          label: 'Today’s Calendar' },
+  ];
+
+  // Built-in seed presets — Ryan's three modes plus baseline.
+  const BUILT_IN = [
+    {
+      id: 'default',
+      name: 'Default',
+      icon: '🎛️',
+      desc: 'Everything visible',
+      builtIn: true,
+      sidebarCollapsed: false,
+      focusMode: false,
+      hiddenPanels: [],
+    },
+    {
+      id: 'meeting',
+      name: 'Meeting',
+      icon: '📅',
+      desc: 'Sidebar collapsed, only Top Tasks + Calendar',
+      builtIn: true,
+      sidebarCollapsed: true,
+      focusMode: false,
+      hiddenPanels: [
+        'dash-heatmap','dash-morning-brief','dash-daily-advisor',
+        'dash-jot-interpreter','dash-ai-focus','dash-quick-actions',
+        'stats-row','dash-decision-resurfacer','dash-bottom-grid',
+      ],
+    },
+    {
+      id: 'deepwork',
+      name: 'Deep Work',
+      icon: '🎯',
+      desc: 'Sidebar collapsed, no surfacing — heads down',
+      builtIn: true,
+      sidebarCollapsed: true,
+      focusMode: true,
+      hiddenPanels: [
+        'dash-heatmap','dash-morning-brief','dash-daily-advisor',
+        'dash-jot-interpreter','dash-ai-focus','dash-quick-actions',
+        'stats-row','dash-decision-resurfacer','dash-bottom-grid',
+        'dash-gcal-card',
+      ],
+    },
+    {
+      id: 'review',
+      name: 'Review',
+      icon: '🔄',
+      desc: 'Daily Advisor + Decisions + Stats — what to revisit',
+      builtIn: true,
+      sidebarCollapsed: false,
+      focusMode: false,
+      hiddenPanels: [
+        'dash-heatmap','dash-morning-brief','dash-jot-interpreter',
+        'dash-ai-focus','dash-quick-actions','dash-gcal-card',
+      ],
+    },
+  ];
+
+  let editing = null; // null or { id, isNew }
+
+  function loadPresets() {
+    let custom = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) custom = JSON.parse(raw) || [];
+    } catch (e) { console.warn('[presets] failed to load custom:', e); }
+    return [...BUILT_IN, ...custom.filter(p => p && p.id && !BUILT_IN.find(b => b.id === p.id))];
+  }
+
+  function saveCustom(custom) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+    } catch (e) { console.warn('[presets] failed to save:', e); }
+  }
+
+  function getCustom() {
+    return loadPresets().filter(p => !p.builtIn);
+  }
+
+  function getActiveId() {
+    return localStorage.getItem(ACTIVE_KEY) || 'default';
+  }
+
+  function setActiveId(id) {
+    localStorage.setItem(ACTIVE_KEY, id);
+  }
+
+  function findPreset(id) {
+    return loadPresets().find(p => p.id === id) || BUILT_IN[0];
+  }
+
+  function applyPreset(id, opts) {
+    const preset = findPreset(id);
+    setActiveId(preset.id);
+    const body = document.body;
+
+    // Reset preset-driven body classes
+    Array.from(body.classList).forEach(c => {
+      if (c.startsWith('preset-active-')) body.classList.remove(c);
+    });
+    body.classList.toggle('preset-sidebar-collapsed', !!preset.sidebarCollapsed);
+    body.classList.toggle('preset-focus-mode', !!preset.focusMode);
+    body.classList.add('preset-active-' + preset.id.replace(/[^a-z0-9_-]/gi, ''));
+
+    // Show all panels first, then hide the ones in this preset.
+    PANELS.forEach(p => {
+      const el = document.getElementById(p.id);
+      if (!el) return;
+      el.dataset.presetHiddenWas = el.dataset.presetHiddenWas || (el.style.display || '');
+      el.style.display = '';
+    });
+    (preset.hiddenPanels || []).forEach(pid => {
+      const el = document.getElementById(pid);
+      if (el) el.style.display = 'none';
+    });
+
+    renderPresetSwitcher();
+    if (!opts || !opts.silent) {
+      try { window.showToast && window.showToast(preset.icon + ' ' + preset.name + ' mode'); } catch (e) {}
+    }
+  }
+
+  function renderPresetSwitcher() {
+    const trigger = document.getElementById('preset-switcher-trigger');
+    if (!trigger) return;
+    const active = findPreset(getActiveId());
+    const iconEl = document.getElementById('preset-switcher-icon');
+    const nameEl = document.getElementById('preset-switcher-name');
+    if (iconEl) iconEl.textContent = active.icon || '🎛️';
+    if (nameEl) nameEl.textContent = active.name;
+    renderPresetPopover();
+  }
+
+  function renderPresetPopover() {
+    const pop = document.getElementById('preset-popover');
+    if (!pop) return;
+    const all = loadPresets();
+    const activeId = getActiveId();
+    const builtIns = all.filter(p => p.builtIn);
+    const customs = all.filter(p => !p.builtIn);
+    const itemHtml = p => `
+      <div class="preset-popover-item ${p.id === activeId ? 'active' : ''}" onclick="setPreset('${p.id.replace(/'/g, "\\'")}')">
+        <span class="preset-icon">${p.icon || '🎛️'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapePresetText(p.name)}</div>
+          ${p.desc ? `<div class="preset-desc">${escapePresetText(p.desc)}</div>` : ''}
+        </div>
+      </div>`;
+    pop.innerHTML =
+      builtIns.map(itemHtml).join('') +
+      (customs.length ? '<div class="preset-popover-divider"></div>' + customs.map(itemHtml).join('') : '') +
+      '<div class="preset-popover-divider"></div>' +
+      `<div class="preset-popover-item" onclick="closePresetPopover();openPresetsManager()" style="color:var(--text-dim);font-size:12px;">⚙ Manage presets…</div>`;
+  }
+
+  function escapePresetText(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function togglePresetPopover(e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('preset-popover');
+    const trigger = document.getElementById('preset-switcher-trigger');
+    if (!pop || !trigger) return;
+    if (pop.classList.contains('visible')) {
+      pop.classList.remove('visible');
+      return;
+    }
+    const r = trigger.getBoundingClientRect();
+    pop.style.left = r.left + 'px';
+    pop.style.top = (r.bottom + 4) + 'px';
+    pop.style.width = Math.max(r.width, 200) + 'px';
+    pop.classList.add('visible');
+  }
+
+  function closePresetPopover() {
+    document.getElementById('preset-popover')?.classList.remove('visible');
+  }
+
+  function setPreset(id) {
+    closePresetPopover();
+    applyPreset(id);
+  }
+
+  function cyclePreset() {
+    const all = loadPresets();
+    const idx = all.findIndex(p => p.id === getActiveId());
+    const next = all[(idx + 1) % all.length];
+    applyPreset(next.id);
+  }
+
+  /* ═══ Manage Modal ═══ */
+  function openPresetsManager() {
+    closePresetPopover();
+    const modal = document.getElementById('presets-manage-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    renderManageList();
+    cancelPresetEdit();
+  }
+
+  function closePresetsManager() {
+    const modal = document.getElementById('presets-manage-modal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function renderManageList() {
+    const list = document.getElementById('presets-manage-list');
+    if (!list) return;
+    const all = loadPresets();
+    const activeId = getActiveId();
+    list.innerHTML = all.map(p => {
+      const hiddenCount = (p.hiddenPanels || []).length;
+      const flags = [];
+      if (p.sidebarCollapsed) flags.push('sidebar collapsed');
+      if (p.focusMode) flags.push('focus mode');
+      flags.push(hiddenCount === 0 ? 'all panels visible' : `${hiddenCount} panel${hiddenCount === 1 ? '' : 's'} hidden`);
+      const isActive = p.id === activeId;
+      const safeId = p.id.replace(/'/g, "\\'");
+      return `
+        <div class="preset-manage-row">
+          <div class="preset-row-icon">${p.icon || '🎛️'}</div>
+          <div class="preset-row-body">
+            <div class="preset-row-name">${escapePresetText(p.name)}${isActive ? ' <span style="font-size:10px;color:var(--accent);font-weight:600;">· active</span>' : ''}${p.builtIn ? ' <span class="preset-row-builtin">built-in</span>' : ''}</div>
+            <div class="preset-row-meta">${flags.join(' · ')}${p.desc ? ' — ' + escapePresetText(p.desc) : ''}</div>
+          </div>
+          <div class="preset-row-actions">
+            <button class="preset-row-btn" onclick="setPreset('${safeId}')">Apply</button>
+            ${p.builtIn ? '' : `<button class="preset-row-btn" onclick="editPreset('${safeId}')">Edit</button>`}
+            ${p.builtIn ? '' : `<button class="preset-row-btn danger" onclick="deletePreset('${safeId}')">Delete</button>`}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function startNewPreset() {
+    editing = { id: null, isNew: true };
+    const baseline = findPreset(getActiveId());
+    fillEditForm({
+      icon: '🎛️',
+      name: '',
+      sidebarCollapsed: !!baseline.sidebarCollapsed,
+      focusMode: !!baseline.focusMode,
+      hiddenPanels: [...(baseline.hiddenPanels || [])],
+    });
+    document.getElementById('preset-edit-title').textContent = 'New preset';
+    document.getElementById('preset-edit-form').style.display = 'block';
+  }
+
+  function editPreset(id) {
+    const preset = findPreset(id);
+    if (!preset || preset.builtIn) return;
+    editing = { id, isNew: false };
+    fillEditForm(preset);
+    document.getElementById('preset-edit-title').textContent = 'Edit preset';
+    document.getElementById('preset-edit-form').style.display = 'block';
+  }
+
+  function fillEditForm(spec) {
+    document.getElementById('preset-edit-icon').value = spec.icon || '🎛️';
+    document.getElementById('preset-edit-name').value = spec.name || '';
+    document.getElementById('preset-edit-sidebar').checked = !!spec.sidebarCollapsed;
+    document.getElementById('preset-edit-focus').checked = !!spec.focusMode;
+    const grid = document.getElementById('preset-edit-panels');
+    const hidden = new Set(spec.hiddenPanels || []);
+    grid.innerHTML = PANELS.map(p => `
+      <label class="preset-edit-checkbox">
+        <input type="checkbox" data-panel-id="${p.id}" ${hidden.has(p.id) ? 'checked' : ''}>
+        ${escapePresetText(p.label)}
+      </label>`).join('');
+  }
+
+  function cancelPresetEdit() {
+    editing = null;
+    document.getElementById('preset-edit-form').style.display = 'none';
+  }
+
+  function savePresetEdit() {
+    if (!editing) return;
+    const name = (document.getElementById('preset-edit-name').value || '').trim();
+    if (!name) {
+      alert('Name is required');
+      return;
+    }
+    const icon = (document.getElementById('preset-edit-icon').value || '').trim() || '🎛️';
+    const sidebarCollapsed = document.getElementById('preset-edit-sidebar').checked;
+    const focusMode = document.getElementById('preset-edit-focus').checked;
+    const hiddenPanels = Array.from(document.querySelectorAll('#preset-edit-panels input[type="checkbox"]'))
+      .filter(cb => cb.checked).map(cb => cb.dataset.panelId);
+
+    const custom = getCustom();
+    if (editing.isNew) {
+      const newId = 'custom-' + Date.now().toString(36);
+      custom.push({ id: newId, name, icon, sidebarCollapsed, focusMode, hiddenPanels });
+      saveCustom(custom);
+      applyPreset(newId);
+    } else {
+      const idx = custom.findIndex(p => p.id === editing.id);
+      if (idx >= 0) {
+        custom[idx] = { ...custom[idx], name, icon, sidebarCollapsed, focusMode, hiddenPanels };
+        saveCustom(custom);
+        if (getActiveId() === editing.id) applyPreset(editing.id);
+      }
+    }
+    cancelPresetEdit();
+    renderManageList();
+    renderPresetSwitcher();
+  }
+
+  function deletePreset(id) {
+    const preset = findPreset(id);
+    if (!preset || preset.builtIn) return;
+    if (!confirm(`Delete preset "${preset.name}"?`)) return;
+    const custom = getCustom().filter(p => p.id !== id);
+    saveCustom(custom);
+    if (getActiveId() === id) applyPreset('default');
+    renderManageList();
+    renderPresetSwitcher();
+  }
+
+  function initPresets() {
+    if (document.getElementById('preset-switcher-trigger')) {
+      applyPreset(getActiveId(), { silent: true });
+    }
+    document.addEventListener('click', (e) => {
+      const pop = document.getElementById('preset-popover');
+      const trigger = document.getElementById('preset-switcher-trigger');
+      if (!pop || !pop.classList.contains('visible')) return;
+      if (pop.contains(e.target)) return;
+      if (trigger && trigger.contains(e.target)) return;
+      pop.classList.remove('visible');
+    });
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'm' || e.key === 'M')) {
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        cyclePreset();
+      }
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('presets-manage-modal');
+        if (modal && modal.style.display === 'flex') closePresetsManager();
+        closePresetPopover();
+      }
+    });
+  }
+
+  // Expose to global so onclick handlers + closeAllModals can reach them
+  window.togglePresetPopover = togglePresetPopover;
+  window.closePresetPopover = closePresetPopover;
+  window.setPreset = setPreset;
+  window.cyclePreset = cyclePreset;
+  window.openPresetsManager = openPresetsManager;
+  window.closePresetsManager = closePresetsManager;
+  window.startNewPreset = startNewPreset;
+  window.editPreset = editPreset;
+  window.deletePreset = deletePreset;
+  window.cancelPresetEdit = cancelPresetEdit;
+  window.savePresetEdit = savePresetEdit;
+  window.applyPreset = applyPreset;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPresets);
+  } else {
+    initPresets();
+  }
+})();
+</script>
 </body>
 </html>
