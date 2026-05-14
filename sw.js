@@ -1,16 +1,20 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v1';
+const CACHE_NAME = 'k2-hq-v2';
 const ASSETS = [
-  '/k2-dashboard/',
-  '/k2-dashboard/index.html',
-  '/k2-dashboard/favicon.svg',
-  '/k2-dashboard/manifest.json',
-  '/k2-dashboard/icon-192.png',
-  '/k2-dashboard/icon-512.png'
+  './',
+  './index.html',
+  './favicon.svg',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(c =>
+      Promise.all(ASSETS.map(a => c.add(a).catch(err => console.warn('sw: skip', a, err))))
+    )
+  );
   self.skipWaiting();
 });
 
