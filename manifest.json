@@ -1,7 +1,7 @@
 {
-  "name": "K-2 Command Center",
-  "short_name": "K-2 HQ",
-  "description": "K-2's Command Center Dashboard",
+  "name": "K2 Command Center",
+  "short_name": "K2",
+  "description": "K2 Command Center Dashboard",
   "start_url": "/k2-dashboard/",
   "display": "standalone",
   "background_color": "#0a0a0f",
