@@ -35,6 +35,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         person_profiles: 'identified_only'
     })
 </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('sw register failed:', err));
+    });
+  }
+</script>
 <style>
   :root {
     /* ── OKLCH palette — cool neutral, soft blue accent ── */
@@ -4021,7 +4028,7 @@ function renderProjects() {
                 ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
               </div>
               <div class="kanban-card-meta">
-                <span class="kanban-card-date">Since ${p.started}</span>
+                ${p.started ? `<span class="kanban-card-date">Since ${p.started}</span>` : ''}
                 ${taskCounts[i].total > 0 ? `
                   <span class="kanban-card-tasks">✅ ${taskCounts[i].done}/${taskCounts[i].total}</span>
                 ` : ''}
@@ -4609,7 +4616,7 @@ function openProjectModal(projectId) {
       <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Tags</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">
         ${(p.tags||[]).map(t => `<span class="tag tag-blue">${t}</span>`).join('')}
-        <span class="tag tag-purple">Since ${p.started}</span>
+        ${p.started ? `<span class="tag tag-purple">Since ${p.started}</span>` : ''}
       </div>
     </div>
 
@@ -4665,7 +4672,7 @@ function openProjectModal(projectId) {
             <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer;" onclick="openTaskModal(${safeId(t.id)})">
               <div class="task-check ${t.done ? 'done' : ''}" style="width:16px;height:16px;margin-top:0;"></div>
               <span style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--text-dim);' : ''}">${t.text}</span>
-              <span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>
+              ${t.priority ? `<span class="task-priority priority-${t.priority}" style="font-size:9px;padding:1px 4px;">${t.priority}</span>` : ''}
             </div>
           `).join('')}
         </div>
