@@ -3020,7 +3020,13 @@ function renderMorningBrief(today) {
   const sections = [];
 
   // 1. Overdue tasks
-  const overdue = DATA.tasks.filter(t => !t.done && t.dueDate && t.dueDate < today);
+  const overdue = DATA.tasks.filter(t => {
+    if (t.done || !t.dueDate || t.dueDate >= today) return false;
+    const y = parseInt(String(t.dueDate).slice(0,4), 10);
+    const nowY = new Date().getFullYear();
+    if (!y || y < nowY - 2 || y > nowY + 5) return false;
+    return true;
+  });
   if (overdue.length > 0) {
     sections.push(`<div style="margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🚨 Overdue (${overdue.length})</div>
@@ -4260,7 +4266,7 @@ function openTaskModal(taskId) {
 
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${modalDueInfo && modalDueInfo.overdue ? 'border-left:3px solid var(--red);' : ''}">
       <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Due Date</span>
-      <input type="date" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
+      <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
       ${dueDateDisplay}
       ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date">✕</span>` : ''}
     </div>
@@ -4279,7 +4285,7 @@ function openTaskModal(taskId) {
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${task.hideUntil && task.hideUntil > getTodayStr() ? 'border-left:3px solid var(--yellow);' : ''}">
       <span style="font-size:16px;flex-shrink:0;">⏰</span>
       <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Show me this on:</span>
-      <input type="date" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
+      <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
       ${task.hideUntil && task.hideUntil > getTodayStr() ? `<span style="font-size:11px;color:var(--yellow);font-weight:600;">Hidden until ${task.hideUntil}</span>` : (task.hideUntil ? `<span style="font-size:11px;color:var(--text-dim);">Visible now</span>` : `<span style="font-size:11px;color:var(--text-dim);">Always visible</span>`)}
       ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule">✕</span>` : ''}
     </div>
@@ -5461,6 +5467,17 @@ function renderEisenhowerMatrix() {
 async function setTaskDueDate(taskId, dateStr) {
   const task = DATA.tasks.find(t => t.id == taskId);
   if (!task) return;
+  // Validate: reject obviously-bad years (browser <input type=date> can emit
+  // year 0002 etc. if the user types instead of using the picker).
+  if (dateStr) {
+    const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const nowY = new Date().getFullYear();
+    if (!m || Number(m[1]) < nowY - 1 || Number(m[1]) > nowY + 5) {
+      if (typeof showToast === 'function') showToast('Bad due date — ignored');
+      console.warn('[K2] setTaskDueDate rejected', dateStr);
+      return;
+    }
+  }
   task.dueDate = dateStr || null;
   await saveData();
   renderTasks();
@@ -7315,7 +7332,17 @@ function generateDailyBrief() {
   const today = getTodayStr();
   const tasks = (DATA.tasks || []).filter(t => !t.done && !t.parentId);
   const dueToday = tasks.filter(t => t.dueDate === today);
-  const overdue = tasks.filter(t => t.dueDate && t.dueDate < today);
+  const overdue = tasks.filter(t => {
+    if (!t.dueDate || t.dueDate >= today) return false;
+    // Sanity: reject impossible years (corrupted data shouldn't show as overdue)
+    const y = parseInt(String(t.dueDate).slice(0,4), 10);
+    const nowY = new Date().getFullYear();
+    if (!y || y < nowY - 2 || y > nowY + 5) {
+      console.warn('[K2] skipping task with bad dueDate year:', t.id, t.dueDate);
+      return false;
+    }
+    return true;
+  });
   const gcal = window._gcalEvents || [];
   const todayEvents = gcal.filter(e => {
     const d = new Date();
