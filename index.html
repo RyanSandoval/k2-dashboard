@@ -902,6 +902,22 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
   .mention-project:hover { opacity: 0.85; cursor: pointer; }
   .mention-note:hover { background: #1e3d2e; transform: translateY(-1px); }
+  .mention-task {
+    display: inline-block; background: color-mix(in srgb, var(--red) 12%, transparent);
+    color: var(--red); padding: 1px 7px; border-radius: var(--radius-sm);
+    font-size: var(--text-xs); font-weight: 600; cursor: pointer; border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+    transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+    text-decoration: none; user-select: none;
+  }
+  .mention-task:hover { background: color-mix(in srgb, var(--red) 22%, transparent); transform: translateY(-1px); }
+  .mention-task.is-due-today { background: color-mix(in srgb, var(--yellow) 12%, transparent); color: var(--yellow); border-color: color-mix(in srgb, var(--yellow) 35%, transparent); }
+  .mention-task.is-due-today:hover { background: color-mix(in srgb, var(--yellow) 22%, transparent); }
+  .task-done-inline {
+    display: inline-block; margin-left: 4px; padding: 0 6px; font-size: 11px;
+    background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text-dim); cursor: pointer; user-select: none;
+  }
+  .task-done-inline:hover { background: var(--surface2); color: var(--green); border-color: var(--green); }
   /* Inline timestamp */
   .jot-time-inline { font-size: 11px; color: var(--text-dim); margin-right: 6px; }
   /* Slash command menu */
@@ -7311,13 +7327,21 @@ function generateDailyBrief() {
 
   if (overdue.length > 0) {
     html += '<h2>🔴 Overdue</h2><ul>';
-    overdue.forEach(t => { html += '<li><p>' + escapeHtml((t.text||'').slice(0,60)) + '</p></li>'; });
+    overdue.forEach(t => {
+      const safeId = String(t.id).replace(/"/g, '&quot;');
+      const txt = escapeHtml((t.text||'').slice(0,80));
+      html += '<li><p><span class="mention-task" data-task-id="' + safeId + '">' + txt + '</span> <span class="task-done-inline" data-task-id="' + safeId + '" data-action="complete">✓ done</span></p></li>';
+    });
     html += '</ul>';
   }
 
   if (dueToday.length > 0) {
     html += '<h2>📋 Due Today</h2><ul>';
-    dueToday.forEach(t => { html += '<li><p>' + escapeHtml((t.text||'').slice(0,60)) + '</p></li>'; });
+    dueToday.forEach(t => {
+      const safeId = String(t.id).replace(/"/g, '&quot;');
+      const txt = escapeHtml((t.text||'').slice(0,80));
+      html += '<li><p><span class="mention-task is-due-today" data-task-id="' + safeId + '">' + txt + '</span> <span class="task-done-inline" data-task-id="' + safeId + '" data-action="complete">✓ done</span></p></li>';
+    });
     html += '</ul>';
   }
 
@@ -8657,6 +8681,48 @@ document.addEventListener('click', (e) => {
     e.stopPropagation();
     navigateTo('notes');
     setTimeout(() => openNoteEditor(noteId), 150);
+  }
+});
+
+// Click-to-open / mark-done for task chips inside Daily Brief
+document.addEventListener('click', (e) => {
+  // Mark done button takes priority
+  const doneBtn = e.target.closest('.task-done-inline');
+  if (doneBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const rawId = doneBtn.getAttribute('data-task-id');
+    if (!rawId) return;
+    // Task IDs may be numeric or string; try both
+    const task = DATA.tasks.find(t => String(t.id) === String(rawId));
+    if (!task) { showToast && showToast('Task not found'); return; }
+    task.done = true;
+    task.completedAt = new Date().toISOString();
+    if (typeof saveData === 'function') saveData();
+    // Visual feedback: replace chip with strikethrough text
+    const chip = document.querySelector('.mention-task[data-task-id="' + rawId.replace(/"/g, '&quot;') + '"]');
+    if (chip) {
+      chip.style.textDecoration = 'line-through';
+      chip.style.opacity = '0.5';
+    }
+    doneBtn.style.display = 'none';
+    showToast && showToast('Marked done ✓');
+    // Trigger a UI refresh if functions exist
+    if (typeof renderTasks === 'function') try { renderTasks(); } catch(_) {}
+    if (typeof renderDailyAdvisor === 'function') try { renderDailyAdvisor(); } catch(_) {}
+    return;
+  }
+  // Click on the chip itself opens the task modal
+  const chip = e.target.closest('.mention-task');
+  if (!chip) return;
+  const rawId = chip.getAttribute('data-task-id');
+  if (!rawId) return;
+  const task = DATA.tasks.find(t => String(t.id) === String(rawId));
+  if (!task) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (typeof openTaskModal === 'function') {
+    openTaskModal(task.id);
   }
 });
 
