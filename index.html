@@ -9110,27 +9110,47 @@ function renderInbox() {
     list.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">📭 Inbox zero! Add something above.</div>';
     return;
   }
-  list.innerHTML = items.map(item => {
+  // Defensive: strip phantom items (null/empty text or null id) before rendering
+  const safeItems = items.filter(it => it && it.id != null && it.text && String(it.text).trim());
+  if (safeItems.length !== items.length) {
+    console.warn('[K2] renderInbox: stripping', items.length - safeItems.length, 'phantom inbox item(s)');
+    DATA.inbox = safeItems;
+    // schedule a save (don't block render)
+    if (typeof saveData === 'function') Promise.resolve().then(() => saveData());
+  }
+  if (safeItems.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">📭 Inbox zero! Add something above.</div>';
+    return;
+  }
+  list.innerHTML = safeItems.map(item => {
     _ensureInboxClassification(item);
-    const d = new Date(item.created);
-    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    let dateStr = '';
+    if (item.created) {
+      const d = new Date(item.created);
+      if (!isNaN(d.getTime())) dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
     const meta = INBOX_BUCKET_META[item.suggestedBucket] || INBOX_BUCKET_META['task'];
-    const chip = '<div title="' + escapeHtml(item.suggestionReason || '') + '" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:10px;background:color-mix(in srgb,' + meta.color + ' 15%,transparent);color:' + meta.color + ';border:1px solid color-mix(in srgb,' + meta.color + ' 35%,transparent);white-space:nowrap;">' + meta.icon + ' ' + meta.label + '</div>';
+    // Make the bucket chip itself clickable (tap = accept suggestion). Bigger tap target.
+    const chipOnclick = 'onclick="inboxAcceptSuggestion(' + item.id + ')" role="button"';
+    const chip = '<div ' + chipOnclick + ' title="Tap to accept: ' + escapeHtml(item.suggestionReason || meta.label) + '" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:6px 10px;min-height:32px;border-radius:10px;background:color-mix(in srgb,' + meta.color + ' 15%,transparent);color:' + meta.color + ';border:1px solid color-mix(in srgb,' + meta.color + ' 35%,transparent);white-space:nowrap;cursor:pointer;user-select:none;">' + meta.icon + ' ' + meta.label + '</div>';
+    // Bumped padding to 8x12, min-height 36, min-width 36 — meets WCAG mobile tap target
+    const btnStyle = 'padding:8px 10px;min-height:36px;min-width:36px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:14px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;';
+    const acceptStyle = 'padding:8px 14px;min-height:36px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;';
     return '<div style="padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;">' +
-      '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">' +
         '<div style="flex:1;font-size:14px;color:var(--text);">' + escapeHtml(item.text) + '</div>' +
         '<div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + dateStr + '</div>' +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
         chip +
-        '<span style="font-size:11px;color:var(--text-muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(item.suggestionReason || '') + '</span>' +
-        '<button onclick="inboxAcceptSuggestion(' + item.id + ')" title="Accept suggestion" style="padding:5px 12px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Accept ↵</button>' +
-        '<button onclick="inboxMakeTask(' + item.id + ')" title="Task" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">✅</button>' +
-        '<button onclick="inboxMakeDecision(' + item.id + ')" title="Decision" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">⚖️</button>' +
-        '<button onclick="inboxSomeday(' + item.id + ')" title="Someday" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">💤</button>' +
-        '<button onclick="inboxMakeReference(' + item.id + ')" title="Reference" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">📎</button>' +
-        '<button onclick="deleteInboxItem(' + item.id + ')" title="Trash" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;line-height:1;">✕</button>' +
+        '<button onclick="inboxAcceptSuggestion(' + item.id + ')" title="Accept suggestion" style="' + acceptStyle + '">Accept ↵</button>' +
+        '<button onclick="inboxMakeTask(' + item.id + ')" title="Task" aria-label="Move to Tasks" style="' + btnStyle + '">✅</button>' +
+        '<button onclick="inboxMakeDecision(' + item.id + ')" title="Decision" aria-label="Move to Decisions" style="' + btnStyle + '">⚖️</button>' +
+        '<button onclick="inboxSomeday(' + item.id + ')" title="Someday" aria-label="Move to Someday" style="' + btnStyle + '">💤</button>' +
+        '<button onclick="inboxMakeReference(' + item.id + ')" title="Reference" aria-label="Save as reference" style="' + btnStyle + '">📎</button>' +
+        '<button onclick="deleteInboxItem(' + item.id + ')" title="Delete" aria-label="Delete" style="' + btnStyle + 'color:var(--red);">🗑</button>' +
       '</div>' +
+      (item.suggestionReason ? '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">' + escapeHtml(item.suggestionReason) + '</div>' : '') +
     '</div>';
   }).join('');
 }
@@ -9211,20 +9231,24 @@ function parsedCapturePreview(parsed) {
 }
 
 function addToInbox(text) {
-  if (!text) return;
+  // Guard: never store null/empty/whitespace-only items
+  const t = (text == null ? '' : String(text)).trim();
+  if (!t) { console.warn('[K2] addToInbox: empty text, ignoring'); return; }
   if (!DATA.inbox) DATA.inbox = [];
-  var parsed = parseCapture(text);
+  var parsed = parseCapture(t);
+  const cleanText = (parsed && parsed.text ? String(parsed.text).trim() : '') || t;
+  if (!cleanText) return; // belt-and-suspenders
   DATA.inbox.unshift({
-    id: Date.now(),
-    text: parsed.text || text,
+    id: Date.now() + Math.floor(Math.random()*1000),
+    text: cleanText,
     created: new Date().toISOString(),
-    project: parsed.project,
-    context: parsed.context,
-    dueDate: parsed.dueDate,
-    urgency: parsed.urgency
+    project: parsed.project || null,
+    context: parsed.context || null,
+    dueDate: parsed.dueDate || null,
+    urgency: parsed.urgency != null ? parsed.urgency : null
   });
+  renderInbox(); // optimistic: render before save completes
   saveData();
-  renderInbox();
   showToast('Captured to inbox');
 }
 
@@ -9251,8 +9275,8 @@ async function inboxMakeTask(id) {
   };
   DATA.tasks.push(newTask);
   DATA.inbox.splice(idx, 1);
-  await saveData();
   renderInbox();
+  await saveData();
   renderTasks();
   showToast('Moved to Tasks');
 }
@@ -9264,16 +9288,29 @@ async function inboxSomeday(id) {
   if (!DATA.somedayMaybe) DATA.somedayMaybe = [];
   DATA.somedayMaybe.unshift({ id: Date.now(), text: item.text, created: item.created });
   DATA.inbox.splice(idx, 1);
-  await saveData();
   renderInbox();
+  await saveData();
   renderSomeday();
   showToast('Moved to Someday/Maybe');
 }
 
 async function deleteInboxItem(id) {
-  DATA.inbox = (DATA.inbox || []).filter(i => i.id != id);
+  if (!DATA.inbox) DATA.inbox = [];
+  // Robust delete: by id if present; also strip any phantom items (null/empty text)
+  const before = DATA.inbox.length;
+  DATA.inbox = DATA.inbox.filter(i => {
+    if (i == null) return false;
+    // Always purge phantom rows
+    if (!i.text || !i.id) return false;
+    if (id != null && i.id == id) return false;
+    return true;
+  });
+  if (DATA.inbox.length === before && id == null) {
+    // explicit "delete this index" fallback
+    DATA.inbox.pop();
+  }
+  renderInbox(); // optimistic
   await saveData();
-  renderInbox();
 }
 
 // ═══ GTD Someday/Maybe ═══
@@ -10912,8 +10949,8 @@ async function inboxMakeDecision(id) {
     createdFrom: 'inbox'
   });
   DATA.inbox.splice(idx, 1);
-  await saveData();
   renderInbox();
+  await saveData();
   if (typeof renderDecisions === 'function') renderDecisions();
   showToast('Moved to Decisions');
 }
@@ -10932,8 +10969,8 @@ async function inboxMakeReference(id) {
     kind: 'reference'
   });
   DATA.inbox.splice(idx, 1);
-  await saveData();
   renderInbox();
+  await saveData();
   if (typeof renderSomeday === 'function') renderSomeday();
   showToast('Saved as reference');
 }

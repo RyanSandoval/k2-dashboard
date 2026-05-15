@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v6-date-hardening';
+const CACHE_NAME = 'k2-hq-v7-inbox-fixes';
 const ASSETS = [
   './',
   './index.html',
