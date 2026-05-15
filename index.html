@@ -3008,8 +3008,8 @@ function renderMorningBrief(today) {
   if (overdue.length > 0) {
     sections.push(`<div style="margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🚨 Overdue (${overdue.length})</div>
-      ${overdue.slice(0,3).map(t=>`<div style="font-size:12px;padding:3px 0;color:var(--text-dim);">· ${(t.text||'').slice(0,60)} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
-      ${overdue.length>3?`<div style="font-size:11px;color:var(--red);">+ ${overdue.length-3} more</div>`:''}
+      ${overdue.slice(0,3).map(t=>`<div onclick="openTaskModal(${JSON.stringify(t.id)})" style="font-size:12px;padding:6px 4px;margin:0 -4px;color:var(--text-dim);cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">· ${(t.text||'').slice(0,60).replace(/</g,'&lt;')} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
+      ${overdue.length>3?`<div onclick="navigateTo('tasks')" style="font-size:11px;color:var(--red);cursor:pointer;padding:4px;">+ ${overdue.length-3} more →</div>`:''}
     </div>`);
   }
 
@@ -10925,14 +10925,31 @@ function showSlashMenu(editor, coords, filterText, triggerPos) {
     </div>`
   ).join('');
   
-  // Clamp position to viewport
+  // Clamp position to viewport (mobile-aware: pin above on-screen keyboard)
   const menuW = 240;
+  const menuH = 280;
   const left = Math.max(8, Math.min(coords.left, window.innerWidth - menuW - 8));
-  const top = (coords.bottom + 4) + window.scrollY;
+  // visualViewport reflects keyboard occlusion on iOS/Android; fall back to innerHeight
+  const vv = window.visualViewport;
+  const viewBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
+  const isMobile = window.matchMedia('(max-width: 640px), (pointer: coarse)').matches;
+  let top;
+  if (isMobile) {
+    top = Math.max(8, viewBottom - menuH - 8);
+    if (coords.bottom + 4 + menuH < viewBottom - 8) {
+      top = coords.bottom + 4;
+    }
+  } else {
+    top = Math.min(coords.bottom + 4, viewBottom - menuH - 8);
+  }
   slashMenuEl.style.position = 'fixed';
   slashMenuEl.style.left = left + 'px';
-  slashMenuEl.style.top = Math.min(coords.bottom + 4, window.innerHeight - 300) + 'px';
+  slashMenuEl.style.top = top + 'px';
   slashMenuEl.style.display = 'block';
+  // Suppress the floating format toolbar while slash menu is open (mobile collision fix)
+  if (typeof floatToolbarEl !== 'undefined' && floatToolbarEl) {
+    floatToolbarEl.classList.remove('visible');
+  }
 
   slashMenuEl.querySelectorAll('.slash-menu-item').forEach(item => {
     item.addEventListener('pointerdown', (e) => {
@@ -11267,6 +11284,8 @@ function updateFloatingToolbar(editor) {
 }
 
 function showFloatingToolbar(editor) {
+  // Don't show formatting bubble while the slash menu is open (mobile usability)
+  if (typeof slashMenuOpen !== 'undefined' && slashMenuOpen) { hideFloatingToolbar(); return; }
   const toolbar = createFloatingToolbar();
   const { from, to } = editor.state.selection;
   if (from === to) { hideFloatingToolbar(); return; }
