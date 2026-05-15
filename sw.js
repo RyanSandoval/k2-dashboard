@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v4-overdue-tasks';
+const CACHE_NAME = 'k2-hq-v5-brief-upgrade';
 const ASSETS = [
   './',
   './index.html',

@@ -7423,8 +7423,59 @@ function renderDailyDocs() {
     _scheduleEodAppend();
   }
 
+  // Upgrade legacy brief format -> new chip-based brief (in place)
+  try { upgradeTodayBriefIfStale(today); } catch(_) {}
+
   // Render previous days
   renderPreviousDays(today);
+}
+
+// If today's Jot was created before the chip-based brief, replace just the
+// auto-generated brief block at the top with a fresh one. Keeps user content intact.
+function upgradeTodayBriefIfStale(today) {
+  if (!window._todayEditor) return;
+  const editor = window._todayEditor;
+  const html = editor.getHTML();
+  if (!html) return;
+  // Legacy detection: has Overdue/Due Today header but missing mention-task
+  const hasLegacyOverdue = /<h2>🔴 Overdue<\/h2>/.test(html) && !/class="mention-task"/.test(html);
+  const hasLegacyDueToday = /<h2>📋 Due Today<\/h2>/.test(html) && !/class="mention-task"/.test(html);
+  if (!hasLegacyOverdue && !hasLegacyDueToday) return;
+
+  // Parse and strip the legacy brief headers + their immediate <ul> siblings + trailing <hr>
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const toRemove = [];
+  for (const node of Array.from(tmp.children)) {
+    if (node.tagName === 'H2') {
+      const t = node.textContent || '';
+      if (t.includes('Overdue') || t.includes('Due Today') || t.includes('Calendar')) {
+        toRemove.push(node);
+        // grab the following <ul> if present
+        let sib = node.nextElementSibling;
+        if (sib && sib.tagName === 'UL') { toRemove.push(sib); }
+      }
+    }
+  }
+  // Remove trailing <hr> that the brief inserts as a separator IF it's followed by content the user wrote
+  // Only safe to remove the first <hr> we encounter at top-level near the brief
+  if (toRemove.length > 0) {
+    const lastIdx = Array.from(tmp.children).indexOf(toRemove[toRemove.length - 1]);
+    const after = tmp.children[lastIdx + 1];
+    if (after && after.tagName === 'HR') toRemove.push(after);
+  }
+  if (toRemove.length === 0) return;
+  toRemove.forEach(n => n.remove());
+  const userContent = tmp.innerHTML;
+  const fresh = generateDailyBrief();
+  const newHtml = (fresh || '') + (userContent || '<p></p>');
+  editor.commands.setContent(newHtml);
+  if (DATA.dailyDocs && DATA.dailyDocs[today]) {
+    DATA.dailyDocs[today].content = newHtml;
+    DATA.dailyDocs[today].updatedAt = new Date().toISOString();
+    if (typeof saveData === 'function') saveData();
+  }
+  if (typeof showToast === 'function') showToast('Brief refreshed ✓');
 }
 
 function initTodayEditor(today) {
