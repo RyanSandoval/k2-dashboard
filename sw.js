@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v7-inbox-fixes';
+const CACHE_NAME = 'k2-hq-v8-brief-upgrade-on-mount';
 const ASSETS = [
   './',
   './index.html',

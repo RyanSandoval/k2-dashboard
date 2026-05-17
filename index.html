@@ -11775,7 +11775,11 @@ window._createTodayEditor = function(today) {
       }
     },
   });
-  
+
+  // Run brief upgrade now that the editor is mounted — renderDailyDocs() may
+  // have called this before the editor was ready, in which case it bailed.
+  try { if (typeof upgradeTodayBriefIfStale === 'function') upgradeTodayBriefIfStale(today); } catch(_) {}
+
   // Focus
   setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 100);
 };
