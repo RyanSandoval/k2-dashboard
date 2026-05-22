@@ -1686,6 +1686,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <span class="icon">🚀</span> AI Insights
           <span class="badge" id="ai-insights-badge">0</span>
         </div>
+        <div class="nav-item" data-page="jira-ledger">
+          <span class="icon">🎫</span> Jira Ledger
+          <span class="badge" id="jira-ledger-badge" style="display:none">0</span>
+        </div>
       </div>
       <div onclick="toggleNavMore('ref')" style="font-size:11px;color:var(--text-dim);padding:4px 12px;cursor:pointer;user-select:none;" id="nav-ref-more-btn">▸ More</div>
     </div>
@@ -2023,6 +2027,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="paper-watermark" style="display:none;text-align:center;color:rgba(136,136,160,0.2);font-size:48px;font-weight:900;letter-spacing:8px;margin-top:24px;user-select:none;">PAPER TRADING</div>
     </div>
     <!-- ========== TRADING SECTION END ========== -->
+
+    <!-- Jira Ledger Page -->
+    <div class="page" id="page-jira-ledger">
+      <div class="page-header">
+        <h2>🎫 Jira Ledger</h2>
+        <p>Every Jira ticket filed from K-2 (notes + cron + fire button). Click a row to open in Jira.</p>
+        <div style="margin-top:10px;">
+          <input id="jira-ledger-search" type="text" placeholder="🔍 Search by key, title, or text…" autocomplete="off"
+            style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+            oninput="renderJiraLedger()">
+        </div>
+      </div>
+      <div id="jira-ledger-list"><!-- Populated by JS --></div>
+    </div>
 
     <!-- Notes Page -->
     <div class="page" id="page-notes">
@@ -2499,7 +2517,7 @@ function mobileNavMore(page) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [], activeTriggers: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [], activeTriggers: [], jiraRequests: [], jiraLedger: [] };
 window.DATA = DATA; // keep module scripts in sync
 
 // ============================================================
@@ -2575,6 +2593,8 @@ async function loadData() {
     DATA.timeBlocks = d.timeBlocks || {};
     DATA.bookmarks = d.bookmarks || [];
     DATA.dailyAdvisor = d.dailyAdvisor || { items: [], dismissedQuotes: [], lastRunAt: null };
+    DATA.jiraRequests = Array.isArray(d.jiraRequests) ? d.jiraRequests : [];
+    DATA.jiraLedger = Array.isArray(d.jiraLedger) ? d.jiraLedger : [];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -2662,7 +2682,7 @@ function toggleNavMore(section) {
 
 function navigateTo(page) {
   // If the page is in a collapsed section, expand it
-  const hiddenPages = { work: ['completed','discussions','trading','growth'], ref: ['accomplishments','memory','mission','ai-insights'] };
+  const hiddenPages = { work: ['completed','discussions','trading','growth'], ref: ['accomplishments','memory','mission','ai-insights','jira-ledger'] };
   for (const [section, pages] of Object.entries(hiddenPages)) {
     if (pages.includes(page)) {
       const el = document.getElementById('nav-' + section + '-more');
@@ -2699,7 +2719,52 @@ function navigateTo(page) {
   if (page === 'completed') renderCompleted();
   if (page === 'planner') renderPlanner(window._plannerDate || getTodayStr());
   if (page === 'accomplishments') renderAccomplishments(window._acomplQ || getCurrentQuarter());
+  if (page === 'jira-ledger') renderJiraLedger();
 }
+
+function renderJiraLedger() {
+  const container = document.getElementById('jira-ledger-list');
+  if (!container) return;
+  const search = (document.getElementById('jira-ledger-search')?.value || '').toLowerCase();
+  const ledger = Array.isArray(DATA.jiraLedger) ? DATA.jiraLedger : [];
+  const pending = (Array.isArray(DATA.jiraRequests) ? DATA.jiraRequests : []).filter(r => r.status === 'pending' || r.status === 'posted');
+  const badge = document.getElementById('jira-ledger-badge');
+  if (badge) {
+    if (pending.length) { badge.style.display = ''; badge.textContent = pending.length; }
+    else badge.style.display = 'none';
+  }
+  const filtered = ledger
+    .slice()
+    .sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .filter(e => {
+      if (!search) return true;
+      return (e.jiraKey || '').toLowerCase().includes(search)
+        || (e.title || '').toLowerCase().includes(search)
+        || (e.sourceText || '').toLowerCase().includes(search);
+    });
+  const pendingHtml = pending.length
+    ? `<div class="card" style="margin-bottom:16px;border-left:3px solid var(--yellow);">
+         <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--yellow);">⏳ In flight (${pending.length})</div>
+         ${pending.map(r => `<div style="font-size:12px;color:var(--text-dim);margin:4px 0;">${(r.title||'').slice(0,120)} <span style="opacity:0.6;">— ${r.status}</span></div>`).join('')}
+       </div>`
+    : '';
+  const rows = filtered.map(e => {
+    const url = `https://vikingtravel.atlassian.net/browse/${e.jiraKey}`;
+    const when = e.createdAt ? new Date(e.createdAt).toLocaleString() : '';
+    return `<a href="${url}" target="_blank" rel="noopener" class="card" style="display:block;text-decoration:none;color:inherit;margin-bottom:8px;padding:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
+        <div style="font-weight:600;font-size:13px;color:var(--accent);">${e.jiraKey}</div>
+        <div style="font-size:11px;color:var(--text-dim);">${when}</div>
+      </div>
+      <div style="margin-top:4px;font-size:13px;color:var(--text);">${(e.title||'').replace(/</g,'&lt;')}</div>
+      ${e.project ? `<span class="tag tag-blue" style="font-size:9px;margin-top:6px;display:inline-block;">${e.project}</span>` : ''}
+    </a>`;
+  }).join('');
+  container.innerHTML = pendingHtml + (filtered.length
+    ? rows
+    : `<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">${search ? 'No tickets match your search.' : 'No tickets filed yet. Open a note and hit 🎫 to file one.'}</div>`);
+}
+window.renderJiraLedger = renderJiraLedger;
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigateTo(item.dataset.page));
@@ -6514,6 +6579,11 @@ function renderNotes(page = 0) {
                       style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Copy link">🔗</button>
               <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();"
                       style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px;">🤖</button>
+              ${note.jiraTicket && note.jiraTicket.key
+                ? `<a href="https://vikingtravel.atlassian.net/browse/${note.jiraTicket.key}" target="_blank" rel="noopener" onclick="event.stopPropagation();" title="View Jira ticket" style="font-size:10px;color:var(--accent);text-decoration:none;background:rgba(74,158,255,0.1);padding:2px 6px;border-radius:4px;">🔗 ${note.jiraTicket.key}</a>`
+                : (note.jiraRequest && note.jiraRequest.status === 'pending'
+                    ? `<span title="Filing Jira ticket…" style="font-size:10px;color:var(--yellow);">⏳ filing</span>`
+                    : `<button onclick="openJiraTicketModal('${noteId}'); event.stopPropagation();" title="Send to Jira" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;">🎫</button>`)}
               <button onclick="deleteNote('${noteId}'); event.stopPropagation();"
                       style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;">🗑</button>
             </div>
@@ -7249,6 +7319,107 @@ async function requestK2TakeFromNote(noteId) {
   showToast('🤖 K-2 will analyze this note');
   renderNotes();
 }
+
+// ─── Jira ticket fire button ─────────────────────────────────────────────────
+window.openJiraTicketModal = function openJiraTicketModal(noteId) {
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (!note) return;
+  // Pull live text from the inline editor if it exists
+  if (window._noteEditors?.[noteId]?.editor) {
+    note.text = window._noteEditors[noteId].editor.getHTML();
+  }
+  const plain = typeof convertHTMLToText === 'function'
+    ? convertHTMLToText(note.text || '')
+    : (note.text || '').replace(/<[^>]+>/g, '');
+  const defaultTitle = note.title && note.title !== 'New Note'
+    ? note.title
+    : plain.split('\n').find(l => l.trim()) || 'New ticket';
+
+  // Remove any pre-existing modal
+  const existing = document.getElementById('jira-fire-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'jira-fire-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:560px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.4);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text);">🎫 Send to Jira</h3>
+        <button id="jira-modal-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">×</button>
+      </div>
+      <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Title</label>
+      <input id="jira-modal-title" type="text" value="${defaultTitle.replace(/"/g,'&quot;').slice(0,200)}" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;margin-bottom:12px;outline:none;">
+      <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Description</label>
+      <textarea id="jira-modal-desc" rows="8" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;resize:vertical;">${plain.replace(/</g,'&lt;')}</textarea>
+      <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Project</label>
+          <select id="jira-modal-project" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;">
+            <option value="MW">MW (default)</option>
+            <option value="CMS">CMS</option>
+            <option value="DES">DES</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Labels (comma-separated)</label>
+          <input id="jira-modal-labels" type="text" value="async" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button id="jira-modal-cancel" style="padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:13px;font-family:inherit;">Cancel</button>
+        <button id="jira-modal-submit" style="padding:8px 14px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600;">Send to Jira</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector('#jira-modal-close').onclick = close;
+  modal.querySelector('#jira-modal-cancel').onclick = close;
+  modal.onclick = (e) => { if (e.target === modal) close(); };
+  modal.querySelector('#jira-modal-submit').onclick = async () => {
+    const title = modal.querySelector('#jira-modal-title').value.trim();
+    const description = modal.querySelector('#jira-modal-desc').value.trim();
+    const project = modal.querySelector('#jira-modal-project').value;
+    const labels = modal.querySelector('#jira-modal-labels').value.split(',').map(s => s.trim()).filter(Boolean);
+    if (!title) { showToast('Title required'); return; }
+    await submitJiraTicketRequest(noteId, { title, description, project, labels });
+    close();
+  };
+};
+
+async function submitJiraTicketRequest(noteId, fields) {
+  const note = DATA.notes.find(n => n.id === noteId);
+  if (!note) return;
+  const reqId = 'jreq-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  // Extract image URLs from the live note HTML so the poller can include them
+  const html = note.text || '';
+  const imageUrls = [];
+  const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
+  let m;
+  while ((m = imgRe.exec(html))) {
+    if (m[1].startsWith('https://raw.githubusercontent.com/')) imageUrls.push(m[1]);
+  }
+  const request = {
+    id: reqId,
+    noteId,
+    title: fields.title,
+    description: fields.description,
+    project: fields.project,
+    labels: fields.labels,
+    imageUrls,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+  if (!Array.isArray(DATA.jiraRequests)) DATA.jiraRequests = [];
+  DATA.jiraRequests.push(request);
+  note.jiraRequest = { id: reqId, status: 'pending', createdAt: request.createdAt };
+  await saveData();
+  showToast('🎫 Filing Jira ticket… ~2 min');
+  renderNotes();
+}
+window.submitJiraTicketRequest = submitJiraTicketRequest;
+// ─── end fire button ─────────────────────────────────────────────────────────
 
 async function createNewNote() {
   const now = new Date();
