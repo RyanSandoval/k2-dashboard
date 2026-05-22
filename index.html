@@ -2615,6 +2615,32 @@ async function saveData() {
   }
 }
 
+// Upload a pasted/dropped image File or Blob to k2-data and return the raw GitHub URL.
+// Stored at images/notes/<ts>-<rand>.<ext>. Used by Tiptap paste/drop handlers.
+async function uploadPastedImage(blob) {
+  if (!GH_TOKEN) throw new Error('No GH_TOKEN — sign in first');
+  const mime = blob.type || 'image/png';
+  const ext = (mime.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `images/notes/${Date.now()}-${rand}.${ext}`;
+  const buf = await blob.arrayBuffer();
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  const content = btoa(bin);
+  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: ghHeaders(),
+    body: JSON.stringify({ message: `Upload pasted image ${path}`, content }),
+  });
+  if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
+  return `https://raw.githubusercontent.com/${DATA_REPO}/main/${path}`;
+}
+window.uploadPastedImage = uploadPastedImage;
+
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
@@ -10998,6 +11024,7 @@ import Link from 'https://esm.sh/@tiptap/extension-link@2.11.5';
 
 import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2.11.5';
 import Typography from 'https://esm.sh/@tiptap/extension-typography@2.11.5';
+import Image from 'https://esm.sh/@tiptap/extension-image@2.11.5';
 import { Node, Extension, mergeAttributes } from 'https://esm.sh/@tiptap/core@2.11.5';
 import { PluginKey, Plugin } from 'https://esm.sh/@tiptap/pm@2.11.5/state';
 
@@ -11706,10 +11733,48 @@ function createEditor(element, content, options = {}) {
     Link.configure({ openOnClick: true, autolink: true, HTMLAttributes: { class: 'note-link', style: 'color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all;' } }),
     Placeholder.configure({ placeholder: options.placeholder || 'Start typing...' }),
     Typography,
+    Image.configure({ inline: false, allowBase64: false, HTMLAttributes: { style: 'max-width:100%;height:auto;border-radius:6px;display:block;margin:8px 0;' } }),
     ProjectMention,
     NoteMention,
   ];
-  
+
+  // Async upload-then-insert. Called when an image is pasted or dropped.
+  // Inserts a placeholder, then swaps for the real raw GitHub URL once uploaded.
+  function handleImageFiles(view, files) {
+    const images = [...files].filter(f => f && f.type && f.type.startsWith('image/'));
+    if (!images.length) return false;
+    images.forEach(async (file) => {
+      const tempId = `up-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+      const localUrl = URL.createObjectURL(file);
+      const { schema } = view.state;
+      const imgNode = schema.nodes.image?.create({ src: localUrl, alt: 'uploading…', title: tempId });
+      if (imgNode) {
+        const tr = view.state.tr.replaceSelectionWith(imgNode);
+        view.dispatch(tr);
+      }
+      try {
+        const url = await uploadPastedImage(file);
+        // Find the placeholder node by title=tempId and swap src.
+        const { state } = view;
+        let pos = null;
+        state.doc.descendants((node, p) => {
+          if (node.type.name === 'image' && node.attrs.title === tempId) { pos = p; return false; }
+        });
+        if (pos !== null) {
+          const tr = view.state.tr.setNodeMarkup(pos, undefined, { src: url, alt: '', title: null });
+          view.dispatch(tr);
+        }
+        if (typeof window.showToast === 'function') window.showToast('Image uploaded');
+      } catch (e) {
+        console.error('[K2] image upload failed:', e);
+        if (typeof window.showToast === 'function') window.showToast('Image upload failed: ' + e.message);
+      } finally {
+        URL.revokeObjectURL(localUrl);
+      }
+    });
+    return true;
+  }
+
   const editor = new Editor({
     element,
     extensions,
@@ -11717,6 +11782,28 @@ function createEditor(element, content, options = {}) {
     editable: options.editable !== false,
     editorProps: {
       attributes: { class: 'ProseMirror' },
+      handlePaste(view, event) {
+        const items = event.clipboardData && event.clipboardData.items;
+        if (!items) return false;
+        const files = [];
+        for (const it of items) {
+          if (it.kind === 'file') {
+            const f = it.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+        if (!files.length) return false;
+        event.preventDefault();
+        return handleImageFiles(view, files);
+      },
+      handleDrop(view, event) {
+        const files = event.dataTransfer && event.dataTransfer.files;
+        if (!files || !files.length) return false;
+        const imgs = [...files].filter(f => f.type && f.type.startsWith('image/'));
+        if (!imgs.length) return false;
+        event.preventDefault();
+        return handleImageFiles(view, imgs);
+      },
     },
     onCreate({ editor }) {
       if (options.editable !== false) {
