@@ -1597,6 +1597,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
     </div>
     <div class="nav-section">
+      <div class="nav-item" data-page="action-inbox">
+        <span class="icon">🎯</span> Action Inbox
+        <span class="badge" id="action-inbox-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
@@ -2029,6 +2033,31 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <!-- ========== TRADING SECTION END ========== -->
 
     <!-- Jira Ledger Page -->
+    <!-- Action Inbox Page -->
+    <div class="page" id="page-action-inbox" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div>
+            <h2>🎯 Action Inbox</h2>
+            <p>Every open task + every jot/note with implied action. Captured anywhere, surfaced here. Recency-ranked, last 30 days.</p>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button class="action-inbox-filter-btn active" data-filter="open" onclick="setActionInboxFilter('open',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:#000;font-weight:700;">Open</button>
+            <button class="action-inbox-filter-btn" data-filter="handled" onclick="setActionInboxFilter('handled',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">Handled</button>
+            <button class="action-inbox-filter-btn" data-filter="dismissed" onclick="setActionInboxFilter('dismissed',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">Dismissed</button>
+            <button class="action-inbox-filter-btn" data-filter="all" onclick="setActionInboxFilter('all',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">All</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <input id="action-inbox-search" type="text" placeholder="🔍 Search action items…" autocomplete="off"
+            style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+            oninput="renderActionInbox()">
+        </div>
+        <div id="action-inbox-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="action-inbox-list"><!-- Populated by renderActionInbox() --></div>
+    </div>
+
     <div class="page" id="page-jira-ledger">
       <div class="page-header">
         <h2>🎫 Jira Ledger</h2>
@@ -2595,6 +2624,7 @@ async function loadData() {
     DATA.dailyAdvisor = d.dailyAdvisor || { items: [], dismissedQuotes: [], lastRunAt: null };
     DATA.jiraRequests = Array.isArray(d.jiraRequests) ? d.jiraRequests : [];
     DATA.jiraLedger = Array.isArray(d.jiraLedger) ? d.jiraLedger : [];
+    DATA.actionInbox = Array.isArray(d.actionInbox) ? d.actionInbox : [];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -2664,7 +2694,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips, renderActionInbox];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -2720,6 +2750,7 @@ function navigateTo(page) {
   if (page === 'planner') renderPlanner(window._plannerDate || getTodayStr());
   if (page === 'accomplishments') renderAccomplishments(window._acomplQ || getCurrentQuarter());
   if (page === 'jira-ledger') renderJiraLedger();
+  if (page === 'action-inbox') renderActionInbox();
 }
 
 function renderJiraLedger() {
@@ -2765,6 +2796,228 @@ function renderJiraLedger() {
     : `<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">${search ? 'No tickets match your search.' : 'No tickets filed yet. Open a note and hit 🎫 to file one.'}</div>`);
 }
 window.renderJiraLedger = renderJiraLedger;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACTION INBOX — unified surface for open tasks + jots/notes implying action
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// DATA.actionInbox row shape (written by nightly cron, read by dashboard):
+//   { id, source: 'task'|'note'|'jot', sourceId, summary, jiraKey,
+//     firstSeenAt, lastSeenAt, handled, handledAt, dismissed, dismissedAt }
+//
+// Cron drops items >14d since lastSeenAt (auto-archive).
+// Dashboard auto-removes items whose underlying task is now done.
+
+window._actionInboxFilter = 'open';
+
+function setActionInboxFilter(f, btn) {
+  window._actionInboxFilter = f;
+  document.querySelectorAll('.action-inbox-filter-btn').forEach(b => {
+    const active = b.dataset.filter === f;
+    b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
+    b.style.color = active ? '#000' : 'var(--text-dim)';
+    b.style.fontWeight = active ? '700' : '400';
+    b.classList.toggle('active', active);
+  });
+  renderActionInbox();
+}
+window.setActionInboxFilter = setActionInboxFilter;
+
+function _actionInboxAgeStr(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  const hrs = ms / 3_600_000;
+  if (hrs < 1) return 'just now';
+  if (hrs < 24) return Math.round(hrs) + 'h ago';
+  const days = Math.round(hrs / 24);
+  return days + 'd ago';
+}
+
+function _actionInboxSourceIcon(src) {
+  return { task: '✅', note: '📝', jot: '✏️' }[src] || '•';
+}
+
+function _actionInboxIsStale(item) {
+  if (!item.lastSeenAt) return false;
+  return (Date.now() - new Date(item.lastSeenAt).getTime()) > 7 * 86_400_000;
+}
+
+function _actionInboxAutoPrune() {
+  // Hide rows whose source task is already done.
+  if (!Array.isArray(DATA.actionInbox)) return [];
+  const taskById = new Map((DATA.tasks || []).map(t => [String(t.id), t]));
+  return DATA.actionInbox.filter(item => {
+    if (item.source === 'task') {
+      const t = taskById.get(String(item.sourceId));
+      if (!t || t.done || t.status === 'done') return false;
+    }
+    return true;
+  });
+}
+
+function renderActionInboxBadge() {
+  const badge = document.getElementById('action-inbox-badge');
+  if (!badge) return;
+  const items = _actionInboxAutoPrune().filter(i => !i.handled && !i.dismissed);
+  if (items.length) {
+    badge.style.display = '';
+    badge.textContent = items.length > 99 ? '99+' : String(items.length);
+  } else {
+    badge.style.display = 'none';
+  }
+}
+window.renderActionInboxBadge = renderActionInboxBadge;
+
+function renderActionInbox() {
+  renderActionInboxBadge();
+  const container = document.getElementById('action-inbox-list');
+  const metaEl = document.getElementById('action-inbox-meta');
+  if (!container) return;
+  const filter = window._actionInboxFilter || 'open';
+  const search = (document.getElementById('action-inbox-search')?.value || '').toLowerCase().trim();
+  const pruned = _actionInboxAutoPrune();
+  let items = pruned.slice();
+  if (filter === 'open') items = items.filter(i => !i.handled && !i.dismissed);
+  else if (filter === 'handled') items = items.filter(i => i.handled);
+  else if (filter === 'dismissed') items = items.filter(i => i.dismissed);
+  if (search) {
+    items = items.filter(i =>
+      (i.summary || '').toLowerCase().includes(search)
+      || (i.jiraKey || '').toLowerCase().includes(search)
+      || (i.source || '').toLowerCase().includes(search)
+    );
+  }
+  items.sort((a, b) => (b.lastSeenAt || '').localeCompare(a.lastSeenAt || ''));
+  const cap = 20;
+  const shown = items.slice(0, cap);
+  const overflow = items.length - shown.length;
+
+  if (metaEl) {
+    const allOpen = pruned.filter(i => !i.handled && !i.dismissed).length;
+    const totalScanned = pruned.length;
+    const lastScan = DATA.actionInboxMeta?.lastScanAt
+      ? 'last scan ' + _actionInboxAgeStr(DATA.actionInboxMeta.lastScanAt)
+      : 'no scan yet — cron runs nightly';
+    metaEl.textContent = `${allOpen} open · ${totalScanned} tracked · ${lastScan}`;
+  }
+
+  if (!shown.length) {
+    const emptyMsg = pruned.length === 0
+      ? 'Action Inbox is empty. The nightly scanner cron will populate it from your tasks, jots, and notes.'
+      : (search ? 'No items match your search.' : (filter === 'open' ? 'No open action items. Inbox zero! 🎉' : 'Nothing here.'));
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${emptyMsg}</div>`;
+    return;
+  }
+
+  const rows = shown.map(item => {
+    const icon = _actionInboxSourceIcon(item.source);
+    const age = _actionInboxAgeStr(item.lastSeenAt || item.firstSeenAt);
+    const stale = _actionInboxIsStale(item);
+    const jiraChip = item.jiraKey
+      ? `<a href="https://vikingtravel.atlassian.net/browse/${item.jiraKey}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="tag tag-blue" style="font-size:10px;text-decoration:none;">${item.jiraKey}</a>`
+      : '';
+    const staleChip = stale
+      ? '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange);font-weight:600;">stale</span>'
+      : '';
+    const sourceLabel = item.source === 'jot'
+      ? `jot · ${item.sourceId || 'recent'}`
+      : (item.source === 'note' ? 'note' : 'task');
+    const summaryHtml = (item.summary || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;');
+    const buttons = item.handled || item.dismissed
+      ? `<button onclick="event.stopPropagation();actionInboxRestore('${item.id}')" title="Restore"
+           style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">↩ restore</button>`
+      : `<button onclick="event.stopPropagation();actionInboxHandled('${item.id}')" title="Mark handled"
+           style="background:none;border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✓ handled</button>
+         <button onclick="event.stopPropagation();actionInboxDismiss('${item.id}')" title="Dismiss"
+           style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✕ dismiss</button>`;
+    return `<div class="card" onclick="jumpToActionSource('${item.id}')" style="cursor:pointer;margin-bottom:8px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;${item.handled ? 'opacity:0.55;' : ''}${item.dismissed ? 'opacity:0.4;' : ''}">
+      <div style="font-size:18px;line-height:1.3;flex-shrink:0;">${icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;color:var(--text);line-height:1.4;${item.handled ? 'text-decoration:line-through;' : ''}">${summaryHtml}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-muted);">
+          <span>${sourceLabel}</span>
+          <span>·</span>
+          <span>${age}</span>
+          ${staleChip}
+          ${jiraChip}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">${buttons}</div>
+    </div>`;
+  }).join('');
+
+  const overflowFooter = overflow > 0
+    ? `<div style="text-align:center;color:var(--text-muted);padding:14px;font-size:12px;">+ ${overflow} more — narrow with search or filter.</div>`
+    : '';
+  container.innerHTML = rows + overflowFooter;
+}
+window.renderActionInbox = renderActionInbox;
+
+async function actionInboxHandled(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.handled = true;
+  item.handledAt = new Date().toISOString();
+  item.dismissed = false;
+  item.dismissedAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('Marked handled');
+}
+window.actionInboxHandled = actionInboxHandled;
+
+async function actionInboxDismiss(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.dismissed = true;
+  item.dismissedAt = new Date().toISOString();
+  item.handled = false;
+  item.handledAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('Dismissed');
+}
+window.actionInboxDismiss = actionInboxDismiss;
+
+async function actionInboxRestore(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.handled = false;
+  item.handledAt = null;
+  item.dismissed = false;
+  item.dismissedAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('Restored');
+}
+window.actionInboxRestore = actionInboxRestore;
+
+function jumpToActionSource(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  if (item.source === 'task') {
+    navigateTo('tasks');
+    setTimeout(() => {
+      const el = document.querySelector(`[data-task-id="${item.sourceId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'background 0.4s';
+        el.style.background = 'color-mix(in srgb,var(--accent) 22%,transparent)';
+        setTimeout(() => { el.style.background = ''; }, 1800);
+      }
+    }, 150);
+  } else if (item.source === 'note') {
+    navigateTo('notes');
+    setTimeout(() => { window.openNoteEditor?.(item.sourceId); }, 150);
+  } else if (item.source === 'jot') {
+    navigateTo('jots');
+    setTimeout(() => {
+      const docEl = document.querySelector(`[data-doc-date="${item.sourceId}"]`);
+      if (docEl) docEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  }
+}
+window.jumpToActionSource = jumpToActionSource;
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigateTo(item.dataset.page));
