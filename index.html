@@ -1700,6 +1700,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">⟳ <span id="last-sync">just now</span></span>
+        <div onclick="forceAppRefresh()" title="Force-refresh: clear SW cache + reload" style="cursor:pointer;color:var(--text-dim);font-size:14px;white-space:nowrap;flex-shrink:0;padding:0 2px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-dim)'">🔄</div>
         <div onclick="openSettings()" style="cursor:pointer;color:var(--accent);font-size:12px;white-space:nowrap;flex-shrink:0;font-weight:600;">⚙️ Settings</div>
       </div>
     </div>
@@ -2495,6 +2496,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-more-handle"></div>
     <div class="mobile-more-grid">
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()"><span class="icon">⚡</span>Capture</div>
+      <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
       <div class="mobile-more-item" data-page="tasks" onclick="mobileNavMore('tasks')"><span class="icon">✅</span>Tasks</div>
       <div class="mobile-more-item" data-page="completed" onclick="mobileNavMore('completed')"><span class="icon">🏁</span>Completed</div>
       <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
@@ -2523,6 +2525,34 @@ function setMobileActive(el) {
   document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
   el.classList.add('active');
 }
+
+// Force-refresh: unregister SW, drop all caches, reload from network.
+// Needed because installed PWAs on iOS have no pull-to-refresh and the
+// service worker will keep serving stale assets until it self-updates.
+async function forceAppRefresh() {
+  try {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--accent);color:#000;padding:10px 14px;text-align:center;font-weight:700;font-size:13px;';
+    banner.textContent = '🔄 Refreshing — clearing cache…';
+    document.body.appendChild(banner);
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) {
+    console.warn('[K2] forceAppRefresh: cleanup error', e);
+  } finally {
+    // Cache-busting reload — appended param defeats any HTTP caches too.
+    const url = new URL(window.location.href);
+    url.searchParams.set('_r', Date.now().toString(36));
+    window.location.replace(url.pathname + '?' + url.searchParams.toString() + url.hash);
+  }
+}
+window.forceAppRefresh = forceAppRefresh;
 
 function openMobileMore() {
   document.getElementById('mobile-more-overlay').classList.add('open');
