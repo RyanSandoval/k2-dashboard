@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v12-force-refresh';
+const CACHE_NAME = 'k2-hq-v13-action-inbox-priority';
 const ASSETS = [
   './',
   './index.html',

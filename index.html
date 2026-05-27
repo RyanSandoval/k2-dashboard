@@ -2047,6 +2047,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
             <button class="action-inbox-filter-btn" data-filter="handled" onclick="setActionInboxFilter('handled',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">Handled</button>
             <button class="action-inbox-filter-btn" data-filter="dismissed" onclick="setActionInboxFilter('dismissed',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">Dismissed</button>
             <button class="action-inbox-filter-btn" data-filter="all" onclick="setActionInboxFilter('all',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">All</button>
+            <button onclick="actionInboxRequestRerank()" title="Queue an LLM re-rank — fires within 5 min" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);cursor:pointer;background:transparent;color:var(--accent);font-weight:700;">🔄 Re-rank now</button>
           </div>
         </div>
         <div style="margin-top:10px;">
@@ -2901,6 +2902,23 @@ function renderActionInboxBadge() {
 }
 window.renderActionInboxBadge = renderActionInboxBadge;
 
+function _actionInboxCompareSort(a, b) {
+  // Pinned first (newest pinnedAt DESC)
+  if (a.pinned && !b.pinned) return -1;
+  if (b.pinned && !a.pinned) return 1;
+  if (a.pinned && b.pinned) {
+    return (b.pinnedAt || '').localeCompare(a.pinnedAt || '');
+  }
+  // Demoted last (oldest demotedAt DESC within demoted group)
+  if (a.demoted && !b.demoted) return 1;
+  if (b.demoted && !a.demoted) return -1;
+  // Middle: priorityScore DESC, lastSeenAt DESC tiebreaker
+  const sa = (typeof a.priorityScore === 'number') ? a.priorityScore : -1;
+  const sb = (typeof b.priorityScore === 'number') ? b.priorityScore : -1;
+  if (sb !== sa) return sb - sa;
+  return (b.lastSeenAt || '').localeCompare(a.lastSeenAt || '');
+}
+
 function renderActionInbox() {
   renderActionInboxBadge();
   const container = document.getElementById('action-inbox-list');
@@ -2920,7 +2938,7 @@ function renderActionInbox() {
       || (i.source || '').toLowerCase().includes(search)
     );
   }
-  items.sort((a, b) => (b.lastSeenAt || '').localeCompare(a.lastSeenAt || ''));
+  items.sort(_actionInboxCompareSort);
   const cap = 20;
   const shown = items.slice(0, cap);
   const overflow = items.length - shown.length;
@@ -2931,7 +2949,10 @@ function renderActionInbox() {
     const lastScan = DATA.actionInboxMeta?.lastScanAt
       ? 'last scan ' + _actionInboxAgeStr(DATA.actionInboxMeta.lastScanAt)
       : 'no scan yet — cron runs nightly';
-    metaEl.textContent = `${allOpen} open · ${totalScanned} tracked · ${lastScan}`;
+    const rerankState = DATA.actionInboxMeta?.rerankRequested
+      ? ' · ⏳ re-rank queued ' + _actionInboxAgeStr(DATA.actionInboxMeta.rerankRequested)
+      : '';
+    metaEl.textContent = `${allOpen} open · ${totalScanned} tracked · ${lastScan}${rerankState}`;
   }
 
   if (!shown.length) {
@@ -2952,18 +2973,46 @@ function renderActionInbox() {
     const staleChip = stale
       ? '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange);font-weight:600;">stale</span>'
       : '';
+    const scoreChip = (typeof item.priorityScore === 'number')
+      ? `<span title="LLM priority score" style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--accent) ${Math.max(8, Math.min(28, Math.round(item.priorityScore/4)))}%,transparent);color:var(--accent);font-weight:700;">${item.priorityScore}</span>`
+      : '';
+    const pinChip = item.pinned
+      ? '<span title="Pinned" style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--yellow) 22%,transparent);color:var(--yellow);font-weight:700;">⭐ pinned</span>'
+      : '';
+    const demotedChip = item.demoted
+      ? '<span title="Demoted" style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-weight:600;">⬇ demoted</span>'
+      : '';
     const sourceLabel = item.source === 'jot'
       ? `jot · ${item.sourceId || 'recent'}`
       : (item.source === 'note' ? 'note' : 'task');
     const summaryHtml = (item.summary || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;');
-    const buttons = item.handled || item.dismissed
-      ? `<button onclick="event.stopPropagation();actionInboxRestore('${item.id}')" title="Restore"
-           style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">↩ restore</button>`
-      : `<button onclick="event.stopPropagation();actionInboxHandled('${item.id}')" title="Mark handled"
-           style="background:none;border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✓ handled</button>
-         <button onclick="event.stopPropagation();actionInboxDismiss('${item.id}')" title="Dismiss"
-           style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✕ dismiss</button>`;
-    return `<div class="card" onclick="jumpToActionSource('${item.id}')" style="cursor:pointer;margin-bottom:8px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;${item.handled ? 'opacity:0.55;' : ''}${item.dismissed ? 'opacity:0.4;' : ''}">
+    const baseBtnStyle = 'background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;';
+    let buttons;
+    if (item.handled || item.dismissed) {
+      buttons = `<button onclick="event.stopPropagation();actionInboxRestore('${item.id}')" title="Restore"
+        style="${baseBtnStyle}color:var(--text-dim);">↩ restore</button>`;
+    } else {
+      const pinBtn = item.pinned
+        ? `<button onclick="event.stopPropagation();actionInboxUnpin('${item.id}')" title="Unpin"
+            style="${baseBtnStyle}border-color:color-mix(in srgb,var(--yellow) 40%,transparent);color:var(--yellow);">★</button>`
+        : `<button onclick="event.stopPropagation();actionInboxPin('${item.id}')" title="Pin to top"
+            style="${baseBtnStyle}color:var(--text-muted);">☆</button>`;
+      const demoteBtn = item.demoted
+        ? `<button onclick="event.stopPropagation();actionInboxUndemote('${item.id}')" title="Restore from demoted"
+            style="${baseBtnStyle}color:var(--text-muted);">⬆</button>`
+        : `<button onclick="event.stopPropagation();actionInboxDemote('${item.id}')" title="Send to bottom"
+            style="${baseBtnStyle}color:var(--text-muted);">⬇</button>`;
+      buttons = `${pinBtn}${demoteBtn}
+        <button onclick="event.stopPropagation();actionInboxHandled('${item.id}')" title="Mark handled"
+          style="${baseBtnStyle}border-color:color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);">✓</button>
+        <button onclick="event.stopPropagation();actionInboxDismiss('${item.id}')" title="Dismiss"
+          style="${baseBtnStyle}color:var(--text-muted);">✕</button>`;
+    }
+    const cardBg = item.pinned
+      ? 'background:color-mix(in srgb,var(--yellow) 6%,transparent);border-left:3px solid var(--yellow);'
+      : '';
+    const opacity = item.handled ? 'opacity:0.55;' : (item.dismissed ? 'opacity:0.4;' : (item.demoted ? 'opacity:0.7;' : ''));
+    return `<div class="card" onclick="jumpToActionSource('${item.id}')" style="cursor:pointer;margin-bottom:8px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;${cardBg}${opacity}">
       <div style="font-size:18px;line-height:1.3;flex-shrink:0;">${icon}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;color:var(--text);line-height:1.4;${item.handled ? 'text-decoration:line-through;' : ''}">${summaryHtml}</div>
@@ -2971,11 +3020,14 @@ function renderActionInbox() {
           <span>${sourceLabel}</span>
           <span>·</span>
           <span>${age}</span>
+          ${scoreChip}
+          ${pinChip}
+          ${demotedChip}
           ${staleChip}
           ${jiraChip}
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">${buttons}</div>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:160px;">${buttons}</div>
     </div>`;
   }).join('');
 
@@ -3024,6 +3076,69 @@ async function actionInboxRestore(id) {
   showToast?.('Restored');
 }
 window.actionInboxRestore = actionInboxRestore;
+
+async function actionInboxPin(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.pinned = true;
+  item.pinnedAt = new Date().toISOString();
+  // Pinning clears demote (mutually exclusive)
+  item.demoted = false;
+  item.demotedAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('⭐ Pinned to top');
+}
+window.actionInboxPin = actionInboxPin;
+
+async function actionInboxUnpin(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.pinned = false;
+  item.pinnedAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('Unpinned');
+}
+window.actionInboxUnpin = actionInboxUnpin;
+
+async function actionInboxDemote(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.demoted = true;
+  item.demotedAt = new Date().toISOString();
+  // Demoting clears pin (mutually exclusive)
+  item.pinned = false;
+  item.pinnedAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('⬇ Sent to bottom');
+}
+window.actionInboxDemote = actionInboxDemote;
+
+async function actionInboxUndemote(id) {
+  const item = (DATA.actionInbox || []).find(i => i.id === id);
+  if (!item) return;
+  item.demoted = false;
+  item.demotedAt = null;
+  await saveData();
+  renderActionInbox();
+  showToast?.('Restored from demoted');
+}
+window.actionInboxUndemote = actionInboxUndemote;
+
+async function actionInboxRequestRerank() {
+  if (!DATA.actionInboxMeta) DATA.actionInboxMeta = {};
+  if (DATA.actionInboxMeta.rerankRequested) {
+    showToast?.('Re-rank already queued — usually fires within 5 min');
+    return;
+  }
+  DATA.actionInboxMeta.rerankRequested = new Date().toISOString();
+  await saveData();
+  renderActionInbox();
+  showToast?.('⏳ Re-rank queued — fires within 5 min during work hours');
+}
+window.actionInboxRequestRerank = actionInboxRequestRerank;
 
 function jumpToActionSource(id) {
   const item = (DATA.actionInbox || []).find(i => i.id === id);
