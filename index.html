@@ -2996,25 +2996,51 @@ function jumpToActionSource(id) {
   const item = (DATA.actionInbox || []).find(i => i.id === id);
   if (!item) return;
   if (item.source === 'task') {
-    navigateTo('tasks');
-    setTimeout(() => {
-      const el = document.querySelector(`[data-task-id="${item.sourceId}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.style.transition = 'background 0.4s';
-        el.style.background = 'color-mix(in srgb,var(--accent) 22%,transparent)';
-        setTimeout(() => { el.style.background = ''; }, 1800);
-      }
-    }, 150);
-  } else if (item.source === 'note') {
+    // Try numeric first (tasks live as numeric ids in DATA.tasks), fall back to raw.
+    const sid = item.sourceId;
+    const numId = Number(sid);
+    const taskId = Number.isFinite(numId) && String(numId) === String(sid) ? numId : sid;
+    if (typeof window.openTaskModal === 'function') {
+      window.openTaskModal(taskId);
+    } else {
+      navigateTo('tasks');
+    }
+    return;
+  }
+  if (item.source === 'note') {
     navigateTo('notes');
-    setTimeout(() => { window.openNoteEditor?.(item.sourceId); }, 150);
-  } else if (item.source === 'jot') {
+    setTimeout(() => {
+      if (typeof window.openNoteEditor === 'function') {
+        window.openNoteEditor(item.sourceId);
+      }
+    }, 80);
+    return;
+  }
+  if (item.source === 'jot') {
+    // sourceId is "YYYY-MM-DD" or "YYYY-MM-DD:N" (line index from scanner)
+    const date = String(item.sourceId || '').split(':')[0];
     navigateTo('jots');
     setTimeout(() => {
-      const docEl = document.querySelector(`[data-doc-date="${item.sourceId}"]`);
-      if (docEl) docEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 200);
+      const today = (typeof getTodayStr === 'function') ? getTodayStr() : new Date().toISOString().slice(0,10);
+      if (date === today) {
+        const el = document.getElementById('daily-doc-today-editor');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
+      if (!header) {
+        showToast?.(`No jot entry found for ${date}`);
+        return;
+      }
+      if (!header.classList.contains('open') && typeof toggleDocDay === 'function') {
+        toggleDocDay(header);
+      }
+      header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      header.style.transition = 'background 0.4s';
+      const original = header.style.background;
+      header.style.background = 'color-mix(in srgb,var(--accent) 22%,transparent)';
+      setTimeout(() => { header.style.background = original; }, 1800);
+    }, 150);
   }
 }
 window.jumpToActionSource = jumpToActionSource;
