@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v10-action-inbox-deep-links';
+const CACHE_NAME = 'k2-hq-v11-action-inbox-mobile';
 const ASSETS = [
   './',
   './index.html',

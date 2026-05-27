@@ -2477,8 +2477,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-nav-item" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
       <span class="icon">✏️</span>Jots
     </div>
-    <div class="mobile-nav-item" data-page="tasks" onclick="navigateTo('tasks');setMobileActive(this)">
-      <span class="icon">✅</span>Tasks
+    <div class="mobile-nav-item" data-page="action-inbox" onclick="navigateTo('action-inbox');setMobileActive(this)" style="position:relative;">
+      <span class="icon">🎯</span>Action
+      <span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:4px;right:10px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span>
     </div>
     <div class="mobile-nav-item" onclick="openCapturePopover()">
       <span class="icon">⚡</span>Capture
@@ -2494,6 +2495,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-more-handle"></div>
     <div class="mobile-more-grid">
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()"><span class="icon">⚡</span>Capture</div>
+      <div class="mobile-more-item" data-page="tasks" onclick="mobileNavMore('tasks')"><span class="icon">✅</span>Tasks</div>
       <div class="mobile-more-item" data-page="completed" onclick="mobileNavMore('completed')"><span class="icon">🏁</span>Completed</div>
       <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
       <div class="mobile-more-item" data-page="someday" onclick="mobileNavMore('someday')"><span class="icon">💤</span>Someday</div>
@@ -2856,14 +2858,15 @@ function _actionInboxAutoPrune() {
 }
 
 function renderActionInboxBadge() {
-  const badge = document.getElementById('action-inbox-badge');
-  if (!badge) return;
   const items = _actionInboxAutoPrune().filter(i => !i.handled && !i.dismissed);
-  if (items.length) {
-    badge.style.display = '';
-    badge.textContent = items.length > 99 ? '99+' : String(items.length);
-  } else {
-    badge.style.display = 'none';
+  const count = items.length;
+  const text = count > 99 ? '99+' : String(count);
+  const targets = ['action-inbox-badge', 'mobile-action-inbox-badge'];
+  for (const id of targets) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (count) { el.style.display = ''; el.textContent = text; }
+    else { el.style.display = 'none'; }
   }
 }
 window.renderActionInboxBadge = renderActionInboxBadge;
