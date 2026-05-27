@@ -10127,11 +10127,13 @@ function renderCompleted(filter) {
       const dateStr = d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       const pName = projectName(t.projectId);
       const badge = pName ? `<span style="background:var(--accent-surface);color:var(--accent);border-radius:var(--radius-sm);padding:1px 8px;font-size:11px;font-weight:600;white-space:nowrap;">${pName}</span>` : '';
-      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-subtle);">
-        <span style="margin-top:2px;color:var(--green);flex-shrink:0;">✓</span>
-        <span style="flex:1;word-break:break-word;color:var(--text-dim);text-decoration:line-through;">${t.text || t.title || 'Untitled'}</span>
+      const tid = safeId(t.id);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-subtle);">
+        <span style="color:var(--green);flex-shrink:0;">✓</span>
+        <span style="flex:1;word-break:break-word;color:var(--text-dim);text-decoration:line-through;cursor:pointer;" onclick="openTaskModal(${tid})" title="Open task">${t.text || t.title || 'Untitled'}</span>
         ${badge}
         <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">${dateStr}</span>
+        <button onclick="reopenCompletedTask(${tid})" title="Mark not done — restores to Tasks page" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border)'">↩ Reopen</button>
       </div>`;
     }).join('');
     return `<div style="margin-bottom:20px;">
@@ -10140,6 +10142,21 @@ function renderCompleted(filter) {
     </div>`;
   }).join('');
 }
+
+async function reopenCompletedTask(taskId) {
+  const task = (DATA.tasks || []).find(t => t.id == taskId);
+  if (!task) return;
+  if (!task.done) {
+    showToast?.('Task is already open');
+    return;
+  }
+  await toggleTask(taskId); // flips done back to false + clears completedAt + syncs linked jot
+  showToast?.('↩ Reopened — back on Tasks page');
+  renderCompleted();
+  if (typeof renderTasks === 'function') renderTasks();
+  if (typeof renderActionInbox === 'function') renderActionInbox();
+}
+window.reopenCompletedTask = reopenCompletedTask;
 
 function renderReviewPage() {
   const container = document.getElementById('page-review');
