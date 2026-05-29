@@ -2486,7 +2486,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-nav-item" onclick="openCapturePopover()">
       <span class="icon">⚡</span>Capture
     </div>
-    <div class="mobile-nav-item" onclick="openMobileMore()">
+    <div class="mobile-nav-item" data-page="more" onclick="openMobileMore()">
       <span class="icon">☰</span>More
     </div>
   </div>
@@ -2570,6 +2570,8 @@ function mobileNavMore(page) {
   navigateTo(page);
   // Mark the More button as active on the tab bar, highlight drawer item
   document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+  const moreBtn = document.querySelector('.mobile-nav-item[data-page="more"]');
+  if (moreBtn) moreBtn.classList.add('active');
   document.querySelectorAll('.mobile-more-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
   });
