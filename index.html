@@ -1601,6 +1601,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span class="icon">🎯</span> Action Inbox
         <span class="badge" id="action-inbox-badge" style="display:none">0</span>
       </div>
+      <div class="nav-item" data-page="stale-jots">
+        <span class="icon">📋</span> Stale Jots
+        <span class="badge" id="stale-jots-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
@@ -2060,6 +2064,34 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="action-inbox-list"><!-- Populated by renderActionInbox() --></div>
     </div>
 
+    <!-- Stale Jots Page -->
+    <div class="page" id="page-stale-jots" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2>📋 Stale Jots</h2>
+            <p>Daily-doc lines older than 7 days that haven't been turned into a task or note. Decide each: convert, link, archive, or discard.</p>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input id="stale-jots-search" type="text" placeholder="🔍 Search stale jots…" autocomplete="off"
+            style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+            oninput="renderStaleJots()">
+          <button onclick="staleJotsToggleSelectAll()" id="stale-jots-select-all-btn"
+            style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);font-weight:600;">Select all</button>
+        </div>
+        <div id="stale-jots-bulk-toolbar" style="display:none;margin-top:10px;padding:10px 12px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:8px;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span id="stale-jots-bulk-count" style="font-size:12px;color:var(--accent);font-weight:700;">0 selected</span>
+          <span style="flex:1;"></span>
+          <button onclick="staleJotsBulkAction('archive')" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;">📦 Archive</button>
+          <button onclick="staleJotsBulkAction('discard')" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid color-mix(in srgb,var(--red) 50%,transparent);background:var(--surface2);color:var(--red);cursor:pointer;">🗑️ Discard</button>
+          <button onclick="staleJotsClearSelection()" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;">Cancel</button>
+        </div>
+        <div id="stale-jots-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="stale-jots-list"><!-- Populated by renderStaleJots() --></div>
+    </div>
+
     <div class="page" id="page-jira-ledger">
       <div class="page-header">
         <h2>🎫 Jira Ledger</h2>
@@ -2498,6 +2530,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-more-grid">
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()"><span class="icon">⚡</span>Capture</div>
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
+      <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="tasks" onclick="mobileNavMore('tasks')"><span class="icon">✅</span>Tasks</div>
       <div class="mobile-more-item" data-page="completed" onclick="mobileNavMore('completed')"><span class="icon">🏁</span>Completed</div>
       <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
@@ -2579,7 +2612,7 @@ function mobileNavMore(page) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [], activeTriggers: [], jiraRequests: [], jiraLedger: [] };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [], activeTriggers: [], jiraRequests: [], jiraLedger: [], staleJotState: {} };
 window.DATA = DATA; // keep module scripts in sync
 
 // ============================================================
@@ -2658,6 +2691,8 @@ async function loadData() {
     DATA.jiraRequests = Array.isArray(d.jiraRequests) ? d.jiraRequests : [];
     DATA.jiraLedger = Array.isArray(d.jiraLedger) ? d.jiraLedger : [];
     DATA.actionInbox = Array.isArray(d.actionInbox) ? d.actionInbox : [];
+    DATA.actionInboxMeta = d.actionInboxMeta || DATA.actionInboxMeta || {};
+    DATA.staleJotState = (d.staleJotState && typeof d.staleJotState === 'object') ? d.staleJotState : {};
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -2727,7 +2762,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips, renderActionInbox];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips, renderActionInbox, renderStaleJotsBadge];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -2784,6 +2819,7 @@ function navigateTo(page) {
   if (page === 'accomplishments') renderAccomplishments(window._acomplQ || getCurrentQuarter());
   if (page === 'jira-ledger') renderJiraLedger();
   if (page === 'action-inbox') renderActionInbox();
+  if (page === 'stale-jots') renderStaleJots();
 }
 
 function renderJiraLedger() {
@@ -3192,6 +3228,511 @@ function jumpToActionSource(id) {
   }
 }
 window.jumpToActionSource = jumpToActionSource;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STALE JOTS — review surface for daily-doc lines >7d untouched
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// DATA.staleJotState shape: { [key]: { archived?, discarded?, handledAt, action } }
+// Keys are stable across sessions: `${date}#${hash(text)}` so edits to the doc
+// don't bury a previously-triaged line.
+
+window._staleJotsSelection = new Set();
+
+function _staleJotsTextHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
+
+function _staleJotsKey(date, text) {
+  return `${date}#${_staleJotsTextHash(text || '')}`;
+}
+
+function _staleJotsAgeStr(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T12:00:00');
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return '1d ago';
+  if (days < 30) return days + 'd ago';
+  const wk = Math.floor(days / 7);
+  if (wk < 8) return wk + 'w ago';
+  const mo = Math.floor(days / 30);
+  return mo + 'mo ago';
+}
+
+function _staleJotsCleanText(raw) {
+  // Strip leading time-inline span text and trim
+  return String(raw || '')
+    .replace(/^\s*\d{1,2}:\d{2}\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function _staleJotsActionInboxJotTexts() {
+  // Build a set of jot-source summaries to dedupe against Action Inbox
+  const set = new Set();
+  for (const item of (DATA.actionInbox || [])) {
+    if (item.source !== 'jot') continue;
+    if (item.handled || item.dismissed) continue;
+    const t = (item.summary || '').toLowerCase().trim();
+    if (t) set.add(t.slice(0, 80));
+  }
+  return set;
+}
+
+function _staleJotsTaskTextSet() {
+  // Build a set of open-task texts so we don't surface jots already converted
+  const set = new Set();
+  for (const t of (DATA.tasks || [])) {
+    if (t.done || t.status === 'done') continue;
+    const text = (t.text || '').toLowerCase().trim();
+    if (text) set.add(text.slice(0, 80));
+  }
+  return set;
+}
+
+function _staleJotsExtractFromDoc(date, html) {
+  const out = [];
+  if (!html) return out;
+  let parser;
+  try {
+    parser = new DOMParser().parseFromString(html, 'text/html');
+  } catch (e) {
+    return out;
+  }
+  const body = parser.body;
+  if (!body) return out;
+  const walk = (node) => {
+    for (const el of Array.from(node.children)) {
+      const tag = el.tagName;
+      if (tag === 'P') {
+        const text = _staleJotsCleanText(el.textContent);
+        if (text && text.length >= 3) {
+          out.push({ date, text, type: 'paragraph' });
+        }
+      } else if (tag === 'UL' && el.dataset.type === 'taskList') {
+        for (const li of Array.from(el.querySelectorAll(':scope > li'))) {
+          if (li.dataset.checked === 'true') continue;
+          const text = _staleJotsCleanText(li.textContent);
+          if (text && text.length >= 3) {
+            out.push({ date, text, type: 'task' });
+          }
+        }
+      } else if (tag === 'UL' || tag === 'OL') {
+        for (const li of Array.from(el.querySelectorAll(':scope > li'))) {
+          const firstP = li.querySelector(':scope > p');
+          const directText = firstP
+            ? firstP.textContent
+            : Array.from(li.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join('');
+          const text = _staleJotsCleanText(directText);
+          if (text && text.length >= 3) {
+            out.push({ date, text, type: 'list-item' });
+          }
+        }
+      } else if (tag === 'DIV' || tag === 'BLOCKQUOTE') {
+        walk(el);
+      }
+    }
+  };
+  walk(body);
+  return out;
+}
+
+function _staleJotsCollectCandidates() {
+  const todayStr = (typeof getTodayStr === 'function') ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  const cutoff = new Date(Date.now() - 7 * 86400000);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const docs = DATA.dailyDocs || {};
+  const aiTexts = _staleJotsActionInboxJotTexts();
+  const taskTexts = _staleJotsTaskTextSet();
+  const state = DATA.staleJotState || {};
+  const seenKeys = new Set();
+  const out = [];
+
+  for (const date of Object.keys(docs)) {
+    if (!date || date >= cutoffStr) continue; // skip today + recent
+    if (date === todayStr) continue;
+    const doc = docs[date];
+    const lines = _staleJotsExtractFromDoc(date, doc?.content || '');
+    for (const line of lines) {
+      const key = _staleJotsKey(line.date, line.text);
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      const st = state[key];
+      if (st && (st.archived || st.discarded)) continue;
+      const lower = line.text.toLowerCase().slice(0, 80);
+      if (aiTexts.has(lower)) continue; // dedupe with Action Inbox
+      if (taskTexts.has(lower)) continue; // already a task
+      out.push({ ...line, key });
+    }
+  }
+
+  // Newest stale first
+  out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return out;
+}
+
+function renderStaleJotsBadge() {
+  const items = _staleJotsCollectCandidates();
+  const count = items.length;
+  const text = count > 99 ? '99+' : String(count);
+  for (const id of ['stale-jots-badge', 'mobile-stale-jots-badge']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (count) { el.style.display = ''; el.textContent = text; }
+    else { el.style.display = 'none'; }
+  }
+}
+window.renderStaleJotsBadge = renderStaleJotsBadge;
+
+function _staleJotsSyncBulkUI() {
+  const toolbar = document.getElementById('stale-jots-bulk-toolbar');
+  const countEl = document.getElementById('stale-jots-bulk-count');
+  const selBtn = document.getElementById('stale-jots-select-all-btn');
+  const n = window._staleJotsSelection.size;
+  if (toolbar) toolbar.style.display = n > 0 ? 'flex' : 'none';
+  if (countEl) countEl.textContent = n + ' selected';
+  if (selBtn) selBtn.textContent = n > 0 ? 'Clear' : 'Select all';
+}
+
+function staleJotsToggleSelect(key) {
+  if (window._staleJotsSelection.has(key)) {
+    window._staleJotsSelection.delete(key);
+  } else {
+    window._staleJotsSelection.add(key);
+  }
+  renderStaleJots();
+}
+window.staleJotsToggleSelect = staleJotsToggleSelect;
+
+function staleJotsClearSelection() {
+  window._staleJotsSelection.clear();
+  renderStaleJots();
+}
+window.staleJotsClearSelection = staleJotsClearSelection;
+
+function staleJotsToggleSelectAll() {
+  const visible = _staleJotsCollectVisible();
+  if (window._staleJotsSelection.size > 0) {
+    window._staleJotsSelection.clear();
+  } else {
+    for (const it of visible) window._staleJotsSelection.add(it.key);
+  }
+  renderStaleJots();
+}
+window.staleJotsToggleSelectAll = staleJotsToggleSelectAll;
+
+function _staleJotsCollectVisible() {
+  const items = _staleJotsCollectCandidates();
+  const q = (document.getElementById('stale-jots-search')?.value || '').toLowerCase().trim();
+  if (!q) return items;
+  return items.filter(i => i.text.toLowerCase().includes(q) || i.date.includes(q));
+}
+
+function renderStaleJots() {
+  renderStaleJotsBadge();
+  const container = document.getElementById('stale-jots-list');
+  const metaEl = document.getElementById('stale-jots-meta');
+  if (!container) return;
+  const items = _staleJotsCollectVisible();
+  const all = _staleJotsCollectCandidates();
+  // Prune selection of anything no longer visible
+  const visibleKeys = new Set(items.map(i => i.key));
+  for (const k of Array.from(window._staleJotsSelection)) {
+    if (!visibleKeys.has(k)) window._staleJotsSelection.delete(k);
+  }
+  _staleJotsSyncBulkUI();
+
+  if (metaEl) {
+    const q = (document.getElementById('stale-jots-search')?.value || '').trim();
+    metaEl.textContent = q
+      ? `${items.length} of ${all.length} stale jot lines match.`
+      : `${all.length} stale jot lines — daily-doc entries older than 7 days, not linked to a task or note.`;
+  }
+
+  if (!items.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${all.length === 0 ? 'No stale jots. Inbox zero on old daily docs! 🎉' : 'No matches for your search.'}</div>`;
+    return;
+  }
+
+  const baseBtn = 'background:none;border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;white-space:nowrap;';
+  const rows = items.map(item => {
+    const safeKey = item.key.replace(/'/g, "\\'");
+    const selected = window._staleJotsSelection.has(item.key);
+    const escText = (item.text || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    const typeChip = item.type === 'task'
+      ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-weight:600;">unchecked task</span>'
+      : '';
+    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;${selected ? 'background:color-mix(in srgb,var(--accent) 8%,transparent);border-left:3px solid var(--accent);' : ''}">
+      <input type="checkbox" ${selected ? 'checked' : ''} onclick="staleJotsToggleSelect('${safeKey}')" style="margin-top:3px;flex-shrink:0;cursor:pointer;width:16px;height:16px;accent-color:var(--accent);" aria-label="select" />
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="staleJotsJumpToSource('${safeKey}')">
+        <div style="font-size:14px;color:var(--text);line-height:1.4;">${escText}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-muted);">
+          <span>${item.date}</span>
+          <span>·</span>
+          <span>${_staleJotsAgeStr(item.date)}</span>
+          ${typeChip}
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:200px;">
+        <button onclick="staleJotConvertToTask('${safeKey}')" title="Convert to task" style="${baseBtn}border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);">➡️ Task</button>
+        <button onclick="staleJotLinkToNote('${safeKey}')" title="Link to note" style="${baseBtn}border-color:color-mix(in srgb,var(--blue) 40%,transparent);color:var(--blue,#5cb3ff);">🔗 Note</button>
+        <button onclick="staleJotArchive('${safeKey}')" title="Archive (keep in jot history, hide here)" style="${baseBtn}color:var(--text-muted);">📦</button>
+        <button onclick="staleJotDiscard('${safeKey}')" title="Discard (delete line from daily doc)" style="${baseBtn}color:var(--red,#ff7575);">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = rows;
+}
+window.renderStaleJots = renderStaleJots;
+
+function _staleJotsResolveItem(key) {
+  return _staleJotsCollectCandidates().find(i => i.key === key);
+}
+
+function staleJotsJumpToSource(key) {
+  const item = _staleJotsResolveItem(key);
+  if (!item) return;
+  navigateTo('jots');
+  setTimeout(() => {
+    const header = document.querySelector(`.jot-day-header[data-date="${item.date}"]`);
+    if (!header) {
+      showToast?.(`No jot entry found for ${item.date}`);
+      return;
+    }
+    if (!header.classList.contains('open') && typeof toggleDocDay === 'function') {
+      toggleDocDay(header);
+    }
+    header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    header.style.transition = 'background 0.4s';
+    const original = header.style.background;
+    header.style.background = 'color-mix(in srgb,var(--accent) 22%,transparent)';
+    setTimeout(() => { header.style.background = original; }, 1800);
+  }, 150);
+}
+window.staleJotsJumpToSource = staleJotsJumpToSource;
+
+function _staleJotsSetState(key, patch) {
+  if (!DATA.staleJotState) DATA.staleJotState = {};
+  DATA.staleJotState[key] = Object.assign({}, DATA.staleJotState[key] || {}, patch, {
+    handledAt: new Date().toISOString()
+  });
+}
+
+async function staleJotConvertToTask(key) {
+  const item = _staleJotsResolveItem(key);
+  if (!item) return;
+  const newTask = {
+    id: Date.now(),
+    text: item.text,
+    urgency: 2,
+    importance: 2,
+    priority: 'medium',
+    project: '',
+    owner: 'ryan',
+    done: false,
+    created: new Date().toISOString().slice(0, 10),
+    sourceDate: item.date,
+    sourceJot: item.date,
+    messages: []
+  };
+  DATA.tasks.push(newTask);
+  _staleJotsSetState(key, { archived: true, action: 'task', taskId: newTask.id });
+  window._staleJotsSelection.delete(key);
+  await saveData();
+  renderStaleJots();
+  if (typeof renderTasks === 'function') renderTasks();
+  showToast?.('☑️ Task created: ' + item.text.slice(0, 40) + (item.text.length > 40 ? '…' : ''));
+}
+window.staleJotConvertToTask = staleJotConvertToTask;
+
+function staleJotLinkToNote(key) {
+  const item = _staleJotsResolveItem(key);
+  if (!item) return;
+  _staleJotsOpenNotePicker(key, item);
+}
+window.staleJotLinkToNote = staleJotLinkToNote;
+
+function _staleJotsOpenNotePicker(key, item) {
+  const existing = document.getElementById('stale-jot-note-picker');
+  if (existing) existing.remove();
+  const notes = (DATA.notes || []).slice().sort((a, b) => {
+    const aT = (a.updatedAt || a.createdAt || a.created || '');
+    const bT = (b.updatedAt || b.createdAt || b.created || '');
+    return bT.localeCompare(aT);
+  });
+  const overlay = document.createElement('div');
+  overlay.id = 'stale-jot-note-picker';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  const safeKey = key.replace(/'/g, "\\'");
+  const escText = (item.text || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const noteOptions = notes.map(n => {
+    const title = (n.title || 'Untitled note').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    const safeId = String(n.id).replace(/'/g, "\\'");
+    return `<button onclick="_staleJotsConfirmLinkToNote('${safeKey}', '${safeId}')" style="display:block;width:100%;text-align:left;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;margin-bottom:6px;">${title}</button>`;
+  }).join('');
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;">
+      <h3 style="margin:0 0 6px 0;font-size:15px;color:var(--text);">🔗 Link this jot to a note</h3>
+      <div style="font-size:12px;color:var(--text-muted);background:var(--surface2);padding:8px 10px;border-radius:6px;margin-bottom:12px;">"${escText}"</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">It'll be appended as a quoted block at the end of the chosen note, and removed from this panel.</div>
+      <div style="overflow-y:auto;flex:1;min-height:0;">${noteOptions || '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">No notes yet. Create one on the Notes page first.</div>'}</div>
+      <button onclick="document.getElementById('stale-jot-note-picker').remove();" style="margin-top:12px;padding:8px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);cursor:pointer;font-size:12px;">Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function _staleJotsConfirmLinkToNote(key, noteId) {
+  const item = _staleJotsResolveItem(key);
+  if (!item) return;
+  const note = (DATA.notes || []).find(n => String(n.id) === String(noteId));
+  if (!note) { showToast?.('Note not found'); return; }
+  const block = `<blockquote><p><em>From jot ${item.date}:</em> ${item.text.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</p></blockquote>`;
+  note.text = (note.text || '') + block;
+  note.updatedAt = new Date().toISOString();
+  _staleJotsSetState(key, { archived: true, action: 'note', noteId: note.id });
+  window._staleJotsSelection.delete(key);
+  document.getElementById('stale-jot-note-picker')?.remove();
+  await saveData();
+  renderStaleJots();
+  showToast?.('🔗 Linked to "' + (note.title || 'Untitled') + '"');
+}
+window._staleJotsConfirmLinkToNote = _staleJotsConfirmLinkToNote;
+
+async function staleJotArchive(key) {
+  const item = _staleJotsResolveItem(key);
+  if (!item) return;
+  _staleJotsSetState(key, { archived: true, action: 'archive' });
+  window._staleJotsSelection.delete(key);
+  await saveData();
+  renderStaleJots();
+  showToast?.('📦 Archived');
+}
+window.staleJotArchive = staleJotArchive;
+
+function _staleJotsRemoveLineFromDoc(date, text) {
+  // Mutates DATA.dailyDocs[date].content — removes the first <p>/<li> whose
+  // cleaned textContent equals the candidate text. Returns the prior content
+  // for undo, or null if nothing was changed.
+  const doc = (DATA.dailyDocs || {})[date];
+  if (!doc || !doc.content) return null;
+  const before = doc.content;
+  let parser;
+  try {
+    parser = new DOMParser().parseFromString(before, 'text/html');
+  } catch (e) {
+    return null;
+  }
+  const body = parser.body;
+  if (!body) return null;
+  const targets = body.querySelectorAll('p, li');
+  for (const el of Array.from(targets)) {
+    const elText = _staleJotsCleanText(el.textContent);
+    if (elText !== text) continue;
+    // If it's an <li> in a taskList, remove the whole <li>. If <p> inside <li>, remove the <li>.
+    if (el.tagName === 'LI') {
+      const ul = el.parentElement;
+      el.remove();
+      if (ul && ul.children.length === 0) ul.remove();
+    } else if (el.tagName === 'P') {
+      const parentLi = el.closest('li');
+      if (parentLi && parentLi.tagName === 'LI') {
+        // P inside a list item — drop the list item entirely
+        const ul = parentLi.parentElement;
+        parentLi.remove();
+        if (ul && ul.children.length === 0) ul.remove();
+      } else {
+        el.remove();
+      }
+    }
+    break;
+  }
+  const after = body.innerHTML || '<p></p>';
+  if (after === before) return null;
+  doc.content = after;
+  doc.updatedAt = new Date().toISOString();
+  return before;
+}
+
+async function staleJotDiscard(key) {
+  const item = _staleJotsResolveItem(key);
+  if (!item) return;
+  const priorContent = _staleJotsRemoveLineFromDoc(item.date, item.text);
+  _staleJotsSetState(key, { discarded: true, action: 'discard' });
+  window._staleJotsSelection.delete(key);
+  await saveData();
+  renderStaleJots();
+  // Re-render jots page if currently visible so the doc reflects deletion
+  if (document.getElementById('page-jots')?.classList.contains('active') && typeof renderJots === 'function') {
+    renderJots();
+  }
+  // 5s undo
+  const undoFn = async () => {
+    if (priorContent && DATA.dailyDocs?.[item.date]) {
+      DATA.dailyDocs[item.date].content = priorContent;
+    }
+    if (DATA.staleJotState?.[key]) delete DATA.staleJotState[key];
+    await saveData();
+    renderStaleJots();
+    if (typeof renderJots === 'function') renderJots();
+    showToast?.('↩ Restored');
+  };
+  _staleJotsShowUndoToast('🗑️ Discarded · tap to undo', undoFn);
+}
+window.staleJotDiscard = staleJotDiscard;
+
+function _staleJotsShowUndoToast(message, undoFn) {
+  const id = 'stale-jots-undo-toast';
+  document.getElementById(id)?.remove();
+  const t = document.createElement('div');
+  t.id = id;
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:24px;font-size:13px;z-index:9998;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+  t.textContent = message;
+  t.onclick = async () => { t.remove(); await undoFn(); };
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+
+async function staleJotsBulkAction(action) {
+  const keys = Array.from(window._staleJotsSelection);
+  if (!keys.length) return;
+  let n = 0;
+  const priorByKey = {};
+  for (const key of keys) {
+    const item = _staleJotsResolveItem(key);
+    if (!item) continue;
+    if (action === 'archive') {
+      _staleJotsSetState(key, { archived: true, action: 'archive' });
+    } else if (action === 'discard') {
+      priorByKey[key] = { date: item.date, prior: _staleJotsRemoveLineFromDoc(item.date, item.text) };
+      _staleJotsSetState(key, { discarded: true, action: 'discard' });
+    }
+    n++;
+  }
+  window._staleJotsSelection.clear();
+  await saveData();
+  renderStaleJots();
+  if (action === 'discard' && typeof renderJots === 'function') renderJots();
+  if (action === 'discard') {
+    _staleJotsShowUndoToast(`🗑️ Discarded ${n} · tap to undo`, async () => {
+      for (const [k, v] of Object.entries(priorByKey)) {
+        if (v.prior && DATA.dailyDocs?.[v.date]) DATA.dailyDocs[v.date].content = v.prior;
+        if (DATA.staleJotState?.[k]) delete DATA.staleJotState[k];
+      }
+      await saveData();
+      renderStaleJots();
+      if (typeof renderJots === 'function') renderJots();
+      showToast?.('↩ Restored ' + n);
+    });
+  } else {
+    showToast?.(`📦 Archived ${n}`);
+  }
+}
+window.staleJotsBulkAction = staleJotsBulkAction;
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigateTo(item.dataset.page));
