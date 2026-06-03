@@ -2515,8 +2515,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <span class="icon">🎯</span>Action
       <span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:4px;right:10px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span>
     </div>
-    <div class="mobile-nav-item" onclick="openCapturePopover()">
-      <span class="icon">⚡</span>Capture
+    <div class="mobile-nav-item" data-page="tasks" onclick="navigateTo('tasks');setMobileActive(this)">
+      <span class="icon">✅</span>Tasks
     </div>
     <div class="mobile-nav-item" onclick="openMobileMore()">
       <span class="icon">☰</span>More
