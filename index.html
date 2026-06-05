@@ -2714,6 +2714,7 @@ async function loadData() {
     DATA.actionInboxMeta = d.actionInboxMeta || DATA.actionInboxMeta || {};
     DATA.staleJotState = (d.staleJotState && typeof d.staleJotState === 'object') ? d.staleJotState : {};
     DATA.combinedMm = (d.combinedMm && typeof d.combinedMm === 'object') ? d.combinedMm : null;
+    DATA.k2Inline = Array.isArray(d.k2Inline) ? d.k2Inline : [];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -8717,6 +8718,80 @@ function renderDailyBriefPanel() {
 }
 window.renderDailyBriefPanel = renderDailyBriefPanel;
 
+// ═══════════════════════════════════════════════════════════════════════════
+// INLINE K2 MENTIONS — type "<@&K2_ROLE>" in a jot to trigger an action.
+// LLM-classified routing via the K2 Inline Mention Router cron.
+// ═══════════════════════════════════════════════════════════════════════════
+// Pipeline:
+//   1. dashboard detects <@&...K2_ROLE...> on save
+//   2. dashboard queues to DATA.k2Inline + swaps mention to a plain-text marker
+//      「K2:REQID:routing…」 (literal text — survives Tiptap unlike spans/data attrs)
+//   3. cron classifies intent, executes, replaces marker with result chip text
+//   4. dashboard re-renders, user sees the result inline
+window.K2_ROLE_MENTION = '<@&1476437742387855454>';
+
+function _k2InlineMakeId() {
+  return 'k2-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+function _k2InlineExtractParagraphText(html, mentionIndex) {
+  // Walk back from the mention to find <p> open, forward to find <p> close.
+  // Return the plain text inside, stripping the mention itself.
+  const openIdx = html.lastIndexOf('<p', mentionIndex);
+  const closeIdx = html.indexOf('</p>', mentionIndex);
+  if (openIdx < 0 || closeIdx < 0) return null;
+  const openEnd = html.indexOf('>', openIdx);
+  if (openEnd < 0 || openEnd > mentionIndex) return null;
+  const inner = html.slice(openEnd + 1, closeIdx);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = inner;
+  let text = (tmp.textContent || '').trim();
+  // Strip the mention chars if they leaked into textContent
+  text = text.replace(/<@&\d+>/g, '').trim();
+  return text;
+}
+
+function detectK2Mentions(date) {
+  if (!DATA.dailyDocs || !DATA.dailyDocs[date]) return { changed: false, queued: 0 };
+  const doc = DATA.dailyDocs[date];
+  let html = doc.content || '';
+  const mention = window.K2_ROLE_MENTION;
+  if (!html.includes(mention)) return { changed: false, queued: 0 };
+  if (!Array.isArray(DATA.k2Inline)) DATA.k2Inline = [];
+
+  let queued = 0;
+  let cursor = 0;
+  while (true) {
+    const idx = html.indexOf(mention, cursor);
+    if (idx < 0) break;
+    const paragraphText = _k2InlineExtractParagraphText(html, idx);
+    if (!paragraphText) {
+      cursor = idx + mention.length;
+      continue;
+    }
+    const reqId = _k2InlineMakeId();
+    const marker = `「K2:${reqId}:routing…」`;
+    html = html.slice(0, idx) + marker + html.slice(idx + mention.length);
+    DATA.k2Inline.push({
+      id: reqId,
+      source: 'jot',
+      sourceDate: date,
+      paragraph: paragraphText,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+    queued++;
+    cursor = idx + marker.length;
+  }
+  if (queued > 0) {
+    doc.content = html;
+    doc.updatedAt = new Date().toISOString();
+    showToast?.(`🤖 K2 picked up ${queued} request${queued > 1 ? 's' : ''} — routing…`);
+  }
+  return { changed: queued > 0, queued, html };
+}
+window.detectK2Mentions = detectK2Mentions;
+
 // One-time cleanup: strip the embedded legacy brief block from today's doc.content so
 // the editor only contains user content. Safe to run repeatedly (idempotent).
 function _stripLegacyBriefFromDoc(date) {
@@ -8995,10 +9070,17 @@ function debouncedSavePreviousDoc(date) {
     DATA.dailyDocs[date].content = html;
     DATA.dailyDocs[date].updatedAt = new Date().toISOString();
 
+    try {
+      const k2res = detectK2Mentions(date);
+      if (k2res.changed) {
+        try { editor.commands.setContent(DATA.dailyDocs[date].content); } catch(_) {}
+      }
+    } catch (e) { console.warn('[K2] inline mention scan failed:', e); }
+
     // Mirror runDailyDocSave: extract tasks from this day's doc and sync done/text
     // state back to DATA.tasks. Without this, toggling a checkbox in a past day's
     // Jot updated the HTML but left DATA.tasks stale (tasks kept showing as open).
-    const plainText = convertHTMLToText(html);
+    const plainText = convertHTMLToText(DATA.dailyDocs[date].content);
     const { created, updated, activeTexts } = extractAndCreateTasks(plainText || '', null, { sourceDate: date });
 
     const before = DATA.tasks.length;
@@ -9022,14 +9104,24 @@ async function runDailyDocSave() {
     if (!window._todayEditor) return;
     const today = getTodayStr();
     const html = window._todayEditor.getHTML();
-    
+
     if (!DATA.dailyDocs) DATA.dailyDocs = {};
     if (!DATA.dailyDocs[today]) DATA.dailyDocs[today] = {};
     DATA.dailyDocs[today].content = html;
     DATA.dailyDocs[today].updatedAt = new Date().toISOString();
-    
+
+    // Detect inline K2 mentions BEFORE extracting tasks so markers don't get
+    // turned into junk tasks. Mutates DATA.dailyDocs[today].content + queues to
+    // DATA.k2Inline; cron picks them up and replaces marker with result chip.
+    try {
+      const k2res = detectK2Mentions(today);
+      if (k2res.changed && window._todayEditor) {
+        try { window._todayEditor.commands.setContent(DATA.dailyDocs[today].content); } catch(_) {}
+      }
+    } catch (e) { console.warn('[K2] inline mention scan failed:', e); }
+
     // Convert HTML to plain text and extract/sync tasks
-    const plainText = convertHTMLToText(html);
+    const plainText = convertHTMLToText(DATA.dailyDocs[today].content);
     const { created, updated, activeTexts } = extractAndCreateTasks(plainText || '', null, { sourceDate: today });
     if (created > 0) {
       showToast(`${created} task${created > 1 ? 's' : ''} created from jot`);

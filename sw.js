@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v17-live-brief';
+const CACHE_NAME = 'k2-hq-v18-inline-k2';
 const ASSETS = [
   './',
   './index.html',
