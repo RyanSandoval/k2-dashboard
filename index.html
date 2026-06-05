@@ -1843,6 +1843,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">#</kbd> Link note</div>
         <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">[[</kbd> Link note (alt)</div>
       </div>
+      <!-- Live Daily Brief panel — rendered from current DATA.tasks, NOT persisted into doc HTML.
+           This fixes the legacy bug where Tiptap stripped mention-task chips on every save. -->
+      <div id="daily-brief-panel" style="display:none;margin-bottom:14px;"></div>
       <div id="daily-doc-today" class="daily-doc-container">
         <div id="daily-doc-today-editor" class="daily-doc-editor"></div>
       </div>
@@ -2780,7 +2783,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips, renderActionInbox, renderStaleJotsBadge, renderCombinedMm];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips, renderActionInbox, renderStaleJotsBadge, renderCombinedMm, renderDailyBriefPanel];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -8689,6 +8692,63 @@ function generateDailyBrief() {
   return html;
 }
 
+// Render the daily brief as a LIVE PANEL above the today editor (not in doc HTML).
+// Solves: Tiptap was stripping <span class="mention-task"> chips on every save because
+// no schema extension preserved them — so inline tasks went dark every time the user typed.
+function renderDailyBriefPanel() {
+  const panel = document.getElementById('daily-brief-panel');
+  if (!panel) return;
+  const briefHtml = generateDailyBrief();
+  if (!briefHtml) {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    return;
+  }
+  // Strip the trailing <hr><p></p> separator that's only useful when embedded in doc HTML.
+  const cleaned = briefHtml.replace(/<hr><p><\/p>\s*$/, '');
+  panel.style.display = '';
+  panel.innerHTML = `<div class="card" style="padding:14px 18px;border-left:3px solid var(--accent);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;">📌 Today's Brief</div>
+      <button onclick="renderDailyBriefPanel()" title="Refresh" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:0;">🔄</button>
+    </div>
+    ${cleaned}
+  </div>`;
+}
+window.renderDailyBriefPanel = renderDailyBriefPanel;
+
+// One-time cleanup: strip the embedded legacy brief block from today's doc.content so
+// the editor only contains user content. Safe to run repeatedly (idempotent).
+function _stripLegacyBriefFromDoc(date) {
+  if (!DATA.dailyDocs || !DATA.dailyDocs[date]) return false;
+  const doc = DATA.dailyDocs[date];
+  const html = doc.content || '';
+  if (!/<h2>(?:🔴 Overdue|📋 Due Today|📅 Calendar)<\/h2>/.test(html)) return false;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const toRemove = [];
+  for (const node of Array.from(tmp.children)) {
+    if (node.tagName === 'H2') {
+      const t = node.textContent || '';
+      if (t.includes('Overdue') || t.includes('Due Today') || t.includes('Calendar')) {
+        toRemove.push(node);
+        const sib = node.nextElementSibling;
+        if (sib && sib.tagName === 'UL') toRemove.push(sib);
+      }
+    }
+  }
+  if (toRemove.length) {
+    const last = toRemove[toRemove.length - 1];
+    const after = last.nextElementSibling;
+    if (after && after.tagName === 'HR') toRemove.push(after);
+    toRemove.forEach(n => n.remove());
+    doc.content = tmp.innerHTML || '<p></p>';
+    doc.updatedAt = new Date().toISOString();
+    return true;
+  }
+  return false;
+}
+
 function _scheduleEodAppend() {
   // Append End-of-Day section if current hour >= 17, only once per jot
   const hour = new Date().getHours();
@@ -8726,10 +8786,15 @@ function renderDailyDocs() {
   // Ensure today's doc exists
   if (!DATA.dailyDocs) DATA.dailyDocs = {};
   if (!DATA.dailyDocs[today]) {
-    // New jot: auto-populate with daily brief
-    const brief = generateDailyBrief();
-    DATA.dailyDocs[today] = { content: brief || '<p></p>', updatedAt: new Date().toISOString(), linkedProjects: [], linkedNotes: [] };
+    // New jot starts empty — the brief lives in its own panel above the editor now.
+    DATA.dailyDocs[today] = { content: '<p></p>', updatedAt: new Date().toISOString(), linkedProjects: [], linkedNotes: [] };
   }
+
+  // One-time cleanup of any legacy embedded brief still living in today's doc.
+  // Without this, the editor will keep showing the old (broken) brief blocks
+  // alongside the new live panel.
+  let stripped = false;
+  try { stripped = _stripLegacyBriefFromDoc(today); } catch (_) {}
 
   // Initialize today's editor (only once)
   if (!window._todayEditor) {
@@ -8751,7 +8816,19 @@ function renderDailyDocs() {
     _scheduleEodAppend();
   }
 
-  // Upgrade legacy brief format -> new chip-based brief (in place)
+  // Render the live brief panel (above the editor). This replaces the in-doc brief.
+  try { renderDailyBriefPanel(); } catch(_) {}
+
+  // If we stripped a legacy brief block from today's content, persist + refresh the editor.
+  if (stripped) {
+    if (window._todayEditor) {
+      try { window._todayEditor.commands.setContent(DATA.dailyDocs[today].content); } catch(_) {}
+    }
+    if (typeof saveData === 'function') saveData();
+  }
+
+  // Legacy upgrade kept as a no-op safety net (it only triggers on legacy HTML
+  // anyway, and the strip above usually beats it).
   try { upgradeTodayBriefIfStale(today); } catch(_) {}
 
   // Render previous days
