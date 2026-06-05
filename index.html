@@ -2715,6 +2715,7 @@ async function loadData() {
     DATA.staleJotState = (d.staleJotState && typeof d.staleJotState === 'object') ? d.staleJotState : {};
     DATA.combinedMm = (d.combinedMm && typeof d.combinedMm === 'object') ? d.combinedMm : null;
     DATA.k2Inline = Array.isArray(d.k2Inline) ? d.k2Inline : [];
+    DATA.recurrenceQueue = Array.isArray(d.recurrenceQueue) ? d.recurrenceQueue : [];
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
@@ -6470,6 +6471,29 @@ async function toggleTask(taskId) {
     }
   } else {
     delete task.completedAt;
+  }
+
+  // SMART RECURRENCE: when completing a task whose text suggests cadence
+  // ("weekly status update", "daily standup", "every other Tuesday") but no
+  // explicit task.recurrence, queue it for the LLM to judge + spawn next.
+  // Skipped for tasks that already have explicit recurrence (handled below).
+  if (task.done && !task.recurrence && !task.recurrenceEvaluated) {
+    const text = String(task.text || '').toLowerCase();
+    const hint = /\b(weekly|daily|monthly|quarterly|every\s+\w|each\s+(?:day|week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|standing|recurring|every\s+other)\b/.test(text);
+    if (hint) {
+      if (!Array.isArray(DATA.recurrenceQueue)) DATA.recurrenceQueue = [];
+      DATA.recurrenceQueue.push({
+        id: 'rec-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+        taskId: task.id,
+        text: task.text,
+        dueDate: task.dueDate || null,
+        completedAt: task.completedAt,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+      task.recurrenceEvaluated = true;
+      showToast?.('🔁 K2 checking if this should recur…');
+    }
   }
 
   // Recurrence: auto-clone with next due date when completing a recurring task
