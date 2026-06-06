@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v19-smart-recurrence';
+const CACHE_NAME = 'k2-hq-v20-agent-picker';
 const ASSETS = [
   './',
   './index.html',
