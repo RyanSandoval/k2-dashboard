@@ -9233,7 +9233,7 @@ function showRichAutocomplete(textarea, items, type, triggerPos) {
   const rect = textarea.getBoundingClientRect();
   dropdown.style.left = rect.left + 'px'; dropdown.style.top = (rect.bottom + 4) + 'px'; dropdown.style.display = 'block';
 }
-function renderAcHighlight() { document.querySelectorAll('#rich-autocomplete .suggestion-item').forEach((el, i) => el.classList.toggle('active', i === window._acIdx)); }
+function renderAcHighlight() { const items = document.querySelectorAll('#rich-autocomplete .suggestion-item'); items.forEach((el, i) => el.classList.toggle('active', i === window._acIdx)); items[window._acIdx]?.scrollIntoView({ block: 'nearest' }); }
 function hideRichAutocomplete() { window._acActive = false; const d = document.getElementById('rich-autocomplete'); if (d) d.style.display = 'none'; }
 function selectRichAutocomplete(idx) {
   const item = window._acItems[idx]; const trigger = window._acTrigger;
@@ -13012,12 +13012,14 @@ function createInputPlugin() {
             const filtered = slashCommands.filter(c => c.label.toLowerCase().includes(slashFilterText.toLowerCase()));
             slashMenuIdx = Math.min(slashMenuIdx + 1, filtered.length - 1);
             slashMenuEl?.querySelectorAll('.slash-menu-item').forEach((el, i) => el.classList.toggle('active', i === slashMenuIdx));
+            slashMenuEl?.querySelectorAll('.slash-menu-item')[slashMenuIdx]?.scrollIntoView({ block: 'nearest' });
             return true;
           }
           if (event.key === 'ArrowUp') {
             event.preventDefault();
             slashMenuIdx = Math.max(slashMenuIdx - 1, 0);
             slashMenuEl?.querySelectorAll('.slash-menu-item').forEach((el, i) => el.classList.toggle('active', i === slashMenuIdx));
+            slashMenuEl?.querySelectorAll('.slash-menu-item')[slashMenuIdx]?.scrollIntoView({ block: 'nearest' });
             return true;
           }
           if (event.key === 'Enter') {
@@ -13037,12 +13039,14 @@ function createInputPlugin() {
             event.preventDefault();
             suggestionIdx = Math.min(suggestionIdx + 1, suggestionItems.length - 1);
             suggestionEl?.querySelectorAll('.suggestion-item').forEach((el, i) => el.classList.toggle('active', i === suggestionIdx));
+            suggestionEl?.querySelectorAll('.suggestion-item')[suggestionIdx]?.scrollIntoView({ block: 'nearest' });
             return true;
           }
           if (event.key === 'ArrowUp') {
             event.preventDefault();
             suggestionIdx = Math.max(suggestionIdx - 1, 0);
             suggestionEl?.querySelectorAll('.suggestion-item').forEach((el, i) => el.classList.toggle('active', i === suggestionIdx));
+            suggestionEl?.querySelectorAll('.suggestion-item')[suggestionIdx]?.scrollIntoView({ block: 'nearest' });
             return true;
           }
           if (event.key === 'Enter' || event.key === 'Tab') {
