@@ -9202,10 +9202,16 @@ function detectAgentMentions(editor, date) {
 
   let queued = 0;
   for (const { mention, container } of found) {
+    const chipReqId = mention.attrs.reqId;
+    // Hard requirement: every chip must carry a stable reqId attr (set on
+    // insertion). Without it we cannot dedupe across keystrokes — the legacy
+    // text-based fingerprint fired the action on every save while the user
+    // was still typing. Chips without reqId silently expire; the user will
+    // need to delete + re-pick to fire again.
+    if (!chipReqId) continue;
+    if (seen.has(chipReqId)) continue;
     const text = _agentMentionExtractText(container);
     if (!text) continue;
-    const fingerprint = `${mention.attrs.id}|${mention.attrs.label}|${text.slice(0, 120)}`;
-    if (seen.has(fingerprint)) continue;
     const reqId = _k2InlineMakeId();
     DATA.k2Inline.push({
       id: reqId,
@@ -9214,11 +9220,12 @@ function detectAgentMentions(editor, date) {
       paragraph: text,
       explicitAgent: mention.attrs.id,
       explicitRoute: mention.attrs.route,
+      chipReqId,
       status: 'pending',
       createdAt: new Date().toISOString(),
     });
-    doc.queuedAgentMentionIds.push(fingerprint);
-    seen.add(fingerprint);
+    doc.queuedAgentMentionIds.push(chipReqId);
+    seen.add(chipReqId);
     queued++;
   }
   if (queued > 0) showToast?.(`🤖 K2 picked up ${queued} explicit agent mention${queued > 1 ? 's' : ''}`);
@@ -13040,6 +13047,13 @@ const AgentMention = Node.create({
       label: { default: null },
       route: { default: null },
       icon: { default: null },
+      // Unique per-insertion request id. Used by detectAgentMentions to dedupe
+      // — a chip can only fire its action exactly once, regardless of how
+      // surrounding text mutates as the user keeps typing.
+      reqId: {
+        default: null,
+        parseHTML: el => el.getAttribute('data-req-id') || null,
+      },
     };
   },
   parseHTML() {
@@ -13052,6 +13066,7 @@ const AgentMention = Node.create({
       'data-id': node.attrs.id,
       'data-label': node.attrs.label,
       'data-route': node.attrs.route,
+      'data-req-id': node.attrs.reqId || '',
     }, `${node.attrs.icon || '🤖'} ${node.attrs.label || ''}`];
   },
 });
@@ -13379,11 +13394,13 @@ function selectSuggestion(idx) {
   let attrs;
   if (type === 'agent') {
     nodeType = 'agentMention';
+    const reqId = 'a-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
     attrs = {
       id: String(item.id),
       label: insertLabel,
       route: item.route || 'classify',
       icon: item.icon || '🤖',
+      reqId,
     };
   } else {
     nodeType = type === 'project' ? 'projectMention' : 'noteMention';
