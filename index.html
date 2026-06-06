@@ -9005,31 +9005,46 @@ function detectAgentMentions(editor, date) {
   try { json = editor.getJSON(); } catch (_) { return { queued: 0 }; }
   if (!json?.content) return { queued: 0 };
 
-  let queued = 0;
-  for (const block of json.content) {
-    if (!block?.content) continue;
-    // Find agent mentions in this block + collect surrounding text
-    const text = _agentMentionExtractText(block);
-    const mentions = _agentMentionFindAll(block);
-    if (mentions.length === 0 || !text) continue;
-    for (const m of mentions) {
-      const fingerprint = `${m.attrs.id}|${m.attrs.label}|${text.slice(0, 120)}`;
-      if (seen.has(fingerprint)) continue;
-      const reqId = _k2InlineMakeId();
-      DATA.k2Inline.push({
-        id: reqId,
-        source: 'jot',
-        sourceDate: date,
-        paragraph: text,
-        explicitAgent: m.attrs.id,
-        explicitRoute: m.attrs.route,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      });
-      doc.queuedAgentMentionIds.push(fingerprint);
-      seen.add(fingerprint);
-      queued++;
+  // Walk the entire doc tree, tracking the nearest "logical container" for each
+  // agentMention. Logical container = the closest paragraph or listItem
+  // ancestor. We use the container's text (excluding agent mentions themselves)
+  // as the routing instruction — NOT the whole top-level block, which would
+  // sweep in unrelated bullets.
+  const found = [];
+  function walk(node, container) {
+    if (!node) return;
+    let nextContainer = container;
+    if (node.type === 'paragraph' || node.type === 'listItem' || node.type === 'heading') {
+      nextContainer = node;
     }
+    if (node.type === 'agentMention') {
+      found.push({ mention: node, container: nextContainer || node });
+      return;
+    }
+    if (node.content) for (const c of node.content) walk(c, nextContainer);
+  }
+  walk(json, null);
+
+  let queued = 0;
+  for (const { mention, container } of found) {
+    const text = _agentMentionExtractText(container);
+    if (!text) continue;
+    const fingerprint = `${mention.attrs.id}|${mention.attrs.label}|${text.slice(0, 120)}`;
+    if (seen.has(fingerprint)) continue;
+    const reqId = _k2InlineMakeId();
+    DATA.k2Inline.push({
+      id: reqId,
+      source: 'jot',
+      sourceDate: date,
+      paragraph: text,
+      explicitAgent: mention.attrs.id,
+      explicitRoute: mention.attrs.route,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+    doc.queuedAgentMentionIds.push(fingerprint);
+    seen.add(fingerprint);
+    queued++;
   }
   if (queued > 0) showToast?.(`🤖 K2 picked up ${queued} explicit agent mention${queued > 1 ? 's' : ''}`);
   return { queued };
