@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v23-workers-detail';
+const CACHE_NAME = 'k2-hq-v24-task-agent';
 const ASSETS = [
   './',
   './index.html',

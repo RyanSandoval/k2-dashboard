@@ -6449,6 +6449,14 @@ function renderTaskRow(task) {
     (task.context ? '<span style="font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border-subtle);">📍 ' + task.context + '</span>' : '') +
     (hasSubtasks ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);">📋 ' + subtasksDone + '/' + subtasks.length + '</span>' : '') +
     (taskIsBlocked ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:var(--red);background:color-mix(in srgb,var(--red) 15%,transparent);">🔒 Blocked</span>' : '') +
+    (task.k2Intent ? (function(){
+      const ic = task.k2Intent.icon || '🤖';
+      const label = task.k2Intent.label || task.k2Intent.agent || 'agent';
+      if (task.k2Status === 'done' && task.k2Result) {
+        return '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:var(--green);background:color-mix(in srgb,var(--green) 15%,transparent);">' + ic + ' → ' + (task.k2Result.intent || 'done') + '</span>';
+      }
+      return '<span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 15%,transparent);">' + ic + ' ' + label + ' ⏳</span>';
+    })() : '') +
     '</div>' +
     '<div class="task-meta">' + projectName + ' • ' + task.created + (task.source === 'jot' ? ' • 📝 from jot' : '') + (parentTask ? ' • <span style="color:var(--text-dim);">↳ ' + (parentTask.text || 'parent') + '</span>' : '') + '</div>' +
     '</div>' +
@@ -6774,8 +6782,13 @@ async function addTask() {
   const rawText = input.value.trim();
   if (!rawText) return;
 
-  const parsed = parseNaturalLanguageTask(rawText);
-  const text = parsed.text || rawText;
+  // Detect `>agent` mention before parsing so we can strip it from task text
+  // AND queue an explicit K2 action. On resolution the router marks the task
+  // done (the agent fulfilled the request — the task lifecycle is closed).
+  const k2Agent = _extractAgentFromText(rawText);
+
+  const parsed = parseNaturalLanguageTask(k2Agent ? k2Agent.cleanText : rawText);
+  const text = parsed.text || (k2Agent ? k2Agent.cleanText : rawText);
   const urgency = parsed.urgency !== null ? parsed.urgency : uiUrgency;
   const importance = parsed.importance !== null ? parsed.importance : uiImportance;
 
@@ -6793,8 +6806,31 @@ async function addTask() {
     messages: []
   };
 
+  if (k2Agent) {
+    newTask.k2Intent = { agent: k2Agent.agent.id, label: k2Agent.agent.label, route: k2Agent.agent.route, icon: k2Agent.agent.icon };
+    newTask.k2Status = 'pending';
+    newTask.k2QueuedAt = new Date().toISOString();
+  }
+
   DATA.tasks.push(newTask);
   input.value = '';
+
+  if (k2Agent) {
+    if (!Array.isArray(DATA.k2Inline)) DATA.k2Inline = [];
+    const reqId = (typeof _k2InlineMakeId === 'function') ? _k2InlineMakeId() : ('k2-' + Date.now().toString(36));
+    DATA.k2Inline.push({
+      id: reqId,
+      source: 'task',
+      sourceTaskId: newTask.id,
+      paragraph: text,
+      explicitAgent: k2Agent.agent.id,
+      explicitRoute: k2Agent.agent.route,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+    newTask.k2RequestId = reqId;
+    showToast(`${k2Agent.agent.icon} ${k2Agent.agent.label} picked up — will mark task done when complete`);
+  }
 
   // Build toast summary
   var toastParts = ['Task added'];
@@ -13027,6 +13063,24 @@ window.K2_AGENTS = [
   { id: 'note',        label: 'note',        icon: '📝', route: 'note', viking: false, desc: 'Save as a reference note' },
   { id: 'dashboard',   label: 'dashboard',   icon: '🔧', route: 'dashboard-feedback', viking: false, desc: 'Queue as K2 dashboard idea' },
 ];
+
+// Detect a `>agent` mention in plain-text input (sidebar capture, addTask).
+// Returns { agent, cleanText } if a known agent is mentioned; otherwise null.
+// Pattern: `>name` preceded by whitespace or start-of-string so URL fragments
+// like `…/foo>bar` don't trigger.
+function _extractAgentFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+  const re = /(^|\s)>([a-zA-Z][a-zA-Z-]*)\b/;
+  const m = text.match(re);
+  if (!m) return null;
+  const slug = m[2].toLowerCase();
+  const agent = (window.K2_AGENTS || []).find(a => a.id === slug || a.label === slug);
+  if (!agent) return null;
+  // Strip the `>agent` token (and any leading whitespace it captured)
+  const cleanText = text.replace(re, '').replace(/\s+/g, ' ').trim();
+  return { agent, cleanText };
+}
+window._extractAgentFromText = _extractAgentFromText;
 
 const NoteMention = Node.create({
   name: 'noteMention',
