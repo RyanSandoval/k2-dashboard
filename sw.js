@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v26-skills-catalog';
+const CACHE_NAME = 'k2-hq-v27-workers-outcomes';
 const ASSETS = [
   './',
   './index.html',

@@ -3736,6 +3736,17 @@ function _workersCardDetailHtml(card) {
     if (r.paragraph) rows.push(['Full paragraph (sent to router)', r.paragraph]);
     rows.push(['Created', r.createdAt || '']);
     if (r.resolvedAt) rows.push(['Resolved', r.resolvedAt]);
+    // ── What did K2 actually do? ──────────────────────────────────
+    if (r.outputLabel || r.resultMarker || r.outputType) {
+      const resultText = r.resultMarker || r.outputLabel || '';
+      if (resultText) rows.push(['Result', resultText]);
+      if (r.outputType) {
+        const outProj = r.outputProject ? ` · project ${r.outputProject}` : '';
+        rows.push(['K2 action', `created ${r.outputType}${outProj}`]);
+      }
+    } else if (r.status === 'done') {
+      rows.push(['Result', '(legacy item — outcome not recorded; new items show what was created)']);
+    }
   } else if (card.kind === 'jira-request') {
     rows.push(['Project', r.project || 'MW']);
     rows.push(['Labels', Array.isArray(r.labels) ? r.labels.join(', ') : '']);
@@ -3775,6 +3786,16 @@ function _workersCardDetailHtml(card) {
   if (r.sourceDate) {
     const safeDate = _workersEscape(r.sourceDate);
     actions.push(`<button onclick="event.stopPropagation();workersOpenSourceJot('${safeDate}')" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-weight:600;">📂 Open source jot</button>`);
+  }
+  // Inline card → open the thing K2 created (task / note / jira request)
+  if (card.kind === 'inline' && r.outputType && r.outputId != null) {
+    const safeType = _workersEscape(r.outputType);
+    const safeId = _workersEscape(String(r.outputId));
+    const label = r.outputType === 'task' ? '✅ Open task'
+      : r.outputType === 'note' ? '📝 Open note'
+      : r.outputType === 'jira-request' ? '🎫 View Jira request'
+      : '🔎 Open output';
+    actions.push(`<button onclick="event.stopPropagation();workersOpenOutput('${safeType}','${safeId}')" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);cursor:pointer;font-weight:700;">${label}</button>`);
   }
   if (card.jiraKey) {
     actions.push(`<a href="https://vikingtravel.atlassian.net/browse/${card.jiraKey}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--accent);text-decoration:none;font-weight:600;">🎫 Open ${card.jiraKey} ↗</a>`);
@@ -3875,6 +3896,47 @@ function workersOpenSourceJot(date) {
   }, 150);
 }
 window.workersOpenSourceJot = workersOpenSourceJot;
+
+// Open the thing K2 actually created from an inline mention — task, note, or
+// jira request. Inline cards stamp outputType + outputId at resolve time
+// (router.py). For jira-request, scroll to the matching jiraRequests row in
+// the Workers tab so the user sees its filed status / MW-key.
+function workersOpenOutput(outputType, outputId) {
+  if (outputType === 'task') {
+    const taskId = Number(outputId);
+    if (typeof openTaskModal === 'function') { openTaskModal(taskId); return; }
+    navigateTo('tasks');
+    return;
+  }
+  if (outputType === 'note') {
+    if (typeof openNoteEditor === 'function') { openNoteEditor(outputId); return; }
+    navigateTo('notes');
+    return;
+  }
+  if (outputType === 'jira-request') {
+    // Expand the matching jira-request card in the same Workers tab so the
+    // user can watch it go pending → filed → MW-XXX.
+    const cardId = `jira-request:${outputId}`;
+    if (window._workersExpanded) {
+      window._workersExpanded.add(cardId);
+      renderWorkers();
+      setTimeout(() => {
+        const cards = document.querySelectorAll('#workers-content .card');
+        for (const c of cards) {
+          if ((c.getAttribute('onclick') || '').includes(cardId)) {
+            c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            c.style.outline = '2px solid var(--accent)';
+            setTimeout(() => { c.style.outline = ''; }, 1500);
+            break;
+          }
+        }
+      }, 50);
+    }
+    return;
+  }
+  showToast?.('Unknown output type: ' + outputType);
+}
+window.workersOpenOutput = workersOpenOutput;
 
 function renderWorkers() {
   renderWorkersBadge();
