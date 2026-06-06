@@ -3509,6 +3509,91 @@ function renderWorkersBadge() {
 }
 window.renderWorkersBadge = renderWorkersBadge;
 
+function _workersEscape(s) {
+  return String(s || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+}
+
+window._workersExpanded = new Set();
+
+function workersToggleCard(cardId) {
+  if (window._workersExpanded.has(cardId)) window._workersExpanded.delete(cardId);
+  else window._workersExpanded.add(cardId);
+  renderWorkers();
+}
+window.workersToggleCard = workersToggleCard;
+
+function _workersCardId(card) {
+  return `${card.kind}:${card.raw?.id || card.raw?.jiraKey || card.ts || ''}`;
+}
+
+function _workersCardDetailHtml(card) {
+  const r = card.raw || {};
+  const rows = [];
+
+  if (card.kind === 'inline') {
+    rows.push(['Source', r.source === 'jot' ? `Jot · ${r.sourceDate || 'unknown date'}` : (r.source || 'unknown')]);
+    rows.push(['Route', r.explicitRoute ? `explicit → ${r.explicitRoute}` : 'Haiku classify']);
+    if (r.intent) rows.push(['Classified intent', r.intent]);
+    if (typeof r.vikingContext === 'boolean') rows.push(['Viking context', r.vikingContext ? 'true' : 'false']);
+    if (r.summary) rows.push(['Summary', r.summary]);
+    if (r.paragraph) rows.push(['Full paragraph (sent to router)', r.paragraph]);
+    rows.push(['Created', r.createdAt || '']);
+    if (r.resolvedAt) rows.push(['Resolved', r.resolvedAt]);
+  } else if (card.kind === 'jira-request') {
+    rows.push(['Project', r.project || 'MW']);
+    rows.push(['Labels', Array.isArray(r.labels) ? r.labels.join(', ') : '']);
+    if (r.title) rows.push(['Title', r.title]);
+    if (r.description) rows.push(['Description (sent to Copilot)', r.description]);
+    if (r.source === 'jot' || r.source === 'jot-mention') rows.push(['Source', `Jot · ${r.sourceDate || 'unknown'}`]);
+    if (r.jiraKey) rows.push(['Jira key', r.jiraKey]);
+    rows.push(['Queued', r.createdAt || '']);
+    if (r.filedAt) rows.push(['Filed', r.filedAt]);
+  } else if (card.kind === 'recurrence') {
+    rows.push(['Task text', r.text || '']);
+    rows.push(['Source task id', r.taskId || '']);
+    if (r.dueDate) rows.push(['Original due', r.dueDate]);
+    if (r.completedAt) rows.push(['Completed at', r.completedAt]);
+    if (r.judgment) {
+      rows.push(['Recurs', r.judgment.recur ? `yes — every ${r.judgment.cadenceDays}d` : 'no']);
+      if (r.judgment.reason) rows.push(['Reason', r.judgment.reason]);
+    }
+  } else if (card.kind === 'jira-ledger') {
+    if (r.title) rows.push(['Title', r.title]);
+    if (r.project) rows.push(['Project', r.project]);
+    if (r.jiraKey) rows.push(['Jira key', r.jiraKey]);
+    if (r.createdAt) rows.push(['Filed', r.createdAt]);
+    if (r.sourceText) rows.push(['Source text', r.sourceText]);
+  }
+
+  // Action buttons
+  const actions = [];
+  if (card.kind === 'jira-request' && card.status === 'pending') {
+    const safeId = _workersEscape(r.id || '');
+    actions.push(`<button onclick="event.stopPropagation();workersCancelJiraRequest('${safeId}')" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid color-mix(in srgb,var(--red) 50%,transparent);background:var(--surface2);color:var(--red);cursor:pointer;font-weight:600;">❌ Cancel — drop from queue</button>`);
+  }
+  if (card.kind === 'inline' && card.status === 'pending') {
+    const safeId = _workersEscape(r.id || '');
+    actions.push(`<button onclick="event.stopPropagation();workersCancelInline('${safeId}')" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid color-mix(in srgb,var(--red) 50%,transparent);background:var(--surface2);color:var(--red);cursor:pointer;font-weight:600;">❌ Cancel — drop from queue</button>`);
+  }
+  if (r.sourceDate) {
+    const safeDate = _workersEscape(r.sourceDate);
+    actions.push(`<button onclick="event.stopPropagation();workersOpenSourceJot('${safeDate}')" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-weight:600;">📂 Open source jot</button>`);
+  }
+  if (card.jiraKey) {
+    actions.push(`<a href="https://vikingtravel.atlassian.net/browse/${card.jiraKey}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="padding:6px 12px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--accent);text-decoration:none;font-weight:600;">🎫 Open ${card.jiraKey} ↗</a>`);
+  }
+
+  const rowsHtml = rows.map(([k, v]) => `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:12px;">
+    <div style="min-width:130px;color:var(--text-muted);font-weight:600;">${_workersEscape(k)}</div>
+    <div style="flex:1;color:var(--text);word-break:break-word;white-space:pre-wrap;">${_workersEscape(v)}</div>
+  </div>`).join('');
+
+  return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+    ${rowsHtml}
+    ${actions.length ? `<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">${actions.join('')}</div>` : ''}
+  </div>`;
+}
+
 function _workersCardHtml(card) {
   const ageStr = _workersAgeStr(card.ts);
   const statusColor = card.status === 'pending'
@@ -3524,21 +3609,75 @@ function _workersCardHtml(card) {
     ? '<span style="font-size:9px;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--accent2);font-weight:700;">VIKING</span>'
     : '';
   const title = (card.title || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;">
-    <div style="font-size:18px;line-height:1.3;flex-shrink:0;">${card.icon}</div>
-    <div style="flex:1;min-width:0;">
-      <div style="font-size:13px;color:var(--text);line-height:1.4;">${title}</div>
-      <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-muted);">
-        <span style="color:${statusColor};font-weight:700;">${statusLabel}</span>
-        <span>·</span>
-        <span>${card.lane}</span>
-        ${vikingChip ? '<span>·</span>' + vikingChip : ''}
-        <span>·</span>
-        <span>${ageStr}</span>${jiraLink}
+  const cardId = _workersCardId(card);
+  const safeCardId = _workersEscape(cardId);
+  const expanded = window._workersExpanded.has(cardId);
+  const detail = expanded ? _workersCardDetailHtml(card) : '';
+  const caret = expanded ? '▾' : '▸';
+  return `<div class="card" style="margin-bottom:8px;padding:12px 14px;cursor:pointer;" onclick="workersToggleCard('${safeCardId}')">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="font-size:18px;line-height:1.3;flex-shrink:0;">${card.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;color:var(--text);line-height:1.4;">${title}</div>
+        <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-muted);">
+          <span style="color:${statusColor};font-weight:700;">${statusLabel}</span>
+          <span>·</span>
+          <span>${card.lane}</span>
+          ${vikingChip ? '<span>·</span>' + vikingChip : ''}
+          <span>·</span>
+          <span>${ageStr}</span>${jiraLink}
+        </div>
       </div>
+      <div style="color:var(--text-muted);font-size:12px;flex-shrink:0;">${caret}</div>
     </div>
+    ${detail}
   </div>`;
 }
+
+async function workersCancelJiraRequest(reqId) {
+  if (!Array.isArray(DATA.jiraRequests)) return;
+  const idx = DATA.jiraRequests.findIndex(r => r.id === reqId);
+  if (idx < 0) { showToast?.('Already gone'); return; }
+  const r = DATA.jiraRequests[idx];
+  if (r.status !== 'pending') { showToast?.('Already in flight — too late to cancel'); return; }
+  if (!confirm(`Cancel "${(r.title || '').slice(0, 70)}"?`)) return;
+  DATA.jiraRequests.splice(idx, 1);
+  await saveData();
+  renderWorkers();
+  showToast?.('❌ Cancelled');
+}
+window.workersCancelJiraRequest = workersCancelJiraRequest;
+
+async function workersCancelInline(reqId) {
+  if (!Array.isArray(DATA.k2Inline)) return;
+  const item = DATA.k2Inline.find(r => r.id === reqId);
+  if (!item) { showToast?.('Already gone'); return; }
+  if (item.status !== 'pending') { showToast?.('Already resolved'); return; }
+  if (!confirm(`Cancel inline request "${(item.paragraph || '').slice(0, 70)}"?`)) return;
+  item.status = 'cancelled';
+  item.resolvedAt = new Date().toISOString();
+  await saveData();
+  renderWorkers();
+  showToast?.('❌ Cancelled');
+}
+window.workersCancelInline = workersCancelInline;
+
+function workersOpenSourceJot(date) {
+  navigateTo('jots');
+  setTimeout(() => {
+    const today = (typeof getTodayStr === 'function') ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    if (date === today) {
+      const el = document.getElementById('daily-doc-today-editor');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
+    if (!header) { showToast?.(`No jot for ${date}`); return; }
+    if (!header.classList.contains('open') && typeof toggleDocDay === 'function') toggleDocDay(header);
+    header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 150);
+}
+window.workersOpenSourceJot = workersOpenSourceJot;
 
 function renderWorkers() {
   renderWorkersBadge();
