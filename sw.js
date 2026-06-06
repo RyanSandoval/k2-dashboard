@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v25-chip-reqid';
+const CACHE_NAME = 'k2-hq-v26-skills-catalog';
 const ASSETS = [
   './',
   './index.html',

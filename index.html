@@ -1616,6 +1616,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span class="icon">🤖</span> Workers
         <span class="badge" id="workers-badge" style="display:none">0</span>
       </div>
+      <div class="nav-item" data-page="skills">
+        <span class="icon">🧩</span> Skills
+        <span class="badge" id="skills-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" data-page="dashboard">
         <span class="icon">📊</span> Dashboard
       </div>
@@ -2123,6 +2127,27 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="stale-jots-list"><!-- Populated by renderStaleJots() --></div>
     </div>
 
+    <!-- Skills Page — discoverable catalog of every K2 capability -->
+    <div class="page" id="page-skills" style="max-width:1000px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2>🧩 Skills</h2>
+            <p>Every K2 capability as a registered skill. Discoverable for humans and for agents.</p>
+          </div>
+          <button onclick="renderSkills(true)" title="Refetch manifest" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;color:var(--text);">🔄 Refresh</button>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input id="skills-search" type="text" placeholder="🔍 Search skills…" autocomplete="off"
+            style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+            oninput="renderSkills(false)">
+          <button onclick="window.open('https://raw.githubusercontent.com/RyanSandoval/k2-dashboard/main/skills/_manifest.json','_blank')" title="Public manifest URL" style="font-size:11px;padding:8px 12px;border-radius:8px;border:1px solid var(--accent);cursor:pointer;background:transparent;color:var(--accent);font-weight:700;">📡 Public manifest</button>
+        </div>
+        <div id="skills-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="skills-content"><!-- Populated by renderSkills() --></div>
+    </div>
+
     <!-- Workers Page — unified live view of agent queues + recent results -->
     <div class="page" id="page-workers" style="max-width:880px;margin:0 auto;">
       <div class="page-header">
@@ -2577,6 +2602,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
       <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="workers" onclick="mobileNavMore('workers')" style="position:relative;"><span class="icon">🤖</span>Workers<span id="mobile-workers-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
+      <div class="mobile-more-item" data-page="skills" onclick="mobileNavMore('skills')"><span class="icon">🧩</span>Skills</div>
       <div class="mobile-more-item" data-page="tasks" onclick="mobileNavMore('tasks')"><span class="icon">✅</span>Tasks</div>
       <div class="mobile-more-item" data-page="completed" onclick="mobileNavMore('completed')"><span class="icon">🏁</span>Completed</div>
       <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
@@ -2870,6 +2896,7 @@ function navigateTo(page) {
   if (page === 'action-inbox') renderActionInbox();
   if (page === 'stale-jots') renderStaleJots();
   if (page === 'workers') renderWorkers();
+  if (page === 'skills') renderSkills(false);
 }
 
 function renderJiraLedger() {
@@ -3396,6 +3423,176 @@ function renderCombinedMm() {
     + `<span>${reviewBadge} · updated ${_combinedMmAgeStr(cmm.updatedAt)}</span>`;
 }
 window.renderCombinedMm = renderCombinedMm;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SKILLS — discoverable catalog of every K2 capability
+// ═══════════════════════════════════════════════════════════════════════════
+// Manifest lives at skills/_manifest.json (relative to dashboard root).
+// Public agent-facing URL:
+//   https://raw.githubusercontent.com/RyanSandoval/k2-dashboard/main/skills/_manifest.json
+
+window._skillsCache = null;
+window._skillsCacheAt = 0;
+window._skillsExpanded = new Set();
+
+async function _skillsLoadManifest(force) {
+  const now = Date.now();
+  if (!force && window._skillsCache && (now - window._skillsCacheAt) < 60_000) {
+    return window._skillsCache;
+  }
+  try {
+    const res = await fetch('./skills/_manifest.json?_=' + now, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    window._skillsCache = data;
+    window._skillsCacheAt = now;
+    return data;
+  } catch (e) {
+    console.error('[K2] skills manifest load failed:', e);
+    return null;
+  }
+}
+
+function _skillsStatusChip(status) {
+  const map = {
+    active: { c: 'var(--green)', label: 'active' },
+    beta: { c: 'var(--yellow)', label: 'beta' },
+    deprecated: { c: 'var(--orange)', label: 'deprecated' },
+    disabled: { c: 'var(--text-dim)', label: 'disabled' },
+  };
+  const s = map[status] || { c: 'var(--text-muted)', label: status || '?' };
+  return `<span style="font-size:10px;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,${s.c} 15%,transparent);color:${s.c};font-weight:700;">${s.label}</span>`;
+}
+
+function _skillsToggleExpanded(name) {
+  if (window._skillsExpanded.has(name)) window._skillsExpanded.delete(name);
+  else window._skillsExpanded.add(name);
+  renderSkills(false);
+}
+window._skillsToggleExpanded = _skillsToggleExpanded;
+
+function _skillsCardHtml(skill) {
+  const expanded = window._skillsExpanded.has(skill.name);
+  const safeName = skill.name.replace(/'/g, "\\'");
+  const escTxt = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const surfaces = (skill.surface || []).map(s => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escTxt(s)}</code>`).join(' ');
+  const triggers = (skill.trigger || []).map(s => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escTxt(s)}</code>`).join(' ');
+  const vikingChip = skill.vikingOnly
+    ? '<span style="font-size:9px;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--accent2);font-weight:700;">VIKING-ONLY</span>'
+    : '';
+  const specLink = skill.specPath
+    ? `<a href="https://github.com/RyanSandoval/k2-dashboard/blob/main/${skill.specPath}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-size:11px;">📄 spec ↗</a>`
+    : '';
+  const invoke = skill.invoke
+    ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;font-size:11px;">
+        <div style="color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:4px;">Invoke</div>
+        <div><strong style="color:var(--accent);">${escTxt(skill.invoke.type || '')}</strong> → <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">${escTxt(skill.invoke.target || '')}</code></div>
+        ${skill.invoke.example ? `<pre style="margin-top:6px;font-size:10px;color:var(--text-dim);white-space:pre-wrap;word-break:break-word;background:var(--surface);padding:6px 8px;border-radius:4px;">${escTxt(skill.invoke.example)}</pre>` : ''}
+      </div>`
+    : '';
+  const inputs = (skill.inputs || []).length
+    ? `<div style="margin-top:6px;font-size:11px;color:var(--text-muted);"><strong>Inputs:</strong> ${(skill.inputs || []).map(escTxt).join(', ')}</div>`
+    : '';
+  const outputs = (skill.outputs || []).length
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Outputs:</strong> ${(skill.outputs || []).map(escTxt).join(', ')}</div>`
+    : '';
+  const deps = (skill.dependencies || []).length
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Depends on:</strong> ${(skill.dependencies || []).map(escTxt).join(', ')}</div>`
+    : '';
+  const code = (skill.code || []).length
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Code:</strong> ${(skill.code || []).map(c => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escTxt(c.file)}:${escTxt(c.symbol)}</code>`).join(' ')}</div>`
+    : '';
+  const detail = expanded
+    ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;font-size:11px;color:var(--text-muted);"><strong>Surface:</strong> ${surfaces || '<em>none</em>'}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;font-size:11px;color:var(--text-muted);"><strong>Trigger:</strong> ${triggers || '<em>none</em>'}</div>
+        ${inputs}${outputs}${deps}${code}${invoke}
+      </div>`
+    : '';
+  return `<div class="card" style="margin-bottom:8px;padding:12px 14px;cursor:pointer;" onclick="_skillsToggleExpanded('${safeName}')">
+    <div style="display:flex;gap:8px;align-items:flex-start;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:3px;">
+          <span style="font-size:14px;font-weight:700;color:var(--text);">${escTxt(skill.title || skill.name)}</span>
+          <code style="font-size:10px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px;">${escTxt(skill.name)}</code>
+          ${_skillsStatusChip(skill.status)}
+          ${vikingChip}
+          <span style="font-size:10px;color:var(--text-muted);">v${escTxt(skill.version)}</span>
+          ${specLink}
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.45;">${escTxt(skill.desc)}</div>
+      </div>
+      <div style="color:var(--text-muted);font-size:12px;flex-shrink:0;">${expanded ? '▾' : '▸'}</div>
+    </div>
+    ${detail}
+  </div>`;
+}
+
+async function renderSkills(forceRefresh) {
+  const container = document.getElementById('skills-content');
+  const metaEl = document.getElementById('skills-meta');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-size:13px;">Loading manifest…</div>';
+
+  const manifest = await _skillsLoadManifest(!!forceRefresh);
+  if (!manifest) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);font-size:13px;">⚠️ Failed to load skills/_manifest.json — check the network tab.</div>';
+    if (metaEl) metaEl.textContent = '';
+    return;
+  }
+
+  const query = (document.getElementById('skills-search')?.value || '').toLowerCase().trim();
+  const all = manifest.skills || [];
+  const filtered = query
+    ? all.filter(s => (s.name + ' ' + (s.title||'') + ' ' + (s.desc||'') + ' ' + (s.category||'')).toLowerCase().includes(query))
+    : all;
+
+  const byCat = {};
+  for (const s of filtered) {
+    const c = s.category || 'other';
+    if (!byCat[c]) byCat[c] = [];
+    byCat[c].push(s);
+  }
+  const orderedCats = (manifest.categories || []).filter(c => byCat[c.id]);
+  // Append any uncategorized
+  for (const cid of Object.keys(byCat)) {
+    if (!orderedCats.find(c => c.id === cid)) {
+      orderedCats.push({ id: cid, label: cid, icon: '•', desc: '' });
+    }
+  }
+
+  if (metaEl) {
+    metaEl.textContent = `${filtered.length} of ${all.length} skills · manifest v${manifest.version || '?'} · phase ${manifest.phase || '?'} · cached ${new Date(window._skillsCacheAt).toLocaleTimeString()}`;
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-size:13px;">No skills match your search.</div>';
+    return;
+  }
+
+  const sectionsHtml = orderedCats.map(cat => {
+    const items = byCat[cat.id] || [];
+    if (items.length === 0) return '';
+    return `<div style="margin-bottom:24px;">
+      <h3 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 4px;display:flex;align-items:center;gap:8px;">
+        ${cat.icon} ${cat.label}
+        <span style="font-size:11px;font-weight:500;color:var(--text-muted);">${cat.desc || ''}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text-dim);font-weight:600;margin-left:auto;">${items.length}</span>
+      </h3>
+      ${items.map(_skillsCardHtml).join('')}
+    </div>`;
+  }).join('');
+
+  const footer = `<div style="margin-top:16px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text-muted);line-height:1.6;">
+    <div style="font-weight:700;color:var(--text-dim);margin-bottom:6px;">🤖 For agents</div>
+    Fetch <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">${manifest.publicUrl || ''}</code> to discover every skill K2 exposes.
+    The schema is documented at <a href="https://github.com/RyanSandoval/k2-dashboard/blob/main/skills/_schema.md" target="_blank" rel="noopener" style="color:var(--accent);">skills/_schema.md</a>.
+    Phase ${manifest.phase || 1} = K2 dashboard. Phases 2–3 will add cron skills + Discord agent skills.
+  </div>`;
+
+  container.innerHTML = sectionsHtml + footer;
+}
+window.renderSkills = renderSkills;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WORKERS — unified live view of K2 agent queues + recent results
