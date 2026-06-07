@@ -1404,12 +1404,33 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   body.preset-sidebar-collapsed .nav-section-title,
   body.preset-sidebar-collapsed .nav-item .badge,
   body.preset-sidebar-collapsed #sidebar-capture-row,
-  body.preset-sidebar-collapsed .preset-switcher,
   body.preset-sidebar-collapsed [id$="-more-btn"],
   body.preset-sidebar-collapsed #nav-work-more,
   body.preset-sidebar-collapsed #nav-ref-more,
   body.preset-sidebar-collapsed #smart-lists-nav-section {
     display: none !important;
+  }
+  /* Keep the preset switcher visible in collapsed mode — without it the user
+     has no way to exit Meeting / Deep Work mode. Render as icon-only. */
+  body.preset-sidebar-collapsed .preset-switcher {
+    padding: 0;
+    margin: 4px auto;
+    width: 40px;
+    gap: 0;
+  }
+  body.preset-sidebar-collapsed .preset-switcher-trigger {
+    padding: 8px 0;
+    justify-content: center;
+    width: 40px;
+    gap: 0;
+  }
+  body.preset-sidebar-collapsed .preset-switcher-trigger .preset-name,
+  body.preset-sidebar-collapsed .preset-switcher-trigger .preset-caret,
+  body.preset-sidebar-collapsed .preset-switcher-manage {
+    display: none !important;
+  }
+  body.preset-sidebar-collapsed .preset-switcher-trigger .preset-icon {
+    font-size: 18px;
   }
   /* nav-items have raw text nodes (no wrapping span) — kill text via font-size:0,
      restore icons via .icon's own rule */
