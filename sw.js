@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v28-preset-switcher-collapsed';
+const CACHE_NAME = 'k2-hq-v29-action-inbox-aging';
 const ASSETS = [
   './',
   './index.html',
