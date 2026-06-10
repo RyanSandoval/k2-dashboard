@@ -3254,8 +3254,9 @@ function renderActionInbox() {
   if (!container) return;
   const filter = window._actionInboxFilter || 'open';
   const search = (document.getElementById('action-inbox-search')?.value || '').toLowerCase().trim();
+  const _aiNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
   const pruned = _actionInboxAutoPrune();
-  let items = pruned.slice();
+  let items = pruned.filter(_aiNotArchived);
   if (filter === 'open') items = items.filter(i => !i.handled && !i.dismissed);
   else if (filter === 'handled') items = items.filter(i => i.handled);
   else if (filter === 'dismissed') items = items.filter(i => i.dismissed);
@@ -4855,7 +4856,8 @@ function setDocsFilter(cat) {
 
 function filterDocs() {
   const q = (document.getElementById('docs-search')?.value || '').toLowerCase();
-  const docs = DATA.docs || [];
+  const _docsNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  const docs = (DATA.docs || []).filter(_docsNotArchived);
   const filtered = docs.filter(d => {
     const matchCat = _docsFilter === 'All' || d.category === _docsFilter;
     const matchQ = !q || (d.title||'').toLowerCase().includes(q) || (d.content||'').toLowerCase().includes(q);
@@ -4914,6 +4916,10 @@ async function saveNewDoc() {
 function openDocModal(id) {
   const doc = (DATA.docs||[]).find(d => d.id == id);
   if (!doc) return;
+  if (doc.archived) {
+    if (typeof showToast === 'function') showToast('Doc is archived — restore from Trash to open');
+    return;
+  }
   const catColors = { Planning:'var(--accent)', Reports:'var(--green)', Blog:'var(--yellow)', Analysis:'var(--orange)', Other:'var(--text-dim)' };
   const color = catColors[doc.category] || 'var(--text-dim)';
   document.getElementById('doc-modal-title').textContent = doc.title || 'Untitled';
@@ -6113,8 +6119,9 @@ function renderProjects() {
   }
 
   const board = document.getElementById('kanban-board');
+  const _projNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
   board.innerHTML = KANBAN_COLUMNS.map(col => {
-    const projects = DATA.projects.filter(p => p.status === col.id);
+    const projects = DATA.projects.filter(_projNotArchived).filter(p => p.status === col.id);
     const taskCounts = projects.map(p => {
       const total = DATA.tasks.filter(t => t.project === p.id).length;
       const done = DATA.tasks.filter(t => t.project === p.id && t.done).length;
@@ -7086,7 +7093,8 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   DATA.tasks.forEach(migrateTaskPriority);
 
   // Base: all open tasks (top-level only — subtasks shown inside parent modals)
-  let tasks = DATA.tasks.filter(t => !(t.done || t.status === 'done') && !t.parentId);
+  const _tasksNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  let tasks = DATA.tasks.filter(_tasksNotArchived).filter(t => !(t.done || t.status === 'done') && !t.parentId);
 
   // Smart list filter
   const slIndicator = document.getElementById('smart-list-indicator');
@@ -8143,7 +8151,8 @@ function updateClipsBadge() {
 function renderClipsList() {
   const container = document.getElementById('clips-list');
   if (!container) return;
-  let clips = [...(DATA.bookmarks || [])].sort((a, b) => b.id - a.id);
+  const _clipsNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  let clips = [...(DATA.bookmarks || [])].filter(_clipsNotArchived).sort((a, b) => b.id - a.id);
   if (_clipsFilter !== 'all') clips = clips.filter(c => c.status === _clipsFilter);
 
   if (clips.length === 0) {
@@ -8553,7 +8562,8 @@ function renderDecisions() {
 
   const catColors = { dashboard:'var(--accent)', trading:'var(--green)', automation:'var(--yellow)', security:'var(--red)', other:'var(--text-dim)' };
 
-  let sorted = [...DATA.decisions].sort((a, b) => b.date.localeCompare(a.date));
+  const _decNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  let sorted = [...DATA.decisions].filter(_decNotArchived).sort((a, b) => b.date.localeCompare(a.date));
   if (_decisionFilter !== 'all') sorted = sorted.filter(d => (d.category||'other') === _decisionFilter);
 
   if (sorted.length === 0) {
@@ -8621,7 +8631,8 @@ function renderNotes(page = 0) {
   const searchEl = document.getElementById('notes-search-input');
   const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
-  let sortedNotes = [...DATA.notes].sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+  const _notArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  let sortedNotes = [...DATA.notes].filter(_notArchived).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
   if (query) {
     sortedNotes = sortedNotes.filter(n =>
       (n.title||'').toLowerCase().includes(query) ||
@@ -11663,7 +11674,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderInbox() {
   const list = document.getElementById('inbox-list');
   if (!list) return;
-  const items = DATA.inbox || [];
+  const _inboxNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  const items = (DATA.inbox || []).filter(_inboxNotArchived);
   // Update badge
   const badge = document.getElementById('inbox-badge');
   if (badge) {
@@ -11885,7 +11897,8 @@ async function deleteInboxItem(id) {
 function renderSomeday() {
   const list = document.getElementById('someday-list');
   if (!list) return;
-  const items = DATA.somedayMaybe || [];
+  const _somedayNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  const items = (DATA.somedayMaybe || []).filter(_somedayNotArchived);
   if (items.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">💤 Nothing parked here yet.</div>';
     return;
@@ -12485,7 +12498,8 @@ function renderAccomplishments(quarter) {
   // ── Growth Areas ──────────────────────────────────────────────────────────
   html += '<div style="margin-bottom:32px;">';
   html += '<div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">🔍 Areas for Growth</div>';
-  var growthAreas = DATA.growthAreas || [];
+  var _gaNotArchived = window.K2Archive ? K2Archive.notArchived : function() { return true; };
+  var growthAreas = (DATA.growthAreas || []).filter(_gaNotArchived);
   if (growthAreas.length === 0) {
     html += '<div style="color:var(--text-dim);font-style:italic;font-size:13px;margin-bottom:10px;">No growth areas logged yet.</div>';
   } else {
@@ -12723,7 +12737,8 @@ function formatWaitingText(text) {
 function renderWaitingFor() {
   const list = document.getElementById('waiting-list');
   const badge = document.getElementById('waiting-badge');
-  const items = (DATA.waitingFor || []).slice().sort((a, b) => new Date(a.since || a.created) - new Date(b.since || b.created));
+  const _wfNotArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  const items = (DATA.waitingFor || []).filter(_wfNotArchived).sort((a, b) => new Date(a.since || a.created) - new Date(b.since || b.created));
 
   if (badge) {
     if (items.length > 0) { badge.textContent = items.length; badge.style.display = ''; }
