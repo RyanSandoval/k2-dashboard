@@ -1,16 +1,14 @@
 # Design — K2 Archive System
 
-**Version:** v0-retrofit
+**Version:** v0.2 (Phase 0 closed)
 **Companion to:** `requirements.md`
-
-Every section marked `[TO VERIFY]` was inferred by K-2 from existing code reads. Confirm in Phase 0 before treating as canonical.
 
 ---
 
 ## 1. Data Model
 
 ### Per-item fields
-Added to every archivable item (no migration needed — fields default to `undefined` which is treated as `archived: false`):
+Added to every archivable item:
 
 | Field | Type | Set by | Cleared by |
 |---|---|---|---|
@@ -18,62 +16,83 @@ Added to every archivable item (no migration needed — fields default to `undef
 | `archivedAt` | ISO string | `K2Archive.archive()` | `K2Archive.restore()`, `K2Archive.purge()` |
 | `archivedHard` | `boolean` (optional) | `K2Archive.archive(..., {hard:true})` | timer expiry or `K2Archive.restore()` |
 
-### Affected DATA arrays
-[TO VERIFY] — current inventory based on KINDS metadata in the in-progress K2Archive module + outstanding surfaces:
+### KINDS table (verified)
 
-| Kind name | DATA key | Renderer | Status |
+| Kind name | DATA key | Renderer | Notes |
 |---|---|---|---|
-| `note` | `notes` | `renderNotes` | scaffolded |
-| `task` | `tasks` | `renderTasks` | scaffolded |
-| `project` | `projects` | `renderProjects` | scaffolded |
-| `inbox` | `inbox` | `renderInbox` | scaffolded |
-| `waiting` | `waitingFor` | `renderWaitingFor` | scaffolded |
-| `someday` | `somedayMaybe` | `renderSomeday` | scaffolded |
-| `decision` | `decisions` | `renderDecisions` | scaffolded |
-| `action-inbox-item` [TO VERIFY] | `actionInbox` | `renderActionInbox` | **not in KINDS yet** |
-| `clip` [TO VERIFY] | `bookmarks` | `renderClips` | **not in KINDS yet** |
-| `doc` [TO VERIFY] | `docs` | `renderDocs` | **not in KINDS yet** |
-| `accomplishment` [TO VERIFY] | `accomplishments` | (renderer name [TO VERIFY]) | **not in KINDS yet** |
-| `jot` [TO VERIFY — likely skip] | `jots` or `dailyDocs` | `renderJots` / `renderDailyDocs` | **structure differs** |
+| `note` | `notes` | `renderNotes` | Two delete paths: `deleteNote` (card) + `deleteCurrentNote` (editor modal) |
+| `task` | `tasks` | `renderTasks` | Two delete paths: `deleteTask` (modal) + `triageTask(id,'delete')` (triage panel) |
+| `project` | `projects` | `renderProjects` | `deleteProject` 2-click confirm flow |
+| `inbox` | `inbox` | `renderInbox` | Two paths: `deleteInboxItem` (manual) + `inboxAcceptSuggestion` w/ `suggestedBucket:'trash'` (AI auto-triage) |
+| `waiting` | `waitingFor` | `renderWaitingFor` | |
+| `someday` | `somedayMaybe` | `renderSomeday` | |
+| `decision` | `decisions` | `renderDecisions` | |
+| `action-inbox-item` | `actionInbox` | `renderActionInbox` | Coexists with existing `hidden:true` (AI rank dismiss) — archive is user-intent |
+| `clip` | `bookmarks` | `renderClips` (calls inner `renderClipsList`) | `deleteClip` is 2-tap confirm; replace whole flow with K2Archive call |
+| `doc` | `docs` | `renderDocs` | Also guard doc modal / direct-open paths |
+| `growthArea` | `growthAreas` | rendered inside `renderAccomplishments` | `deleteGrowthArea` at index.html:12559 |
+
+### Delete affordance inventory (verified by Sonnet 4.6, 2026-06-09)
+
+| Surface | Function | Approx line |
+|---|---|---|
+| Notes (card) | `deleteNote` | ~9406 |
+| Notes (editor modal) | `deleteCurrentNote` | ~9031 |
+| Tasks (modal) | `deleteTask` | ~6548 |
+| Tasks (triage) | `triageTask(id,'delete')` | ~6977, 7820 |
+| Projects | `deleteProject` | ~6831 |
+| Inbox (manual) | `deleteInboxItem` | ~13516 |
+| Inbox (AI auto-triage) | `inboxAcceptSuggestion` → trash bucket | callers around 13500 |
+| Decisions | tbd — agents verify in their cluster |
+| WaitingFor | tbd | |
+| Someday | tbd | |
+| Action Inbox dismiss | tbd; coexists with `hidden:true` | |
+| Clips | `deleteClip` | ~8252 |
+| Docs | tbd | |
+| GrowthAreas | `deleteGrowthArea` | ~12559 |
+
+### data.json archive-field hygiene
+No existing kind uses `archived`/`archivedAt` for other purposes (verified by Phase 0 inspection).
 
 ---
 
 ## 2. Components
 
-### `K2Archive` global module
-IIFE attached to `window.K2Archive`. Owns archive, restore, purge, render, badge.
-
+### `K2Archive` global module (IIFE)
 Public API:
 ```js
-K2Archive.archive(kind, id, { hard = false })  // soft delete + toast (or hard with timer)
-K2Archive.restore(kind, id)                    // un-archive
-K2Archive.purge(kind, id)                      // permanent remove
-K2Archive.purgeAll()                           // empty trash
-K2Archive.isArchived(item)                     // filter predicate
-K2Archive.notArchived(item)                    // negated filter (renderer convenience)
-K2Archive.renderTrash()                        // page renderer
-K2Archive.renderTrashBadge()                   // sidebar badge updater
+K2Archive.archive(kind, id, { hard = false })
+K2Archive.restore(kind, id)
+K2Archive.purge(kind, id)
+K2Archive.purgeAll()
+K2Archive.restoreLast()            // for palette "Restore most recently archived"
+K2Archive.isArchived(item)
+K2Archive.notArchived(item)
+K2Archive.renderTrash()
+K2Archive.renderTrashBadge()
 ```
 
 Private state:
-- `KINDS` — kind → { arr, label, render } metadata
-- `_pendingPurge` — Map<`${kind}:${id}`, timeoutId> for hard-delete undo window
+- `KINDS` — kind → { arr, label, render } metadata (full list per § 1 table above)
+- `_pendingPurge` — `Map<"${kind}:${id}", timeoutId>` for hard-delete undo window
 - `_activeToast` — single in-flight toast handle (one toast at a time; replaces previous)
 
 ### Toast UI (`.k2arch-toast`)
-Single-toast policy. Slides up from bottom-center, shows label + countdown (`8s`...`1s`) + Undo button. Auto-dismisses on expiry. Replaces any existing `.k2arch-toast` if a new archive fires.
+Single-toast policy across the dashboard. Replaces both the existing global `showToast` for archive events and the standalone `_staleJotsShowUndoToast`.
+
+Anatomy: label + tabular countdown (8s → 1s) + Undo button. Slides up from bottom-center; auto-dismisses on expiry; visually distinct only in that Undo is accent-colored.
 
 ### Trash page (`page-trash`)
-Header: count + Empty trash button.
-Rows: kind tag + label + `archivedAt` timestamp + Restore + Delete buttons.
-Empty state: "Trash is empty. Archived items appear here for safekeeping."
+- Header: count + Empty trash button
+- Rows: kind tag + label + `archivedAt` + Restore + Delete
+- Empty state: "Trash is empty. Archived items appear here for safekeeping."
 
 ### Renderer filter pattern
 Every native renderer prepends:
 ```js
 items = items.filter(K2Archive.notArchived);
 ```
-Inserted at the same position in each (after raw-array read, before sort/group/limit).
+Same pattern in every surface, applied right after raw-array read.
 
 ---
 
@@ -83,12 +102,11 @@ Inserted at the same position in each (after raw-array read, before sort/group/l
 ```
 User clicks 🗑 → deleteX(id) → K2Archive.archive(kind, id)
   → item.archived = true; item.archivedAt = now
-  → KINDS[kind].render()           ← item gone from native page
-  → renderTrash() + renderTrashBadge()
-  → await saveData()
+  → KINDS[kind].render() + renderTrash() + renderTrashBadge()
+  → await saveDataWithRetry()      ← 409-retry logic
   → toast({ label: "X archived: <name>", undo: () => restore })
     └─ on Undo (within 8s): item.archived = false; saveData(); re-render
-    └─ on expire: nothing further; item stays archived
+    └─ on expire: nothing further
 ```
 
 ### 3.2 Hard delete (shift+click trash)
@@ -96,40 +114,63 @@ User clicks 🗑 → deleteX(id) → K2Archive.archive(kind, id)
 User shift+clicks 🗑 → deleteX(id, { hard:true }) → K2Archive.archive(kind, id, {hard:true})
   → item.archived = true; archivedHard = true; archivedAt = now
   → KINDS[kind].render() + renderTrash() + renderTrashBadge()
-  → await saveData()
+  → await saveDataWithRetry()
   → setTimeout 8000ms (timerKey = `${kind}:${id}`):
-      → splice item from DATA[arr]
-      → await saveData()
+      → if item still present in DATA[arr] (orphan guard) → splice
+      → await saveDataWithRetry()
       → renderTrash() + renderTrashBadge()
   → toast({ label: "X deleted: <name>", undo: () => clearTimer + restore })
-    └─ on Undo: clearTimeout, unset archived/hard, saveData, re-render
-    └─ on expire: toast disappears; timer fires; item gone
 ```
 
-### 3.3 Restore from Trash page
+### 3.3 Restore (from Trash page or palette action)
 ```
 User clicks Restore → K2Archive.restore(kind, id)
   → if _pendingPurge has key → clearTimeout, delete from map
   → unset item.archived/archivedAt/archivedHard
-  → await saveData()
+  → await saveDataWithRetry()
   → KINDS[kind].render() + renderTrash() + renderTrashBadge()
 ```
 
 ### 3.4 Empty trash
 ```
-User clicks Empty trash → confirm("permanently delete every archived item?") 
+User clicks Empty trash → confirm()
   → for each KIND: DATA[arr] = DATA[arr].filter(notArchived)
-  → await saveData()
+  → await saveDataWithRetry()
   → renderTrash() + renderTrashBadge() + every KIND render()
-  → toast({ label: "N items purged", undo: null, duration: 3000 })
+  → toast({ label: "N items purged", undoFn: null, duration: 3000 })
 ```
 
-### 3.5 Cmd+K → "Restore most recently archived" [REQ-011]
+### 3.5 Cmd+K → "Restore most recently archived"
 ```
-Palette action "Restore last archived":
+Palette action runs K2Archive.restoreLast():
   → collect all archived items across KINDS, sort by archivedAt desc
   → if empty → toast "Nothing to restore"
   → else → K2Archive.restore(kind, id) on the top one
+```
+
+### 3.6 `saveDataWithRetry()` — 409 race recovery (REQ-017)
+```
+async function saveDataWithRetry(retries = 1):
+  try { await saveData(); return; }
+  catch (e):
+    if (e.status === 409 && retries > 0):
+      await loadData()
+      // re-apply the archive flag if the item still exists in the freshly-loaded DATA
+      reapplyPendingArchiveFlags()
+      return saveDataWithRetry(retries - 1)
+    throw e
+```
+The existing `saveData()` already calls `loadData()` on 409 but returns without re-saving — that's the silent-loss bug. The retry wrapper re-applies the flag after the fresh load.
+
+### 3.7 Orphan-undo guard (REQ-018)
+The toast's Undo handler checks whether the item still exists in `DATA[arr]` (find by id) before calling restore. If missing (purged manually within the undo window), Undo dismisses the toast and no-ops.
+
+```js
+undoFn: async () => {
+  const stillThere = DATA[meta.arr].find(x => String(x.id) === String(id));
+  if (!stillThere) { /* orphan */ return; }
+  // ... normal restore ...
+}
 ```
 
 ---
@@ -146,21 +187,28 @@ Palette action "Restore last archived":
 
 ---
 
-## 5. Failure Modes
+## 5. Failure Modes (resolved)
 
 | Mode | Behavior |
 |---|---|
-| `saveData()` fails after archive | Item already marked archived in memory; toast still shows. On next `loadData()`, archive flag is lost (no recovery). [TO VERIFY] — accept this risk for v1. |
-| User closes tab mid-undo-window | Item stays archived (or pending-purge); timer dies. On reload, hard-pending items appear in Trash with `archivedHard:true` but no timer running. Trash page treats these as normal archived rows. |
-| Two archives in quick succession | Single-toast policy: second toast replaces first; first toast's undo is forfeited. [TO VERIFY] — acceptable per "smooth and clear" goal. |
-| Renderer not yet defined when KINDS[k].render() called | `render: () => window.renderX && renderX()` guard. No-op if undefined. |
+| Network save fails (5xx) | Existing `saveData()` error path. Archive flag stays in memory; on next load may be lost. v1 accepted risk; v2 could add a write-ahead queue. |
+| `saveData()` 409 race | **Resolved by REQ-017**: `saveDataWithRetry()` re-applies flag after fresh load. |
+| Two archives in quick succession | Single-toast policy: second toast replaces first; first toast's Undo forfeit. By design per REQ-014. |
+| Hard-delete + manual purge race | **Resolved by REQ-018**: Undo button guards against orphan item; no-ops silently. |
+| Renderer not yet defined | `render: () => window.renderX && renderX()` guard. |
+| User closes tab mid-undo-window | Hard-pending item stays archived; timer dies. Item appears in Trash on next load with `archivedHard:true` but no timer running. Trash treats these as normal archived rows; manual Restore or Delete required. |
 
 ---
 
-## 6. Open Design Questions (for Phase 0 verification)
+## 6. Open Questions (resolved 2026-06-09)
 
-1. **Q-1:** Should `dailyDocs` (date-keyed object) support archive? Or treat daily jots as ephemeral by date?
-2. **Q-2:** Action Inbox items have a `hidden` field already (existing dismiss flow). Should archive replace `hidden`, coexist, or alias to it?
-3. **Q-3:** Should the Cmd+K palette show archived items in search results (with a "(archived)" tag) or hide them entirely?
-4. **Q-4:** Does the existing `clips` array live at `DATA.bookmarks` or `DATA.clips`? [Grep verification needed.]
-5. **Q-5:** What's the accomplishments renderer function name?
+| ID | Question | Decision |
+|---|---|---|
+| Q-1 | Archive `dailyDocs` / jots? | **No** — out of scope v1 (date-keyed, ephemeral). |
+| Q-2 | Action Inbox dismiss aliased to archive? | **No** — coexist. `hidden:true` stays the AI rank dismiss; archive is separate user-intent. |
+| Q-3 | Cmd+K surfaces archived items? | **No** — hide archived from palette search. Only Trash page (and "Restore last archived" action) surface them. |
+| Q-4 | Clips array name? | `DATA.bookmarks` (verified). |
+| Q-5 | Accomplishments renderer? | `renderAccomplishments` (verified); no delete affordance today — kind is `growthArea` instead, deleted via `deleteGrowthArea`. |
+| Q-6 | Docs deep-link/modal bypass? | **No bypass** — doc modal open path and direct render path both check `archived` and refuse to open archived docs (show "open Trash to restore" notice). |
+| Q-7 | AI auto-triage to trash bypasses K2Archive? | **Route through K2Archive** — `inboxAcceptSuggestion` with `suggestedBucket:'trash'` calls `K2Archive.archive('inbox', id)` instead of `deleteInboxItem`. |
+| Q-8 | `project.nextSteps[]` sub-items? | **Out of scope v1** — sub-items, not first-class. Per-project delete affordances unchanged. |
