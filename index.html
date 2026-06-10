@@ -3327,7 +3327,9 @@ function renderActionInbox() {
     let buttons;
     if (item.handled || item.dismissed) {
       buttons = `<button onclick="event.stopPropagation();actionInboxRestore('${item.id}')" title="Restore"
-        style="${baseBtnStyle}color:var(--text-dim);">↩ restore</button>`;
+        style="${baseBtnStyle}color:var(--text-dim);">↩ restore</button>
+        <button onclick="event.stopPropagation();K2Archive.archive('action','${item.id}',{hard:event.shiftKey===true})" title="Archive (⇧+click to delete immediately)"
+          style="${baseBtnStyle}color:var(--red);">🗑</button>`;
     } else {
       const pinBtn = item.pinned
         ? `<button onclick="event.stopPropagation();actionInboxUnpin('${item.id}')" title="Unpin"
@@ -3343,7 +3345,9 @@ function renderActionInbox() {
         <button onclick="event.stopPropagation();actionInboxHandled('${item.id}')" title="Mark handled"
           style="${baseBtnStyle}border-color:color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);">✓</button>
         <button onclick="event.stopPropagation();actionInboxDismiss('${item.id}')" title="Dismiss"
-          style="${baseBtnStyle}color:var(--text-muted);">✕</button>`;
+          style="${baseBtnStyle}color:var(--text-muted);">✕</button>
+        <button onclick="event.stopPropagation();K2Archive.archive('action','${item.id}',{hard:event.shiftKey===true})" title="Archive (⇧+click to delete immediately)"
+          style="${baseBtnStyle}color:var(--red);">🗑</button>`;
     }
     // Card accent — pinned wins (yellow), else red-tier aging gets a red strip,
     // else amber-tier gets a softer amber strip. Aging accents lose to pinned so
@@ -11716,7 +11720,7 @@ function renderInbox() {
         '<button onclick="inboxMakeDecision(' + item.id + ')" title="Decision" aria-label="Move to Decisions" style="' + btnStyle + '">⚖️</button>' +
         '<button onclick="inboxSomeday(' + item.id + ')" title="Someday" aria-label="Move to Someday" style="' + btnStyle + '">💤</button>' +
         '<button onclick="inboxMakeReference(' + item.id + ')" title="Reference" aria-label="Save as reference" style="' + btnStyle + '">📎</button>' +
-        '<button onclick="deleteInboxItem(' + item.id + ')" title="Delete" aria-label="Delete" style="' + btnStyle + 'color:var(--red);">🗑</button>' +
+        '<button onclick="deleteInboxItem(' + item.id + ', event)" title="Delete (⇧+click to delete immediately)" aria-label="Delete" style="' + btnStyle + 'color:var(--red);">🗑</button>' +
       '</div>' +
       (item.suggestionReason ? '<div style="margin-top:6px;font-size:11px;color:var(--text-muted);">' + escapeHtml(item.suggestionReason) + '</div>' : '') +
     '</div>';
@@ -11862,23 +11866,17 @@ async function inboxSomeday(id) {
   showToast('Moved to Someday/Maybe');
 }
 
-async function deleteInboxItem(id) {
-  if (!DATA.inbox) DATA.inbox = [];
-  // Robust delete: by id if present; also strip any phantom items (null/empty text)
-  const before = DATA.inbox.length;
-  DATA.inbox = DATA.inbox.filter(i => {
-    if (i == null) return false;
-    // Always purge phantom rows
-    if (!i.text || !i.id) return false;
-    if (id != null && i.id == id) return false;
-    return true;
-  });
-  if (DATA.inbox.length === before && id == null) {
-    // explicit "delete this index" fallback
-    DATA.inbox.pop();
+async function deleteInboxItem(id, e) {
+  if (id == null) {
+    // Legacy phantom-purge path (no id): strip empty items and re-render
+    if (!DATA.inbox) DATA.inbox = [];
+    DATA.inbox = DATA.inbox.filter(i => i != null && i.text && i.id);
+    renderInbox();
+    await saveData();
+    return;
   }
-  renderInbox(); // optimistic
-  await saveData();
+  const hard = e?.shiftKey === true;
+  await K2Archive.archive('inbox', id, { hard });
 }
 
 // ═══ GTD Someday/Maybe ═══
@@ -11897,7 +11895,7 @@ function renderSomeday() {
       '<div style="flex:1;font-size:14px;color:var(--text-dim);">' + escapeHtml(item.text) + '</div>' +
       '<div style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + dateStr + '</div>' +
       '<button onclick="activateSomedayItem(' + item.id + ')" title="Move to Inbox" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;white-space:nowrap;">📥 Inbox</button>' +
-      '<button onclick="deleteSomedayItem(' + item.id + ')" title="Delete" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;line-height:1;">✕</button>' +
+      '<button onclick="deleteSomedayItem(' + item.id + ', event)" title="Delete (⇧+click to delete immediately)" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;line-height:1;">✕</button>' +
       '</div>';
   }).join('');
 }
@@ -12703,10 +12701,9 @@ async function activateSomedayItem(id) {
   showToast('Moved to Inbox');
 }
 
-async function deleteSomedayItem(id) {
-  DATA.somedayMaybe = (DATA.somedayMaybe || []).filter(i => i.id != id);
-  await saveData();
-  renderSomeday();
+async function deleteSomedayItem(id, e) {
+  const hard = e?.shiftKey === true;
+  await K2Archive.archive('someday', id, { hard });
 }
 
 // ═══ GTD Waiting For ═══
@@ -12755,7 +12752,7 @@ function renderWaitingFor() {
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button onclick="resolveWaitingFor(${item.id})" title="Mark received" style="padding:5px 10px;background:var(--green-dim);border:1px solid var(--green);border-radius:var(--radius-sm);color:var(--green);font-size:11px;font-weight:600;cursor:pointer;">✅ Done</button>
           <button onclick="waitingToTask(${item.id})" title="Make task" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;">📋 Task</button>
-          <button onclick="deleteWaitingItem(${item.id})" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
+          <button onclick="deleteWaitingItem(${item.id}, event)" title="Delete (⇧+click to delete immediately)" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
         </div>
       </div>
     </div>`;
@@ -12791,10 +12788,9 @@ async function waitingToTask(id) {
   showToast('📋 Moved to Tasks');
 }
 
-async function deleteWaitingItem(id) {
-  DATA.waitingFor = (DATA.waitingFor || []).filter(i => i.id != id);
-  await saveData();
-  renderWaitingFor();
+async function deleteWaitingItem(id, e) {
+  const hard = e?.shiftKey === true;
+  await K2Archive.archive('waiting', id, { hard });
 }
 
 async function taskToWaiting(taskId) {
@@ -13513,7 +13509,7 @@ async function inboxAcceptSuggestion(id) {
     case 'someday': return inboxSomeday(id);
     case 'decision-needed': return inboxMakeDecision(id);
     case 'reference': return inboxMakeReference(id);
-    case 'trash': return deleteInboxItem(id);
+    case 'trash': return K2Archive.archive('inbox', id);
     default: return inboxMakeTask(id);
   }
 }
