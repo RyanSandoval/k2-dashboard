@@ -1850,6 +1850,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-item" data-page="decisions">
         <span class="icon">⚖️</span> Decisions
       </div>
+      <div class="nav-item" data-page="trash">
+        <span class="icon">🗑️</span> Trash
+        <span class="badge" id="trash-badge" style="display:none">0</span>
+      </div>
       <!-- Collapsed reference items -->
       <div id="nav-ref-more" style="display:none;">
         <div class="nav-item" data-page="accomplishments">
@@ -2399,6 +2403,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <div id="note-backlinks-list"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Trash / Archive Page -->
+    <div class="page" id="page-trash" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <h2>🗑️ Trash</h2>
+        <p>Archived items across notes, tasks, and projects. Restore anytime or purge to permanently delete.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:12px;color:var(--text-dim);">
+        <div id="trash-count"></div>
+        <div style="flex:1;"></div>
+        <button onclick="K2Archive && K2Archive.purgeAll()" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--red);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">Empty trash</button>
+      </div>
+      <div id="trash-list"></div>
     </div>
 
     <!-- AI Insights Page -->
@@ -9385,15 +9403,19 @@ function initFullScreenEditor(noteId, content) {
   }
 }
 
-async function deleteNote(noteId) {
-  if (!confirm('Delete this note?')) return;
-  DATA.notes = DATA.notes.filter(n => n.id !== noteId);
+async function deleteNote(noteId, { hard = false } = {}) {
   if (window._noteEditors[noteId]) {
     if (window._noteEditors[noteId].editor) {
       window._noteEditors[noteId].editor.destroy();
     }
     delete window._noteEditors[noteId];
   }
+  if (window.K2Archive) {
+    await K2Archive.archive('note', noteId, { hard });
+    return;
+  }
+  if (!confirm('Delete this note?')) return;
+  DATA.notes = DATA.notes.filter(n => n.id !== noteId);
   await saveData();
   renderNotes();
 }
@@ -15014,6 +15036,406 @@ setTimeout(() => {
 })();
 </script>
 
+<!-- ─── Unified Archive / Delete System ──────────────────────────────── -->
+<style>
+  .k2arch-toast {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 9500;
+    min-width: 280px; max-width: 92vw;
+    animation: k2arch-up 180ms ease-out;
+  }
+  @keyframes k2arch-up {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .k2arch-toast.leaving { animation: k2arch-down 200ms ease-in forwards; }
+  @keyframes k2arch-down {
+    to { opacity: 0; transform: translate(-50%, 8px); }
+  }
+  .k2arch-toast .label { flex: 1; min-width: 0; }
+  .k2arch-toast .undo {
+    background: none; border: none;
+    color: var(--accent); font-weight: 700;
+    cursor: pointer; padding: 4px 8px;
+    border-radius: 6px; font-family: inherit; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .k2arch-toast .undo:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .k2arch-toast .countdown {
+    font-size: 10px; color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  /* Trash page rows */
+  .k2arch-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .k2arch-row .kind-tag {
+    font-size: 10px; padding: 3px 8px;
+    background: var(--surface2); border-radius: 12px;
+    color: var(--text-dim); flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    font-weight: 600;
+  }
+  .k2arch-row .body { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .k2arch-row .when { font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+  .k2arch-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .k2arch-row .actions button {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px;
+    font-size: 11px; color: var(--text);
+    cursor: pointer; font-family: inherit; font-weight: 600;
+  }
+  .k2arch-row .actions .purge { color: var(--red); }
+</style>
+<script>
+(function() {
+  'use strict';
+
+  const UNDO_MS = 8000;
+
+  // Per-kind metadata: where the array lives + render fn to refresh + label
+  const KINDS = {
+    note:       { arr: 'notes',         label: 'Note',         render: () => window.renderNotes && renderNotes() },
+    task:       { arr: 'tasks',         label: 'Task',         render: () => window.renderTasks && renderTasks() },
+    project:    { arr: 'projects',      label: 'Project',      render: () => window.renderProjects && renderProjects() },
+    inbox:      { arr: 'inbox',         label: 'Inbox',        render: () => window.renderInbox && renderInbox() },
+    waiting:    { arr: 'waitingFor',    label: 'Waiting',      render: () => window.renderWaitingFor && renderWaitingFor() },
+    someday:    { arr: 'somedayMaybe',  label: 'Someday',      render: () => window.renderSomeday && renderSomeday() },
+    decision:   { arr: 'decisions',     label: 'Decision',     render: () => window.renderDecisions && renderDecisions() },
+    'action':   { arr: 'actionInbox',   label: 'Action',       render: () => window.renderActionInbox && renderActionInbox() },
+    clip:       { arr: 'bookmarks',     label: 'Clip',         render: () => window.renderClips && renderClips() },
+    doc:        { arr: 'docs',          label: 'Doc',          render: () => window.renderDocs && renderDocs() },
+    growthArea: { arr: 'growthAreas',   label: 'Growth area',  render: () => window.renderAccomplishments && renderAccomplishments() },
+  };
+
+  // Pending purge timers, keyed by kind:id
+  const _pendingPurge = new Map();
+
+  function findItem(kind, id) {
+    const meta = KINDS[kind];
+    if (!meta) return null;
+    const arr = (window.DATA && DATA[meta.arr]) || [];
+    return arr.find(x => String(x.id) === String(id));
+  }
+
+  function getItemLabel(kind, item) {
+    const raw = item.title || item.text || item.name || '';
+    return String(raw).replace(/<[^>]*>/g, '').trim().slice(0, 60) || `(untitled ${KINDS[kind].label.toLowerCase()})`;
+  }
+
+  // ── Toast with Undo ──
+  let _activeToast = null;
+  function toast({ message, undoFn, durationMs = UNDO_MS, onExpire }) {
+    if (_activeToast) _activeToast.dismiss(true);
+    const el = document.createElement('div');
+    el.className = 'k2arch-toast';
+    el.innerHTML = `
+      <span class="label"></span>
+      <span class="countdown"></span>
+      <button class="undo">Undo</button>`;
+    el.querySelector('.label').textContent = message;
+    document.body.appendChild(el);
+
+    const countdownEl = el.querySelector('.countdown');
+    const undoBtn = el.querySelector('.undo');
+    let remaining = Math.ceil(durationMs / 1000);
+    countdownEl.textContent = remaining + 's';
+    const tick = setInterval(() => {
+      remaining--;
+      if (remaining > 0) countdownEl.textContent = remaining + 's';
+    }, 1000);
+
+    const expireTimer = setTimeout(() => {
+      clearInterval(tick);
+      dismiss();
+      if (onExpire) onExpire();
+    }, durationMs);
+
+    function dismiss(skipAnim) {
+      clearTimeout(expireTimer);
+      clearInterval(tick);
+      if (_activeToast === handle) _activeToast = null;
+      if (skipAnim) { el.remove(); return; }
+      el.classList.add('leaving');
+      setTimeout(() => el.remove(), 220);
+    }
+
+    undoBtn.addEventListener('click', () => {
+      if (undoFn) undoFn();
+      dismiss();
+    });
+
+    const handle = { dismiss };
+    _activeToast = handle;
+    return handle;
+  }
+
+  // ── REQ-017: 409 retry-once wrapper ──
+  // saveData() in this app sets GH_SHA on first load. If a concurrent write
+  // bumps the sha, saveData calls loadData() and silently returns. The retry
+  // wrapper re-applies the in-memory archive intent (passed in as `applyIntent`)
+  // after the fresh load, then saves again with the new sha.
+  async function saveWithRetry(applyIntent) {
+    try { await saveData(); return; }
+    catch (e) {
+      console.warn('K2Archive: save failed, retrying with reapply', e);
+      try { await loadData(); } catch (_) {}
+      if (typeof applyIntent === 'function') applyIntent();
+      try { await saveData(); }
+      catch (e2) { console.error('K2Archive: retry also failed', e2); }
+    }
+  }
+
+  // ── REQ-018: orphan guard — undo no-ops if item already purged ──
+  function itemStillExists(kind, id) {
+    const meta = KINDS[kind];
+    if (!meta) return false;
+    const arr = (window.DATA && DATA[meta.arr]) || [];
+    return arr.some(x => String(x.id) === String(id));
+  }
+
+  // ── Archive (soft delete; hard=true uses pending-purge timer) ──
+  async function archive(kind, id, { hard = false } = {}) {
+    const meta = KINDS[kind];
+    if (!meta) { console.warn('K2Archive: unknown kind', kind); return; }
+    const item = findItem(kind, id);
+    if (!item) return;
+
+    const label = getItemLabel(kind, item);
+    const nowIso = new Date().toISOString();
+
+    const applyArchiveFlag = () => {
+      const fresh = findItem(kind, id);
+      if (!fresh) return;
+      fresh.archived = true;
+      fresh.archivedAt = nowIso;
+      if (hard) fresh.archivedHard = true; else delete fresh.archivedHard;
+    };
+
+    applyArchiveFlag();
+    meta.render();
+    renderTrash();
+    renderTrashBadge();
+    await saveWithRetry(applyArchiveFlag);
+
+    if (hard) {
+      const key = `${kind}:${id}`;
+      const timer = setTimeout(async () => {
+        _pendingPurge.delete(key);
+        const arr = DATA[meta.arr];
+        const idx = arr.findIndex(x => String(x.id) === String(id));
+        if (idx !== -1) arr.splice(idx, 1);
+        await saveWithRetry(null);
+        renderTrash();
+        renderTrashBadge();
+      }, UNDO_MS);
+      _pendingPurge.set(key, timer);
+
+      toast({
+        message: `${meta.label} deleted: ${label}`,
+        undoFn: async () => {
+          clearTimeout(timer);
+          _pendingPurge.delete(key);
+          if (!itemStillExists(kind, id)) return;  // orphan guard
+          const fresh = findItem(kind, id);
+          if (!fresh) return;
+          const restoreFlag = () => {
+            const f = findItem(kind, id);
+            if (!f) return;
+            f.archived = false;
+            delete f.archivedAt;
+            delete f.archivedHard;
+          };
+          restoreFlag();
+          await saveWithRetry(restoreFlag);
+          meta.render();
+          renderTrash();
+          renderTrashBadge();
+        },
+      });
+      return;
+    }
+
+    toast({
+      message: `${meta.label} archived: ${label}`,
+      undoFn: async () => {
+        if (!itemStillExists(kind, id)) return;  // orphan guard
+        const restoreFlag = () => {
+          const f = findItem(kind, id);
+          if (!f) return;
+          f.archived = false;
+          delete f.archivedAt;
+        };
+        restoreFlag();
+        await saveWithRetry(restoreFlag);
+        meta.render();
+        renderTrash();
+        renderTrashBadge();
+      },
+    });
+  }
+
+  async function restore(kind, id) {
+    const item = findItem(kind, id);
+    if (!item) return;
+    const key = `${kind}:${id}`;
+    if (_pendingPurge.has(key)) {
+      clearTimeout(_pendingPurge.get(key));
+      _pendingPurge.delete(key);
+    }
+    const restoreFlag = () => {
+      const f = findItem(kind, id);
+      if (!f) return;
+      f.archived = false;
+      delete f.archivedAt;
+      delete f.archivedHard;
+    };
+    restoreFlag();
+    await saveWithRetry(restoreFlag);
+    const meta = KINDS[kind];
+    if (meta) meta.render();
+    renderTrash();
+    renderTrashBadge();
+  }
+
+  // Restore the most recently archived item across all kinds (palette action)
+  async function restoreLast() {
+    const all = collectArchived();
+    if (all.length === 0) {
+      toast({ message: 'Nothing to restore.', undoFn: null, durationMs: 2500 });
+      return;
+    }
+    const top = all[0];
+    await restore(top.kind, top.item.id);
+    toast({ message: `Restored: ${getItemLabel(top.kind, top.item)}`, undoFn: null, durationMs: 2500 });
+  }
+
+  async function purge(kind, id) {
+    const meta = KINDS[kind];
+    if (!meta) return;
+    const arr = DATA[meta.arr];
+    if (!arr) return;
+    const idx = arr.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) return;
+    arr.splice(idx, 1);
+    const key = `${kind}:${id}`;
+    if (_pendingPurge.has(key)) { clearTimeout(_pendingPurge.get(key)); _pendingPurge.delete(key); }
+    await saveWithRetry(null);
+    renderTrash();
+    renderTrashBadge();
+    meta.render();
+  }
+
+  async function purgeAll() {
+    if (!confirm('Permanently delete every archived item? This cannot be undone.')) return;
+    let count = 0;
+    for (const [kind, meta] of Object.entries(KINDS)) {
+      const arr = DATA[meta.arr];
+      if (!Array.isArray(arr)) continue;
+      const before = arr.length;
+      DATA[meta.arr] = arr.filter(x => !x.archived);
+      count += before - DATA[meta.arr].length;
+    }
+    await saveWithRetry(null);
+    renderTrash();
+    renderTrashBadge();
+    for (const meta of Object.values(KINDS)) meta.render();
+    toast({ message: `${count} item${count !== 1 ? 's' : ''} purged.`, undoFn: null, durationMs: 3000 });
+  }
+
+  function collectArchived() {
+    const out = [];
+    for (const [kind, meta] of Object.entries(KINDS)) {
+      const arr = DATA[meta.arr] || [];
+      for (const item of arr) {
+        if (item.archived) out.push({ kind, meta, item });
+      }
+    }
+    out.sort((a, b) => (b.item.archivedAt || '').localeCompare(a.item.archivedAt || ''));
+    return out;
+  }
+
+  function renderTrash() {
+    const list = document.getElementById('trash-list');
+    const countEl = document.getElementById('trash-count');
+    if (!list) return;
+    const items = collectArchived();
+    if (countEl) countEl.textContent = items.length === 0 ? 'Empty' : `${items.length} archived item${items.length !== 1 ? 's' : ''}`;
+    if (items.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:48px 24px;color:var(--text-dim);font-size:13px;">Trash is empty. Archived items appear here for safekeeping.</div>';
+      return;
+    }
+    list.innerHTML = items.map(({ kind, meta, item }) => {
+      const label = getItemLabel(kind, item);
+      const when = item.archivedAt ? new Date(item.archivedAt).toLocaleString() : '';
+      return `
+        <div class="k2arch-row">
+          <span class="kind-tag">${meta.label}</span>
+          <span class="body">${escapeHtml(label)}</span>
+          <span class="when">${escapeHtml(when)}</span>
+          <span class="actions">
+            <button onclick="K2Archive.restore('${kind}', '${escapeAttr(item.id)}')">Restore</button>
+            <button class="purge" onclick="if(confirm('Permanently delete this ${meta.label.toLowerCase()}?')) K2Archive.purge('${kind}', '${escapeAttr(item.id)}')">Delete</button>
+          </span>
+        </div>`;
+    }).join('');
+  }
+
+  function renderTrashBadge() {
+    const count = collectArchived().length;
+    const badge = document.getElementById('trash-badge');
+    if (!badge) return;
+    if (count === 0) {
+      badge.style.display = 'none';
+    } else {
+      badge.style.display = '';
+      badge.textContent = count > 99 ? '99+' : String(count);
+    }
+  }
+
+  function isArchived(item) { return !!(item && item.archived); }
+  function notArchived(item) { return !(item && item.archived); }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function escapeAttr(s) { return String(s).replace(/['"\\]/g, '\\$&'); }
+
+  // Hook page navigation to refresh trash view
+  document.addEventListener('click', (e) => {
+    const navItem = e.target.closest('[data-page="trash"]');
+    if (navItem) setTimeout(renderTrash, 50);
+  });
+
+  window.K2Archive = {
+    archive, restore, restoreLast, purge, purgeAll,
+    isArchived, notArchived,
+    renderTrash, renderTrashBadge,
+  };
+
+  // Auto-render trash on data load
+  const _origRenderAll = window.renderAll;
+  if (typeof _origRenderAll === 'function') {
+    window.renderAll = function() {
+      const r = _origRenderAll.apply(this, arguments);
+      try { renderTrash(); renderTrashBadge(); } catch (e) {}
+      return r;
+    };
+  }
+})();
+</script>
+
 <!-- ─── Command Palette (Cmd+K / Ctrl+K) ─────────────────────────────── -->
 <script>
 (function() {
@@ -15042,6 +15464,7 @@ setTimeout(() => {
     ['clips',           '🔗', 'Clips'],
     ['docs',            '📁', 'Docs'],
     ['decisions',       '⚖️', 'Decisions'],
+    ['trash',           '🗑️', 'Trash'],
     ['accomplishments', '🏆', 'Brag Doc'],
     ['memory',          '🧠', 'Memory'],
     ['mission',         '🎯', 'Mission'],
@@ -15055,6 +15478,7 @@ setTimeout(() => {
     { id: 'act-go-today',    icon: '🪶', label: 'Open today\'s Jot',  run: () => window.navigateTo && window.navigateTo('jots') },
     { id: 'act-action-inbox',icon: '🎯', label: 'Open Action Inbox',  run: () => window.navigateTo && window.navigateTo('action-inbox') },
     { id: 'act-reload',      icon: '🔄', label: 'Reload data from k2-data', run: () => window.loadData && window.loadData() },
+    { id: 'act-restore-last',icon: '↩️', label: 'Restore most recently archived', run: () => window.K2Archive && K2Archive.restoreLast() },
     { id: 'act-signout',     icon: '🚪', label: 'Sign out',           run: () => {
         if (!confirm('Sign out of K-2?')) return;
         localStorage.removeItem('k2auth'); localStorage.removeItem('gh_token'); location.reload();
