@@ -8373,7 +8373,7 @@ function renderNotes(page = 0) {
   const searchEl = document.getElementById('notes-search-input');
   const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
-  let sortedNotes = [...DATA.notes].sort((a, b) => b.created.localeCompare(a.created));
+  let sortedNotes = [...DATA.notes].sort((a, b) => (b.created || '').localeCompare(a.created || ''));
   if (query) {
     sortedNotes = sortedNotes.filter(n =>
       (n.title||'').toLowerCase().includes(query) ||
