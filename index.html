@@ -2383,7 +2383,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
               <option value="">No project</option>
             </select>
             <span id="note-save-status" style="font-size:11px;color:var(--text-dim);">Saved</span>
-            <button onclick="deleteCurrentNote()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;" title="Delete">🗑</button>
+            <button onclick="deleteCurrentNote(event)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;" title="Delete (⇧+click to delete immediately)">🗑</button>
           </div>
         </div>
         <input type="text" id="note-title-input" placeholder="Note title..." style="width:100%;padding:12px 0;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:22px;font-weight:700;margin-bottom:12px;outline:none;">
@@ -6517,7 +6517,7 @@ function openTaskModal(taskId) {
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="taskToSomeday(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">💤 Someday</button>
       <button onclick="taskToWaiting(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">⏳ Waiting</button>
-      <button onclick="deleteTask(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">🗑 Delete</button>
+      <button onclick="deleteTask(${safeId(task.id)}, event)" style="flex:1;padding:8px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;" title="Delete (⇧+click to delete immediately)">🗑 Delete</button>
     </div>
   `;
 
@@ -6570,12 +6570,16 @@ function openTaskModal(taskId) {
   }, 30000);
 }
 
-async function deleteTask(taskId) {
-  // Replace delete button with inline confirm
+async function deleteTask(taskId, e) {
+  if (window.K2Archive) {
+    await K2Archive.archive('task', taskId, { hard: e && e.shiftKey === true });
+    closeTaskModal();
+    return;
+  }
+  // Fallback 2-click confirm when K2Archive is not available
   const btn = document.querySelector(`button[onclick*="deleteTask"]`);
   if (!btn) return;
   if (btn.dataset.confirming === 'true') {
-    // Second click — confirmed
     btn.textContent = '⏳';
     btn.disabled = true;
     DATA.tasks = DATA.tasks.filter(t => t.id != taskId);
@@ -6584,12 +6588,10 @@ async function deleteTask(taskId) {
     renderTasks();
     renderProjects();
   } else {
-    // First click — ask for confirmation inline
     btn.dataset.confirming = 'true';
     btn.textContent = '⚠️ Confirm delete?';
     btn.style.background = 'var(--red)';
     btn.style.color = '#fff';
-    // Auto-reset after 3s if no second click
     setTimeout(() => {
       if (btn.dataset.confirming === 'true') {
         btn.dataset.confirming = '';
@@ -6981,7 +6983,7 @@ function renderTaskRow(task) {
     '<span style="font-size:10px;color:var(--text-dim);">⚠️ ' + staleAgeDays + 'd old</span>' +
     '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'keep\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--green);border:1px solid var(--green);border-radius:4px;cursor:pointer;">Keep</button>' +
     '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'snooze\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--yellow);border:1px solid var(--yellow);border-radius:4px;cursor:pointer;">Snooze</button>' +
-    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'delete\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--red);border:1px solid var(--red);border-radius:4px;cursor:pointer;">Delete</button>' +
+    '<button onclick="event.stopPropagation();triageTask(' + taskId + ',\'delete\')" style="padding:2px 8px;font-size:10px;font-weight:600;background:var(--surface2);color:var(--red);border:1px solid var(--red);border-radius:4px;cursor:pointer;" title="Delete (⇧+click to delete immediately)">Delete</button>' +
     '</div>'
   ) : '';
   return '<li class="task-item" onclick="openTaskModal(' + taskId + ')" style="' + overdueStyle + 'flex-wrap:wrap;">' +
@@ -7826,6 +7828,10 @@ async function triageTask(taskId, action) {
     renderDashboard();
     showToast('⏰ Task snoozed — visible again ' + task.hideUntil);
   } else if (action === 'delete') {
+    if (window.K2Archive) {
+      await K2Archive.archive('task', taskId, { hard: false });
+      return;
+    }
     if (!confirm('Delete this task: "' + (task.text || task.title || 'Untitled').slice(0, 60) + '"?')) return;
     DATA.tasks = DATA.tasks.filter(t => t.id != taskId);
     await saveData();
@@ -8710,8 +8716,9 @@ function renderNotes(page = 0) {
                 : (note.jiraRequest && note.jiraRequest.status === 'pending'
                     ? `<span title="Filing Jira ticket…" style="font-size:10px;color:var(--yellow);">⏳ filing</span>`
                     : `<button onclick="openJiraTicketModal('${noteId}'); event.stopPropagation();" title="Send to Jira" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;">🎫</button>`)}
-              <button onclick="deleteNote('${noteId}'); event.stopPropagation();"
-                      style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;">🗑</button>
+              <button onclick="deleteNote('${noteId}', { hard: event.shiftKey }); event.stopPropagation();"
+                      style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;"
+                      title="Delete (⇧+click to delete immediately)">🗑</button>
             </div>
           </div>
           <div class="note-preview" onclick="toggleNoteExpand('${noteId}', event)"
@@ -9039,8 +9046,14 @@ async function linkNoteToProject() {
   document.getElementById('note-save-status').textContent = 'Saved ✓';
 }
 
-async function deleteCurrentNote() {
+async function deleteCurrentNote(e) {
   if (!activeNoteId) return;
+  if (window.K2Archive) {
+    await K2Archive.archive('note', activeNoteId, { hard: e && e.shiftKey === true });
+    activeNoteId = null;
+    closeNoteEditor();
+    return;
+  }
   if (!confirm('Delete this note?')) return;
   DATA.notes = DATA.notes.filter(n => n.id !== activeNoteId);
   await saveData();
