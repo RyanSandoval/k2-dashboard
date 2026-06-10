@@ -2957,6 +2957,16 @@ async function loadData() {
     DATA.discussions = d.discussions || [];
     DATA.tasks = d.tasks || [];
     DATA.decisions = d.decisions || [];
+    // Backfill .id on legacy decisions so K2Archive can route them. Deterministic.
+    let _decBackfill = false;
+    DATA.decisions.forEach(dec => {
+      if (!dec.id) {
+        const slug = (dec.decision || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+        const dateKey = (dec.date || 'undated').replace(/[^0-9]/g, '');
+        dec.id = `dec-${dateKey}-${slug || Math.random().toString(36).slice(2, 8)}`;
+        _decBackfill = true;
+      }
+    });
     DATA.notes = d.notes || [];
     DATA.timeline = d.timeline || [];
     DATA.inbox = d.inbox || [];
@@ -3004,6 +3014,8 @@ async function loadData() {
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
     document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+    // Persist decision ID backfill once (REQ-009 dec routing)
+    if (_decBackfill) { try { await saveData(); } catch (_) {} }
   } catch(e) {
     console.error('Failed to load data:', e);
   }
@@ -8633,6 +8645,7 @@ function renderDecisions() {
   container.innerHTML = sorted.map(decision => {
     const cat = decision.category || 'other';
     const color = catColors[cat] || 'var(--text-dim)';
+    const safeId = String(decision.id || '').replace(/'/g, "\\'");
     return `
     <div class="timeline-item">
       <div class="timeline-date">${decision.date}</div>
@@ -8640,12 +8653,20 @@ function renderDecisions() {
         <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <div style="font-weight:600;flex:1;">${decision.decision}</div>
           <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,${color} 15%,transparent);color:${color};border:1px solid color-mix(in srgb,${color} 30%,transparent);white-space:nowrap;font-weight:600;">${cat}</span>
+          <button onclick="deleteDecision('${safeId}', event)" title="Delete (⇧+click to delete immediately)"
+                  style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px 4px;flex-shrink:0;">🗑</button>
         </div>
         <div style="font-size:12px;color:var(--text-dim);line-height:1.5;">${decision.rationale}</div>
         ${decision.project ? `<span class="tag tag-blue" style="margin-top:6px;display:inline-block;">${DATA.projects.find(p => p.id === decision.project)?.name || ''}</span>` : ''}
       </div>
     </div>`;
   }).join('');
+}
+
+async function deleteDecision(id, e) {
+  if (window.K2Archive) {
+    await K2Archive.archive('decision', id, { hard: e?.shiftKey === true });
+  }
 }
 
 // Render Notes

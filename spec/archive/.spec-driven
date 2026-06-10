@@ -1,8 +1,8 @@
 version: 1.0
 activated: 2026-06-09T20:13:00-07:00
 shipped: 2026-06-09T20:39:00-07:00
+decisions_added: 2026-06-09T21:37:00-07:00
 project: k2-archive-system
 scope: subsystem of k2-dashboard (single index.html SPA)
 status: shipped
-known_gaps:
-  - Decisions surface — items have no .id field, deferred until backfill
+known_gaps: []
