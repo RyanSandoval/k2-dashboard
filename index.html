@@ -1581,6 +1581,25 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     flex-shrink: 0;
   }
+  .k2pal-close-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s;
+  }
+  .k2pal-close-btn:hover, .k2pal-close-btn:active {
+    background: var(--border);
+    color: var(--text);
+  }
   .k2pal-results {
     flex: 1; overflow-y: auto;
     padding: 6px 0 10px 0;
@@ -15557,7 +15576,7 @@ setTimeout(() => {
         <div class="k2pal-search">
           <span class="k2pal-search-icon">⌘</span>
           <input class="k2pal-input" type="text" placeholder="Search pages, notes, tasks, projects, or run an action…" autocomplete="off" spellcheck="false">
-          <span class="k2pal-kbd">esc</span>
+          <button class="k2pal-close-btn" aria-label="Close" type="button">✕</button>
         </div>
         <div class="k2pal-results"></div>
         <div class="k2pal-footer">
@@ -15574,6 +15593,8 @@ setTimeout(() => {
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
     state.input.addEventListener('input', () => { state.query = state.input.value; state.active = 0; refresh(); });
     state.input.addEventListener('keydown', onKeyDown);
+    const closeBtn = backdrop.querySelector('.k2pal-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', close);
 
     // Mobile floating search button — one-tap palette open
     const fab = document.createElement('button');

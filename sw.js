@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v32-nav-refactor-complete';
+const CACHE_NAME = 'k2-hq-v33-palette-close-btn';
 const ASSETS = [
   './',
   './index.html',
