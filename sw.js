@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v31-archive-system';
+const CACHE_NAME = 'k2-hq-v32-nav-refactor-complete';
 const ASSETS = [
   './',
   './index.html',
