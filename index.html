@@ -1404,10 +1404,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   body.preset-sidebar-collapsed .nav-section-title,
   body.preset-sidebar-collapsed .nav-item .badge,
   body.preset-sidebar-collapsed #sidebar-capture-row,
-  body.preset-sidebar-collapsed [id$="-more-btn"],
-  body.preset-sidebar-collapsed #nav-work-more,
-  body.preset-sidebar-collapsed #nav-ref-more,
-  body.preset-sidebar-collapsed #smart-lists-nav-section {
+  body.preset-sidebar-collapsed #nav-section-work-body,
+  body.preset-sidebar-collapsed #nav-section-reference-body {
     display: none !important;
   }
   /* Keep the preset switcher visible in collapsed mode — without it the user
@@ -1759,58 +1757,64 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           title="Capture to inbox (⌘I)">+</button>
       </div>
     </div>
+    <!-- Pinned nav — 9 items, no section title -->
     <div class="nav-section">
+      <div class="nav-item" data-page="dashboard">
+        <span class="icon">☀️</span> Today
+      </div>
       <div class="nav-item" data-page="action-inbox">
         <span class="icon">🎯</span> Action Inbox
         <span class="badge" id="action-inbox-badge" style="display:none">0</span>
       </div>
-      <div class="nav-item" data-page="stale-jots">
-        <span class="icon">📋</span> Stale Jots
-        <span class="badge" id="stale-jots-badge" style="display:none">0</span>
-      </div>
-      <div class="nav-item" data-page="workers">
-        <span class="icon">🤖</span> Workers
-        <span class="badge" id="workers-badge" style="display:none">0</span>
-      </div>
-      <div class="nav-item" data-page="skills">
-        <span class="icon">🧩</span> Skills
-        <span class="badge" id="skills-badge" style="display:none">0</span>
-      </div>
-      <div class="nav-item" data-page="dashboard">
-        <span class="icon">☀️</span> Today
-      </div>
       <div class="nav-item active" data-page="jots">
         <span class="icon">✏️</span> Jots
-      </div>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-title">Work</div>
-      <div class="nav-item" data-page="projects">
-        <span class="icon">🚀</span> Projects
-        <span class="badge" id="project-count">0</span>
       </div>
       <div class="nav-item" data-page="tasks">
         <span class="icon">✅</span> Tasks
         <span class="badge" id="task-count">0</span>
       </div>
-      <div class="nav-item" data-page="planner">
-        <span class="icon">🗓️</span> Planner
+      <div class="nav-item" data-page="notes">
+        <span class="icon">📝</span> Notes
       </div>
-      <div class="nav-item" data-page="inbox">
-        <span class="icon">📥</span> Inbox <span class="badge" id="inbox-badge" style="display:none"></span>
+      <div class="nav-item" data-page="projects">
+        <span class="icon">🚀</span> Projects
+        <span class="badge" id="project-count">0</span>
       </div>
-      <div class="nav-item" data-page="someday">
-        <span class="icon">💤</span> Someday
+      <div class="nav-item" data-page="skills">
+        <span class="icon">🧩</span> Skills
+        <span class="badge" id="skills-badge" style="display:none">0</span>
       </div>
-      <div class="nav-item" data-page="waiting">
-        <span class="icon">⏳</span> Waiting For
-        <span class="badge" id="waiting-badge" style="display:none"></span>
+      <div class="nav-item" data-page="workers">
+        <span class="icon">🤖</span> Workers
+        <span class="badge" id="workers-badge" style="display:none">0</span>
       </div>
-      <div class="nav-item" data-page="review">
-        <span class="icon">🔄</span> Weekly Review <span id="review-overdue-badge" style="display:none;margin-left:4px;font-size:11px;" title="Review overdue">⚠️</span>
+      <div class="nav-item" data-page="trash">
+        <span class="icon">🗑️</span> Trash
+        <span class="badge" id="trash-badge" style="display:none">0</span>
       </div>
-      <!-- Collapsed work items -->
-      <div id="nav-work-more" style="display:none;">
+    </div>
+    <!-- WORK collapsible section -->
+    <div class="nav-section">
+      <div class="nav-section-title" onclick="toggleNavSection('work')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-work-title">
+        <span id="nav-section-work-arrow">▸</span> Work
+      </div>
+      <div id="nav-section-work-body" style="display:none;">
+        <div class="nav-item" data-page="planner">
+          <span class="icon">🗓️</span> Planner
+        </div>
+        <div class="nav-item" data-page="inbox">
+          <span class="icon">📥</span> Inbox <span class="badge" id="inbox-badge" style="display:none"></span>
+        </div>
+        <div class="nav-item" data-page="someday">
+          <span class="icon">💤</span> Someday
+        </div>
+        <div class="nav-item" data-page="waiting">
+          <span class="icon">⏳</span> Waiting For
+          <span class="badge" id="waiting-badge" style="display:none"></span>
+        </div>
+        <div class="nav-item" data-page="review">
+          <span class="icon">🔄</span> Weekly Review <span id="review-overdue-badge" style="display:none;margin-left:4px;font-size:11px;" title="Review overdue">⚠️</span>
+        </div>
         <div class="nav-item" data-page="completed">
           <span class="icon">🏁</span> Completed
         </div>
@@ -1824,38 +1828,27 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <span class="icon">🎯</span> Growth
         </div>
       </div>
-      <div onclick="toggleNavMore('work')" style="font-size:11px;color:var(--text-dim);padding:4px 12px;cursor:pointer;user-select:none;" id="nav-work-more-btn">▸ More</div>
     </div>
-    <div class="nav-section" id="smart-lists-nav-section">
-      <div class="nav-section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:4px;">
-        <span>Smart Lists</span>
-        <button onclick="openCreateSmartList()" title="Create smart list" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0 2px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">+</button>
-      </div>
-      <div id="smart-lists-nav-items">
-        <!-- Populated by renderSmartListsNav() -->
-      </div>
-    </div>
+    <!-- REFERENCE collapsible section -->
     <div class="nav-section">
-      <div class="nav-section-title">Reference</div>
-      <div class="nav-item" data-page="notes">
-        <span class="icon">📝</span> Notes
+      <div class="nav-section-title" onclick="toggleNavSection('reference')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-reference-title">
+        <span id="nav-section-reference-arrow">▸</span> Reference
       </div>
-      <div class="nav-item" data-page="clips">
-        <span class="icon">🔗</span> Clips
-        <span class="badge" id="clips-unread-badge" style="display:none">0</span>
-      </div>
-      <div class="nav-item" data-page="docs">
-        <span class="icon">📁</span> Docs
-      </div>
-      <div class="nav-item" data-page="decisions">
-        <span class="icon">⚖️</span> Decisions
-      </div>
-      <div class="nav-item" data-page="trash">
-        <span class="icon">🗑️</span> Trash
-        <span class="badge" id="trash-badge" style="display:none">0</span>
-      </div>
-      <!-- Collapsed reference items -->
-      <div id="nav-ref-more" style="display:none;">
+      <div id="nav-section-reference-body" style="display:none;">
+        <div class="nav-item" data-page="stale-jots">
+          <span class="icon">📋</span> Stale Jots
+          <span class="badge" id="stale-jots-badge" style="display:none">0</span>
+        </div>
+        <div class="nav-item" data-page="clips">
+          <span class="icon">🔗</span> Clips
+          <span class="badge" id="clips-unread-badge" style="display:none">0</span>
+        </div>
+        <div class="nav-item" data-page="docs">
+          <span class="icon">📁</span> Docs
+        </div>
+        <div class="nav-item" data-page="decisions">
+          <span class="icon">⚖️</span> Decisions
+        </div>
         <div class="nav-item" data-page="accomplishments">
           <span class="icon">🏆</span> Accomplishments
         </div>
@@ -1874,7 +1867,6 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <span class="badge" id="jira-ledger-badge" style="display:none">0</span>
         </div>
       </div>
-      <div onclick="toggleNavMore('ref')" style="font-size:11px;color:var(--text-dim);padding:4px 12px;cursor:pointer;user-select:none;" id="nav-ref-more-btn">▸ More</div>
     </div>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
@@ -2074,9 +2066,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <!-- Tasks Page -->
     <div class="page" id="page-tasks">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <h2 style="font-size:var(--text-2xl);font-weight:800;letter-spacing:-0.03em;">Tasks <span id="scheduled-tasks-stat" style="display:none;font-size:11px;font-weight:600;color:var(--yellow);background:color-mix(in srgb,var(--yellow) 15%,transparent);border:1px solid color-mix(in srgb,var(--yellow) 40%,transparent);border-radius:10px;padding:2px 8px;margin-left:6px;vertical-align:middle;"></span></h2>
         <button id="matrix-toggle-btn" onclick="toggleMatrixView()" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">⊞ Matrix</button>
+      </div>
+      <!-- Smart List filter chips -->
+      <div id="smart-list-chips" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+        <!-- Populated by renderSmartListChips() -->
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" id="new-task-input" placeholder="Add a task… (try 'call joe #viking @phone !high tomorrow')" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')addTask()">
@@ -2765,20 +2761,19 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   </div>
 
   <!-- Mobile Bottom Nav -->
-  <!-- Mobile bottom tab bar: 4 primary + More -->
+  <!-- Mobile bottom tab bar: Today, Capture, Tasks, Notes, More -->
   <div class="mobile-nav" id="mobile-nav">
     <div class="mobile-nav-item active" data-page="dashboard" onclick="navigateTo('dashboard');setMobileActive(this)">
       <span class="icon">☀️</span>Today
     </div>
-    <div class="mobile-nav-item" data-page="jots" onclick="navigateTo('jots');setMobileActive(this)">
-      <span class="icon">✏️</span>Jots
-    </div>
-    <div class="mobile-nav-item" data-page="action-inbox" onclick="navigateTo('action-inbox');setMobileActive(this)" style="position:relative;">
-      <span class="icon">🎯</span>Action
-      <span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:4px;right:10px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span>
-    </div>
     <div class="mobile-nav-item" onclick="openCapturePopover()">
       <span class="icon">⚡</span>Capture
+    </div>
+    <div class="mobile-nav-item" data-page="tasks" onclick="navigateTo('tasks');setMobileActive(this)">
+      <span class="icon">✅</span>Tasks
+    </div>
+    <div class="mobile-nav-item" data-page="notes" onclick="navigateTo('notes');setMobileActive(this)">
+      <span class="icon">📝</span>Notes
     </div>
     <div class="mobile-nav-item" onclick="openMobileMore()">
       <span class="icon">☰</span>More
@@ -2791,7 +2786,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-more-handle"></div>
     <div class="mobile-more-grid">
       <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
-      <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()"><span class="icon">⚡</span>Capture</div>
+      <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
+      <div class="mobile-more-item" data-page="action-inbox" onclick="mobileNavMore('action-inbox')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🎯</span>Action Inbox<span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
+      <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
       <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="workers" onclick="mobileNavMore('workers')" style="position:relative;"><span class="icon">🤖</span>Workers<span id="mobile-workers-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
