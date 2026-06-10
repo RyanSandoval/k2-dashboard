@@ -6619,31 +6619,42 @@ function closeTaskModal() {
 
 function navigateToJotSource(date) {
   closeTaskModal();
+  // Verify the requested jot actually exists in DATA before navigating away
+  const docExists = DATA.dailyDocs && DATA.dailyDocs[date];
+  if (!docExists && date !== getTodayStr()) {
+    if (typeof showToast === 'function') showToast(`No jot for ${date}`);
+    return;
+  }
   navigateTo('jots');
   setTimeout(() => {
     const today = getTodayStr();
     if (date === today) {
       const el = document.getElementById('daily-doc-today');
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    } else {
-      // Previous day — find its container and scroll to it
-      let el = document.getElementById('doc-editor-' + date);
-      if (!el) {
-        // Try the parent container
-        const prev = document.getElementById('daily-doc-previous');
-        if (prev) {
-          const headers = prev.querySelectorAll('[data-date]');
-          headers.forEach(h => { if (h.dataset.date === date) el = h; });
-        }
-      }
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Flash highlight
-        el.style.transition = 'box-shadow 0.3s';
-        el.style.boxShadow = '0 0 0 2px var(--accent2)';
-        setTimeout(() => { el.style.boxShadow = ''; }, 1500);
+      return;
+    }
+    // Previous day — try to find the rendered container
+    let el = document.getElementById('doc-editor-' + date);
+    if (!el) {
+      const prev = document.getElementById('daily-doc-previous');
+      if (prev) {
+        const headers = prev.querySelectorAll('[data-date]');
+        headers.forEach(h => { if (h.dataset.date === date) el = h; });
       }
     }
+    if (!el) {
+      // Jot exists in data but isn't rendered on the page (collapsed history,
+      // pagination, etc). Tell the user instead of silently leaving them
+      // staring at today's jot.
+      if (typeof showToast === 'function') {
+        showToast(`Jot ${date} exists but isn't in the current view — search the Jots page or scroll back`);
+      }
+      return;
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.style.transition = 'box-shadow 0.3s';
+    el.style.boxShadow = '0 0 0 2px var(--accent2)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1500);
   }, 300);
 }
 

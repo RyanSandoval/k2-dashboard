@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v30-cmdk-palette';
+const CACHE_NAME = 'k2-hq-v31-archive-system';
 const ASSETS = [
   './',
   './index.html',
