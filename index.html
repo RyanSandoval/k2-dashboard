@@ -8364,6 +8364,33 @@ let noteAutoSaveTimer = null;
 
 let _notesPage = 0;
 const NOTES_PER_PAGE = 20;
+const _expandedNotes = new Set();
+
+window.toggleNoteExpand = function(noteId, event) {
+  if (event) event.stopPropagation();
+  const card = document.querySelector(`.note-card[data-note-id="${CSS.escape(String(noteId))}"]`);
+  if (!card) return;
+  const body = card.querySelector('.note-body');
+  const caret = card.querySelector('.note-caret');
+  const previewEl = card.querySelector('.note-preview');
+  if (!body) return;
+  if (_expandedNotes.has(String(noteId))) {
+    _expandedNotes.delete(String(noteId));
+    body.style.display = 'none';
+    if (caret) caret.textContent = '▸';
+    if (previewEl) previewEl.style.display = '';
+  } else {
+    _expandedNotes.add(String(noteId));
+    body.style.display = '';
+    if (caret) caret.textContent = '▾';
+    if (previewEl) previewEl.style.display = 'none';
+    const editorEl = document.getElementById(`note-editor-${noteId}`);
+    const alreadyInit = window._noteEditors && window._noteEditors[noteId] && window._noteEditors[noteId].editor;
+    if (editorEl && !alreadyInit && window.initNoteInlineEditor) {
+      window.initNoteInlineEditor(noteId);
+    }
+  }
+};
 
 function renderNotes(page = 0) {
   _notesPage = page;
@@ -8403,21 +8430,27 @@ function renderNotes(page = 0) {
       const title = note.title || rawText.split('\n')[0].slice(0, 60) || 'Untitled';
       const projectLabel = note.projectId ? (DATA.projects.find(p => p.id === note.projectId)||{}).name || '' : '';
 
+      const isExpanded = _expandedNotes.has(String(noteId));
+      const previewLine = rawText.replace(/\s+/g, ' ').trim().slice(0, 140);
       return `
         <div class="card note-card" data-note-id="${noteId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-            <input type="text" class="note-title-inline" value="${title}" 
-                   style="background:none;border:none;font-size:14px;font-weight:600;color:var(--text);flex:1;outline:none;cursor:pointer;"
-                   onchange="updateNoteTitle('${noteId}', this.value)"
-                   onclick="event.stopPropagation()"
-                   ondblclick="openNoteEditor('${noteId}'); event.stopPropagation();">
+            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+              <span class="note-caret" onclick="toggleNoteExpand('${noteId}', event)"
+                    style="cursor:pointer;font-size:11px;color:var(--text-dim);user-select:none;width:14px;flex-shrink:0;text-align:center;">${isExpanded ? '▾' : '▸'}</span>
+              <input type="text" class="note-title-inline" value="${title}"
+                     style="background:none;border:none;font-size:14px;font-weight:600;color:var(--text);flex:1;min-width:0;outline:none;cursor:pointer;"
+                     onchange="updateNoteTitle('${noteId}', this.value)"
+                     onclick="toggleNoteExpand('${noteId}', event)"
+                     ondblclick="openNoteEditor('${noteId}'); event.stopPropagation();">
+            </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
-              <span style="font-size:10px;color:var(--text-dim);">${note.created}</span>
+              <span style="font-size:10px;color:var(--text-dim);">${note.created || ''}</span>
               ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
               ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
               ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
               <button onclick="openNoteEditor('${noteId}'); event.stopPropagation();"
-                      style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Expand">⤢</button>
+                      style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Open full editor">⤢</button>
               <button onclick="copyNoteLink('${noteId}', event);"
                       style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Copy link">🔗</button>
               <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();"
@@ -8431,24 +8464,29 @@ function renderNotes(page = 0) {
                       style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;">🗑</button>
             </div>
           </div>
-          <div class="note-editor-inline" id="note-editor-${noteId}" 
-               style="min-height:100px;border:1px solid var(--border);border-radius:8px;padding:12px;position:relative;">
-            <div onclick="openNoteEditor('${noteId}')" 
-                 style="position:absolute;top:-4px;right:8px;color:var(--text-dim);cursor:pointer;font-size:12px;opacity:0.7;z-index:10;" 
-                 title="Double-click title or click here to expand">⤢ Expand</div>
-          </div>
-          ${hasResponse ? `
-            <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
-              <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">🤖 K-2's Take</div>
-              <div class="md-content" style="font-size:13px;color:var(--text);line-height:1.6;">${renderMarkdown(note.k2Response)}</div>
+          <div class="note-preview" onclick="toggleNoteExpand('${noteId}', event)"
+               style="display:${isExpanded ? 'none' : '-webkit-box'};-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;color:var(--text-dim);font-size:12px;padding-left:20px;cursor:pointer;margin-bottom:4px;">${previewLine || '<em style="opacity:0.5;">(empty)</em>'}</div>
+          <div class="note-body" style="display:${isExpanded ? 'block' : 'none'};">
+            <div class="note-editor-inline" id="note-editor-${noteId}"
+                 style="min-height:100px;border:1px solid var(--border);border-radius:8px;padding:12px;position:relative;">
+              <div onclick="openNoteEditor('${noteId}')"
+                   style="position:absolute;top:-4px;right:8px;color:var(--text-dim);cursor:pointer;font-size:12px;opacity:0.7;z-index:10;"
+                   title="Open full editor">⤢ Expand</div>
             </div>
-          ` : ''}
+            ${hasResponse ? `
+              <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
+                <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">🤖 K-2's Take</div>
+                <div class="md-content" style="font-size:13px;color:var(--text);line-height:1.6;">${renderMarkdown(note.k2Response)}</div>
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
     }).join('');
 
-    // Init all visible note editors — simple and reliable
+    // Lazy init: only expanded notes get a live editor; collapsed cards stay header-only
     pageNotes.forEach(note => {
+      if (!_expandedNotes.has(String(note.id))) return;
       if (window.createEditor) {
         initNoteInlineEditor(note.id);
       } else {
