@@ -8431,7 +8431,25 @@ function renderNotes(page = 0) {
       const projectLabel = note.projectId ? (DATA.projects.find(p => p.id === note.projectId)||{}).name || '' : '';
 
       const isExpanded = _expandedNotes.has(String(noteId));
-      const previewLine = rawText.replace(/\s+/g, ' ').trim().slice(0, 140);
+      let previewSource = '';
+      if (note.aiSummary && typeof note.aiSummary === 'string') {
+        previewSource = note.aiSummary;
+      } else if (typeof convertHTMLToText === 'function') {
+        previewSource = convertHTMLToText(note.text || '');
+      } else {
+        previewSource = rawText;
+      }
+      // Strip markdown formatting, drop the title line if it leads, collapse whitespace
+      let previewClean = previewSource
+        .replace(/^#+\s*/gm, '')
+        .replace(/^\s*\[[x\s]\]\s*/gm, '')
+        .replace(/^[-*]\s+/gm, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (note.title && previewClean.toLowerCase().startsWith(note.title.toLowerCase())) {
+        previewClean = previewClean.slice(note.title.length).replace(/^[\s\-—:|]+/, '').trim();
+      }
+      const previewLine = previewClean.slice(0, 140);
       return `
         <div class="card note-card" data-note-id="${noteId}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
