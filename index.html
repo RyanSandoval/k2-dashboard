@@ -10731,21 +10731,11 @@ function updateCapturePreview(val) {
 }
 
 function initKeyboardShortcuts() {
-  // Cmd+K: Open search (works from anywhere)
+  // Cmd+/ — legacy search shortcut (Cmd+K is owned by K2Palette directly)
   document.addEventListener('keydown', (e) => {
-    // Cmd+F or Cmd+/ — global search (works from anywhere)
-    if ((e.metaKey || e.ctrlKey) && (e.key === '/' || e.key === 'f')) {
+    if ((e.metaKey || e.ctrlKey) && e.key === '/') {
       e.preventDefault();
       openSearch();
-    }
-    // Cmd+K — global search (only when not in editor, since editors use it for links)
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
-      const active = document.activeElement;
-      const inEditor = active?.closest('.ProseMirror') || active?.closest('[contenteditable]');
-      if (!inEditor) {
-        e.preventDefault();
-        openSearch();
-      }
     }
   });
   // Cmd+I: Quick capture to inbox (works from anywhere)
@@ -10965,6 +10955,8 @@ let _searchSelectedIdx = -1;
 let _searchResults = [];
 
 function openSearch() {
+  // Legacy entry point — route every caller to the unified Cmd+K palette
+  if (window.K2Palette) { K2Palette.open(); return; }
   const overlay = document.getElementById('search-overlay');
   overlay.classList.add('active');
   const input = document.getElementById('search-input');
