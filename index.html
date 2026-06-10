@@ -1726,21 +1726,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
 <div class="app" id="app-main" style="display:none;">
 
-  <!-- Sitewide Search Modal -->
-  <div class="search-overlay" id="search-overlay" onclick="if(event.target===this)closeSearch()">
-    <div class="search-modal">
-      <div class="search-modal-input">
-        <span class="icon">🔍</span>
-        <input type="text" id="search-input" placeholder="Search projects, notes, jots, tasks, discussions, decisions..." autocomplete="off" oninput="onSearchInput()">
-      </div>
-      <div class="search-results" id="search-results"></div>
-      <div class="search-modal-footer">
-        <span><kbd>↑↓</kbd> Navigate</span>
-        <span><kbd>↵</kbd> Open</span>
-        <span><kbd>Esc</kbd> Close</span>
-      </div>
-    </div>
-  </div>
+  <!-- Legacy search modal removed; all entry points route to K2Palette (⌘K) -->
+
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
@@ -10955,17 +10942,8 @@ let _searchSelectedIdx = -1;
 let _searchResults = [];
 
 function openSearch() {
-  // Legacy entry point — route every caller to the unified Cmd+K palette
-  if (window.K2Palette) { K2Palette.open(); return; }
-  const overlay = document.getElementById('search-overlay');
-  overlay.classList.add('active');
-  const input = document.getElementById('search-input');
-  input.value = '';
-  document.getElementById('search-results').innerHTML = '';
-  _searchSelectedIdx = -1;
-  _searchResults = [];
-  setTimeout(() => input.focus(), 50);
-  input.addEventListener('keydown', handleSearchKeydown);
+  // Every caller routes to the unified Cmd+K palette. Legacy modal is gone.
+  if (window.K2Palette) K2Palette.open();
 }
 
 function closeSearch() {
