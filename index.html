@@ -3027,7 +3027,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderClips, renderActionInbox, renderStaleJotsBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderStaleJotsBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -3035,22 +3035,48 @@ function renderAll() {
 
 // Navigation
 function toggleNavMore(section) {
-  const el = document.getElementById('nav-' + section + '-more');
-  const btn = document.getElementById('nav-' + section + '-more-btn');
-  if (!el) return;
-  const open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  btn.textContent = open ? '▸ More' : '▴ Less';
+  // Legacy shim — kept so any stale refs don't throw. Maps old 'work'/'ref' keys.
+  const map = { work: 'work', ref: 'reference' };
+  toggleNavSection(map[section] || section);
+}
+
+function toggleNavSection(name) {
+  const body = document.getElementById('nav-section-' + name + '-body');
+  const arrow = document.getElementById('nav-section-' + name + '-arrow');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▸' : '▾';
+  try { localStorage.setItem('k2nav.' + name + '.expanded', open ? '0' : '1'); } catch(e) {}
+}
+
+function initNavSectionStates() {
+  ['work', 'reference'].forEach(name => {
+    let expanded = false;
+    try { expanded = localStorage.getItem('k2nav.' + name + '.expanded') === '1'; } catch(e) {}
+    const body = document.getElementById('nav-section-' + name + '-body');
+    const arrow = document.getElementById('nav-section-' + name + '-arrow');
+    if (!body) return;
+    body.style.display = expanded ? 'block' : 'none';
+    if (arrow) arrow.textContent = expanded ? '▾' : '▸';
+  });
 }
 
 function navigateTo(page) {
-  // If the page is in a collapsed section, expand it
-  const hiddenPages = { work: ['completed','discussions','trading','growth'], ref: ['accomplishments','memory','mission','ai-insights','jira-ledger'] };
-  for (const [section, pages] of Object.entries(hiddenPages)) {
+  // If the page is in a collapsible section, expand it
+  const sectionPages = {
+    work: ['planner','inbox','someday','waiting','review','completed','discussions','trading','growth'],
+    reference: ['stale-jots','clips','docs','decisions','accomplishments','memory','mission','ai-insights','jira-ledger']
+  };
+  for (const [name, pages] of Object.entries(sectionPages)) {
     if (pages.includes(page)) {
-      const el = document.getElementById('nav-' + section + '-more');
-      const btn = document.getElementById('nav-' + section + '-more-btn');
-      if (el && el.style.display === 'none') { el.style.display = 'block'; btn.textContent = '▴ Less'; }
+      const body = document.getElementById('nav-section-' + name + '-body');
+      const arrow = document.getElementById('nav-section-' + name + '-arrow');
+      if (body && body.style.display === 'none') {
+        body.style.display = 'block';
+        if (arrow) arrow.textContent = '▾';
+        try { localStorage.setItem('k2nav.' + name + '.expanded', '1'); } catch(e) {}
+      }
     }
   }
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -7715,30 +7741,35 @@ function applySmartListFilter(tasks, rules) {
 }
 
 function renderSmartListsNav() {
-  const container = document.getElementById('smart-lists-nav-items');
+  // Sidebar smart-list container removed in Phase 3; chips live on Tasks page now.
+  // This function is kept as a no-op so any stale callers don't throw.
+  renderSmartListChips();
+}
+
+function renderSmartListChips() {
+  const container = document.getElementById('smart-list-chips');
   if (!container) return;
   const lists = DATA.smartLists || [];
-  container.innerHTML = lists.map(sl => {
+  const activeTasks = DATA.tasks.filter(t => !t.done && t.status !== 'done');
+  const chips = lists.map(sl => {
     const isActive = window._activeSmartList === sl.id;
-    const count = applySmartListFilter(DATA.tasks.filter(t => !t.done && t.status !== 'done'), sl.rules).length;
-    return `<div class="nav-item${isActive ? ' active' : ''}" data-smartlist="${sl.id}" onclick="activateSmartList('${sl.id}')" style="display:flex;align-items:center;gap:6px;" title="${sl.name}">
-      <span class="icon">${sl.icon}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;">${sl.name}</span>
-      ${count > 0 ? `<span class="badge">${count}</span>` : ''}
-    </div>`;
-  }).join('');
+    const count = applySmartListFilter(activeTasks, sl.rules).length;
+    return `<button onclick="activateSmartList('${sl.id}')" title="${sl.name}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};background:${isActive ? 'var(--accent)' : 'var(--surface2)'};color:${isActive ? '#000' : 'var(--text)'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .1s,border-color .1s;" onmouseover="if(!${isActive})this.style.borderColor='var(--accent)'" onmouseout="if(!${isActive})this.style.borderColor='var(--border)'">${sl.icon} ${sl.name}${count > 0 ? ` <span style="background:${isActive ? 'rgba(0,0,0,0.2)' : 'var(--accent-surface)'};color:${isActive ? '#000' : 'var(--accent)'};border-radius:9px;padding:0 5px;font-size:10px;">${count}</span>` : ''}</button>`;
+  });
+  chips.push(`<button onclick="openCreateSmartList()" title="Create smart list" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);cursor:pointer;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">+ Create</button>`);
+  container.innerHTML = chips.join('');
 }
 
 function activateSmartList(id) {
   window._activeSmartList = id;
   navigateTo('tasks');
-  renderSmartListsNav();
+  renderSmartListChips();
   renderTasks();
 }
 
 function clearActiveSmartList() {
   window._activeSmartList = null;
-  renderSmartListsNav();
+  renderSmartListChips();
   renderTasks();
 }
 
@@ -7794,7 +7825,7 @@ async function saveNewSmartList() {
   DATA.smartLists.push({ id, name, icon, rules });
   await saveData();
   closeCreateSmartList();
-  renderSmartListsNav();
+  renderSmartListChips();
   showToast('✨ Smart list created: ' + name);
 }
 
