@@ -1078,14 +1078,36 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     z-index: 160;
     transform: translateY(100%);
     transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 80vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .mobile-more-drawer.open { transform: translateY(0); }
   .mobile-more-handle {
-    width: 36px; height: 4px;
+    width: 60px; height: 6px;
     background: var(--border);
-    border-radius: 2px;
-    margin: 0 auto 16px;
+    border-radius: 3px;
+    margin: 4px auto 12px;
+    cursor: pointer;
+    touch-action: manipulation;
   }
+  .mobile-more-handle:active { background: var(--text-dim); }
+  .mobile-more-close {
+    position: absolute;
+    top: 8px; right: 12px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 161;
+  }
+  .mobile-more-close:active { background: var(--border); }
   .mobile-more-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -2783,7 +2805,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   <!-- More drawer overlay -->
   <div class="mobile-more-overlay" id="mobile-more-overlay" onclick="closeMobileMore()"></div>
   <div class="mobile-more-drawer" id="mobile-more-drawer">
-    <div class="mobile-more-handle"></div>
+    <button class="mobile-more-close" onclick="closeMobileMore()" aria-label="Close menu">✕</button>
+    <div class="mobile-more-handle" onclick="closeMobileMore()" title="Tap to close"></div>
     <div class="mobile-more-grid">
       <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
