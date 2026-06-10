@@ -6175,7 +6175,7 @@ function renderProjects() {
         </div>
         <div style="display:flex;gap:6px;">
           <button onclick="restoreProject('${p.id}')" style="padding:6px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Restore</button>
-          <button onclick="deleteProject('${p.id}')" style="padding:6px 12px;background:var(--red);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Delete</button>
+          <button onclick="deleteProject('${p.id}', event)" title="Delete (⇧+click to delete immediately)" style="padding:6px 12px;background:var(--red);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Delete</button>
         </div>
       </div>
     `).join('');
@@ -6813,7 +6813,7 @@ function openProjectModal(projectId) {
 
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
       <button onclick="archiveProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;">Archive</button>
-      <button onclick="deleteProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete</button>
+      <button onclick="deleteProject('${p.id}', event)" title="Delete (⇧+click to delete immediately)" style="flex:1;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete</button>
     </div>
   `;
 
@@ -6846,16 +6846,9 @@ async function archiveProject(projectId) {
   closeProjectModal();
 }
 
-async function deleteProject(projectId) {
-  const project = DATA.projects.find(p => p.id === projectId);
-  if (!project) return;
-  if (!confirm(`Permanently delete "${project.name}"? This cannot be undone.`)) return;
-  DATA.projects = DATA.projects.filter(p => p.id !== projectId);
-  // Also remove associated tasks
-  DATA.tasks = (DATA.tasks || []).filter(t => t.project !== projectId);
-  await saveData();
-  renderProjects();
-  renderTasks();
+async function deleteProject(projectId, e) {
+  const hard = e?.shiftKey === true;
+  await K2Archive.archive('project', projectId, { hard });
   closeProjectModal();
 }
 
@@ -8195,7 +8188,7 @@ function renderClipsList() {
         </div>
         ${readBtn}
         ${archiveBtn}
-        <button class="clip-action-btn danger" onclick="deleteClip(${clip.id})" title="Delete">✕</button>
+        <button class="clip-action-btn danger" onclick="deleteClip(${clip.id}, event)" title="Delete (⇧+click to delete immediately)">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -8249,19 +8242,9 @@ function unarchiveClip(id) {
   saveData();
 }
 
-function deleteClip(id) {
-  const btn = event.currentTarget;
-  if (btn.dataset.confirm) {
-    DATA.bookmarks = (DATA.bookmarks || []).filter(b => b.id !== id);
-    renderClips();
-    renderDashboard();
-    saveData();
-    return;
-  }
-  btn.dataset.confirm = '1';
-  btn.textContent = '⚠';
-  btn.title = 'Click again to confirm delete';
-  setTimeout(() => { btn.removeAttribute('data-confirm'); btn.textContent = '✕'; btn.title = 'Delete'; }, 3000);
+function deleteClip(id, e) {
+  const hard = e?.shiftKey === true;
+  K2Archive.archive('clip', id, { hard });
 }
 
 function toggleClipSendMenu(clipId, btn) {
