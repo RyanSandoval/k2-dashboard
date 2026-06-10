@@ -2574,7 +2574,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <div id="doc-modal-title" style="font-size:15px;font-weight:700;"></div>
           <div style="display:flex;gap:8px;align-items:center;">
             <div id="doc-modal-category" style="font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600;"></div>
-            <button id="doc-modal-delete" style="background:none;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px;">🗑 Delete</button>
+            <button id="doc-modal-delete" style="background:none;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px;" title="Delete (⇧+click to delete immediately)">🗑 Delete</button>
             <button onclick="closeDocModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;">✕</button>
           </div>
         </div>
@@ -4669,21 +4669,9 @@ async function staleJotDiscard(key) {
     if (typeof renderJots === 'function') renderJots();
     showToast?.('↩ Restored');
   };
-  _staleJotsShowUndoToast('🗑️ Discarded · tap to undo', undoFn);
+  K2Archive.toast({ message: 'Jot discarded', undoFn, durationMs: 8000 });
 }
 window.staleJotDiscard = staleJotDiscard;
-
-function _staleJotsShowUndoToast(message, undoFn) {
-  const id = 'stale-jots-undo-toast';
-  document.getElementById(id)?.remove();
-  const t = document.createElement('div');
-  t.id = id;
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:24px;font-size:13px;z-index:9998;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
-  t.textContent = message;
-  t.onclick = async () => { t.remove(); await undoFn(); };
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 5000);
-}
 
 async function staleJotsBulkAction(action) {
   const keys = Array.from(window._staleJotsSelection);
@@ -4706,7 +4694,7 @@ async function staleJotsBulkAction(action) {
   renderStaleJots();
   if (action === 'discard' && typeof renderJots === 'function') renderJots();
   if (action === 'discard') {
-    _staleJotsShowUndoToast(`🗑️ Discarded ${n} · tap to undo`, async () => {
+    K2Archive.toast({ message: `Jot discarded (${n})`, undoFn: async () => {
       for (const [k, v] of Object.entries(priorByKey)) {
         if (v.prior && DATA.dailyDocs?.[v.date]) DATA.dailyDocs[v.date].content = v.prior;
         if (DATA.staleJotState?.[k]) delete DATA.staleJotState[k];
@@ -4715,7 +4703,7 @@ async function staleJotsBulkAction(action) {
       renderStaleJots();
       if (typeof renderJots === 'function') renderJots();
       showToast?.('↩ Restored ' + n);
-    });
+    }, durationMs: 8000 });
   } else {
     showToast?.(`📦 Archived ${n}`);
   }
@@ -4924,7 +4912,7 @@ function openDocModal(id) {
   catEl.style.border = `1px solid color-mix(in srgb,${color} 30%,transparent)`;
   document.getElementById('doc-modal-content').innerHTML = renderMarkdown ? renderMarkdown(doc.content||'') : `<pre style="white-space:pre-wrap;font-family:inherit;">${doc.content||''}</pre>`;
   document.getElementById('doc-modal-meta').textContent = `Created ${doc.created||''}`;
-  document.getElementById('doc-modal-delete').onclick = () => deleteDoc(id);
+  document.getElementById('doc-modal-delete').onclick = (e) => deleteDoc(id, e);
   document.getElementById('doc-modal').style.display = '';
 }
 
@@ -4932,13 +4920,10 @@ function closeDocModal() {
   document.getElementById('doc-modal').style.display = 'none';
 }
 
-async function deleteDoc(id) {
-  if (!confirm('Delete this doc?')) return;
-  DATA.docs = (DATA.docs||[]).filter(d => d.id != id);
-  await saveData();
+async function deleteDoc(id, e) {
+  const hard = e?.shiftKey === true;
   closeDocModal();
-  filterDocs();
-  showToast('Doc deleted');
+  await K2Archive.archive('doc', id, { hard });
 }
 
 async function saveMission() {
@@ -12497,7 +12482,7 @@ function renderAccomplishments(quarter) {
       html += '<span>' + icon + '</span>';
       html += '<div style="flex:1;font-size:13px;">' + escHTML(ga.text) + ' <span style="font-size:11px;color:' + statusColor + ';font-weight:600;">[' + (ga.status || 'active') + ']</span></div>';
       html += '<button onclick="toggleGrowthArea(' + ga.id + ')" style="font-size:11px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-dim);font-family:inherit;">' + (isResolved ? 'Reopen' : 'Resolve') + '</button>';
-      html += '<button onclick="deleteGrowthArea(' + ga.id + ')" style="font-size:11px;padding:3px 8px;background:none;border:1px solid var(--red);border-radius:var(--radius-sm);cursor:pointer;color:var(--red);font-family:inherit;">Delete</button>';
+      html += '<button onclick="deleteGrowthArea(' + ga.id + ', event)" title="Delete (⇧+click to delete immediately)" style="font-size:11px;padding:3px 8px;background:none;border:1px solid var(--red);border-radius:var(--radius-sm);cursor:pointer;color:var(--red);font-family:inherit;">Delete</button>';
       html += '</div>';
     });
   }
@@ -12556,11 +12541,9 @@ async function toggleGrowthArea(id) {
   renderAccomplishments(window._acomplQ || getCurrentQuarter());
 }
 
-async function deleteGrowthArea(id) {
-  if (!confirm('Delete this growth area?')) return;
-  DATA.growthAreas = (DATA.growthAreas || []).filter(function(g) { return g.id != id; });
-  await saveData();
-  renderAccomplishments(window._acomplQ || getCurrentQuarter());
+async function deleteGrowthArea(id, e) {
+  const hard = e?.shiftKey === true;
+  await K2Archive.archive('growthArea', id, { hard });
 }
 
 async function exportAccomplishments(quarter) {
@@ -15422,6 +15405,7 @@ setTimeout(() => {
     archive, restore, restoreLast, purge, purgeAll,
     isArchived, notArchived,
     renderTrash, renderTrashBadge,
+    toast,
   };
 
   // Auto-render trash on data load
