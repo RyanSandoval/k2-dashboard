@@ -2548,11 +2548,32 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
       </div>
 
+      <!-- Decisions Needed (workspace plan files w/ pending decisions) -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="font-size:13px;font-weight:700;">⚖️ Decisions Needed</div>
+          <span id="mission-decisions-meta" style="font-size:10px;color:var(--text-dim);"></span>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">Workspace plan files with pending-decision markers, stalest first.</div>
+        <div id="mission-decisions-needed-list"></div>
+      </div>
+
+      <!-- Spec Open Questions Inbox -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="font-size:13px;font-weight:700;">📐 Spec Open Questions</div>
+          <span id="mission-spec-q-meta" style="font-size:10px;color:var(--text-dim);"></span>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">[INFERRED] markers + Open-Questions sections from spec-driven projects. Confirm to stamp the spec file; Override to rewrite the line.</div>
+        <div id="mission-spec-questions-list"></div>
+      </div>
+
       <!-- Scheduled Jobs -->
       <div class="card">
         <div style="font-size:13px;font-weight:700;margin-bottom:4px;">⏰ Scheduled Jobs</div>
         <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">K-2 can write to DATA.cronJobs to populate this list</div>
         <div id="mission-cron-list"></div>
+        <div id="mission-spend-rollup" style="margin-top:14px;"></div>
       </div>
     </div>
 
@@ -4886,14 +4907,151 @@ function renderMissionPage() {
   const input = document.getElementById('mission-input');
   if (input) input.value = DATA.mission || '';
 
-  // Cron jobs — pulse-aware, refreshed by interval ticker
+  renderDecisionsNeededPanel();
+  renderSpecOpenQuestionsPanel();
   renderMissionCronList();
+  renderMissionSpendRollup();
   if (!window._cronPulseTicker) {
     window._cronPulseTicker = setInterval(() => {
       const onMission = document.getElementById('page-mission')?.classList.contains('active');
       if (onMission) renderMissionCronList();
     }, 5000);
   }
+}
+
+// ═══ Plan Visibility — Decisions Needed Panel ═══
+function renderDecisionsNeededPanel() {
+  const el = document.getElementById('mission-decisions-needed-list');
+  if (!el) return;
+  const rows = DATA.decisionsNeeded || [];
+  const meta = document.getElementById('mission-decisions-meta');
+  if (meta) meta.textContent = (DATA.decisionsNeededMeta && DATA.decisionsNeededMeta.scannedAt)
+    ? `scanned ${_relTime(new Date(DATA.decisionsNeededMeta.scannedAt).getTime())}`
+    : '';
+  if (rows.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No pending decisions detected in workspace plan files.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const days = (r.daysSinceModified || 0);
+    const ageColor = days >= 14 ? '#ef4444' : days >= 7 ? '#f59e0b' : 'var(--text-dim)';
+    const markerColor = r.marker === 'Awaiting' ? '#f59e0b' : r.marker === 'Paused' ? '#64748b' : r.marker === 'Decision Needed' ? '#a855f7' : 'var(--accent)';
+    const fileUrl = 'file://' + (r.file || '');
+    return `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,${markerColor} 15%,transparent);color:${markerColor};border:1px solid color-mix(in srgb,${markerColor} 35%,transparent);white-space:nowrap;flex-shrink:0;">${r.marker || 'Pending'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:600;color:var(--text);">${(r.basename || r.fileShort || '').replace(/</g,'&lt;')}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4;">${(r.snippet || '').replace(/</g,'&lt;')}</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
+            <a href="${fileUrl}" style="color:var(--accent);text-decoration:none;" title="${(r.file||'').replace(/"/g,'&quot;')}">${r.fileShort || r.file}</a>
+          </div>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:${ageColor};white-space:nowrap;flex-shrink:0;">${days}d</span>
+      </div>`;
+  }).join('');
+}
+
+// ═══ Plan Visibility — Spec Open Questions Inbox ═══
+function renderSpecOpenQuestionsPanel() {
+  const el = document.getElementById('mission-spec-questions-list');
+  if (!el) return;
+  const all = DATA.specOpenQuestions || [];
+  const open = all.filter(q => (q.status || 'open') === 'open');
+  const meta = document.getElementById('mission-spec-q-meta');
+  if (meta) {
+    const ts = DATA.specOpenQuestionsMeta && DATA.specOpenQuestionsMeta.scannedAt;
+    meta.textContent = (ts ? `scanned ${_relTime(new Date(ts).getTime())} · ` : '') + `${open.length} open / ${all.length} total`;
+  }
+  if (open.length === 0) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-style:italic;">No open questions in spec files. Add an <code>[INFERRED]</code> marker or an <code>## Open Questions</code> section to surface items here.</div>';
+    return;
+  }
+  el.innerHTML = open.map(q => {
+    const fileUrl = 'file://' + (q.file || '');
+    const markerColor = q.marker === '[INFERRED]' ? '#f59e0b' : '#a855f7';
+    return `
+      <div id="spec-q-${q.id}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,${markerColor} 15%,transparent);color:${markerColor};border:1px solid color-mix(in srgb,${markerColor} 35%,transparent);white-space:nowrap;flex-shrink:0;">${q.marker}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:var(--text);line-height:1.5;">${(q.text || '').replace(/</g,'&lt;')}</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
+            <a href="${fileUrl}" style="color:var(--accent);text-decoration:none;" title="${(q.file||'').replace(/"/g,'&quot;')}">${q.fileShort || q.file}${q.lineNo ? ':' + q.lineNo : ''}</a>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="confirmSpecQuestion('${q.id}')" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;" title="Stamp the spec file: [INFERRED] → [CONFIRMED today]">✓ Confirm</button>
+          <button onclick="overrideSpecQuestion('${q.id}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;" title="Type a replacement, the cron will rewrite the line">✎ Override</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function confirmSpecQuestion(id) {
+  const arr = DATA.specOpenQuestions || [];
+  const q = arr.find(x => x.id === id);
+  if (!q) return;
+  q.status = 'confirmed';
+  q.confirmedAt = new Date().toISOString();
+  await saveData();
+  showToast?.('✓ Marked confirmed — cron will stamp the spec file on next pass (~30 min).');
+  renderSpecOpenQuestionsPanel();
+}
+
+async function overrideSpecQuestion(id) {
+  const arr = DATA.specOpenQuestions || [];
+  const q = arr.find(x => x.id === id);
+  if (!q) return;
+  const row = document.getElementById('spec-q-' + id);
+  if (!row) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = q.text || '';
+  input.style.cssText = 'width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:6px;color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;';
+  input.placeholder = 'New line text…';
+  const save = async () => {
+    const v = input.value.trim();
+    if (v && v !== q.text) {
+      q.status = 'overridden';
+      q.overrideText = v;
+      q.confirmedAt = new Date().toISOString();
+      await saveData();
+      showToast?.('✓ Override saved — cron will rewrite the line on next pass.');
+    }
+    renderSpecOpenQuestionsPanel();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') renderSpecOpenQuestionsPanel();
+  });
+  input.addEventListener('blur', save);
+  row.innerHTML = '';
+  row.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+// ═══ Plan Visibility — Mission Spend Rollup strip ═══
+function renderMissionSpendRollup() {
+  const el = document.getElementById('mission-spend-rollup');
+  if (!el) return;
+  const s = DATA.cronSpend;
+  if (!s || !s.rollup) { el.innerHTML = ''; return; }
+  const r = s.rollup;
+  const computed = s.computedAt ? _relTime(new Date(s.computedAt).getTime()) : '';
+  const seg = (label, val, color) => {
+    if (!val || val <= 0) return '';
+    return `<span style="font-size:11px;color:${color};font-weight:600;">${label} $${val.toFixed(2)}</span>`;
+  };
+  el.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);font-weight:700;">7d cron spend</span>
+      ${seg('Opus', r.opus, '#ef4444')}
+      ${seg('Sonnet', r.sonnet, '#a855f7')}
+      ${seg('Haiku', r.haiku, '#22c55e')}
+      <span style="font-size:11px;color:var(--text);font-weight:700;">Total $${(r.total||0).toFixed(2)}</span>
+      ${computed ? `<span style="font-size:10px;color:var(--text-dim);margin-left:auto;">refreshed ${computed}</span>` : ''}
+    </div>`;
 }
 
 // ═══ Cron Snapshot — Pulse Indicator ═══
@@ -4942,6 +5100,7 @@ function renderMissionCronList() {
     if (ar !== br) return ar ? -1 : 1;
     return (a.nextRunAtMs || 0) - (b.nextRunAtMs || 0);
   });
+  const spendByJob = (DATA.cronSpend && DATA.cronSpend.byJob) ? Object.fromEntries(DATA.cronSpend.byJob.map(s => [s.jobId, s])) : {};
   cronEl.innerHTML = sorted.map(j => {
     const running = _cronIsRunning(j);
     const errored = (j.consecutiveErrors || 0) > 0 || j.lastRunStatus === 'error';
@@ -4955,6 +5114,10 @@ function renderMissionCronList() {
     const statusLabel = running ? '● RUNNING' : (errored ? `✕ ${j.consecutiveErrors || 1} consec error${(j.consecutiveErrors||1)===1?'':'s'}` : '');
     const statusColor = running ? '#22c55e' : '#ef4444';
     const errSnippet = !running && errored && j.lastError ? `<div style="font-size:10px;color:#ef4444;margin-top:3px;line-height:1.3;">${String(j.lastError).slice(0,140).replace(/</g,'&lt;')}</div>` : '';
+    const sp = spendByJob[j.id];
+    const tierColor = sp ? (sp.tier === 'opus' ? '#ef4444' : sp.tier === 'sonnet' ? '#a855f7' : sp.tier === 'haiku' ? '#22c55e' : '#64748b') : null;
+    const spendChip = sp && sp.dollars > 0 ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,${tierColor} 15%,transparent);color:${tierColor};border:1px solid color-mix(in srgb,${tierColor} 35%,transparent);" title="${sp.runCount} runs · ${sp.inputTokens.toLocaleString()} in + ${sp.outputTokens.toLocaleString()} out tokens">$${sp.dollars.toFixed(2)} 7d</span>` : '';
+    const overChip = sp && sp.overTier ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.4);" title="Opus tier ≥ $1.00 — consider downgrading to Sonnet">💸 Opus → Sonnet</span>` : '';
     return `
       <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);${running ? 'background:color-mix(in srgb,#22c55e 6%,transparent);margin:0 -6px;padding-left:6px;padding-right:6px;border-radius:6px;' : ''}">
         <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};margin-top:5px;flex-shrink:0;${dotAnim}box-shadow:${running?`0 0 6px ${dotColor}`:'none'};"></span>
@@ -4962,6 +5125,8 @@ function renderMissionCronList() {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <div style="font-size:12px;font-weight:600;">${j.name}</div>
             ${statusLabel ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,${statusColor} 15%,transparent);color:${statusColor};border:1px solid color-mix(in srgb,${statusColor} 35%,transparent);">${statusLabel}</span>` : ''}
+            ${spendChip}
+            ${overChip}
           </div>
           <div style="font-size:11px;color:var(--text-dim);">${schedHuman}${j.description ? ' · '+j.description.slice(0,80) : ''}</div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">Last: ${last}${next ? ` · Next: ${next}` : ''}${j.lastDurationMs ? ` · ${Math.round(j.lastDurationMs/100)/10}s` : ''}</div>
