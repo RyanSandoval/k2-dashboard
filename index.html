@@ -3231,9 +3231,43 @@ function renderJiraLedger() {
       ${e.project ? `<span class="tag tag-blue" style="font-size:9px;margin-top:6px;display:inline-block;">${e.project}</span>` : ''}
     </a>`;
   }).join('');
+  const emptyHowItWorks = `
+    <div style="max-width:680px;margin:24px auto;padding:24px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;">
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">🎫 How the Jira Ledger works</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:18px;">No tickets filed yet. Here's the path a 🎫 takes from a note to this page.</div>
+
+      <ol style="margin:0;padding-left:22px;font-size:13px;color:var(--text);line-height:1.65;">
+        <li style="margin-bottom:10px;">
+          <strong>File it</strong> — open any note, click the <span style="display:inline-block;padding:0 4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:11px;">🎫</span> icon next to the note title. Fill in title, description, project (defaults to <code>MW</code>), sprint. Submit.
+        </li>
+        <li style="margin-bottom:10px;">
+          <strong>Poller picks it up</strong> — the <code>K2 Jira Fire Button Poller</code> cron runs every 5 min on weekdays 10am–3pm PT. It reads pending requests, posts a structured ask into <code>#viking-jira</code>, marks <code>status: posted</code>, then watches the channel for a reply with the new <code>MW-XXXXX</code> key.
+        </li>
+        <li style="margin-bottom:10px;">
+          <strong>github-copilot files it</strong> — only Copilot touches Jira directly. It reads the ask, calls the Jira REST API, and posts back <code>Created MW-XXXXX &lt;link&gt;</code> in <code>#viking-jira</code>. If anything's unclear (project, sprint, labels), Copilot DMs back asking — it won't guess.
+        </li>
+        <li style="margin-bottom:10px;">
+          <strong>Ledger gets the row</strong> — the poller sees the key, marks the request <code>resolved</code>, clears the note's link, and appends to <code>DATA.jiraLedger</code>: <code>{ jiraKey, title, noteId, sourceText, project, createdAt }</code>. That's the row you'll see here.
+        </li>
+        <li>
+          <strong>Click to open</strong> — every row links to <code>vikingtravel.atlassian.net/browse/&lt;KEY&gt;</code>. Search filters by key, title, or text.
+        </li>
+      </ol>
+
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);line-height:1.55;">
+        <strong style="color:var(--text);">Things to know:</strong>
+        <ul style="margin:6px 0 0;padding-left:18px;">
+          <li>A 🎫 clicked outside the 10am–3pm weekday window sits pending until the next workday morning.</li>
+          <li>Rejecting Copilot's ask in <code>#viking-jira</code> leaves the request <code>posted</code> — it never reaches the ledger.</li>
+          <li>The daily <code>K2 → Jira Ticket Finder</code> cron is a <em>separate</em> feature — it scans your jots/notes for implicit Jira candidates and proposes them, independent of this explicit 🎫 path.</li>
+        </ul>
+      </div>
+    </div>`;
   container.innerHTML = pendingHtml + (filtered.length
     ? rows
-    : `<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">${search ? 'No tickets match your search.' : 'No tickets filed yet. Open a note and hit 🎫 to file one.'}</div>`);
+    : (search
+        ? `<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">No tickets match your search.</div>`
+        : emptyHowItWorks));
 }
 window.renderJiraLedger = renderJiraLedger;
 
