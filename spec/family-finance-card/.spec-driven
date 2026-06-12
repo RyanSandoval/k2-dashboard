@@ -1,0 +1,5 @@
+version: 1.0
+activated: 2026-06-12T18:46:00Z
+project: k2-dashboard/spec/family-finance-card
+status: active
+parent_spec: family-finance/
