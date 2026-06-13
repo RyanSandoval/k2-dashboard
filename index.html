@@ -1880,6 +1880,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <span class="icon">📋</span> Stale Jots
           <span class="badge" id="stale-jots-badge" style="display:none">0</span>
         </div>
+        <div class="nav-item" data-page="stale-notes">
+          <span class="icon">📝</span> Stale Notes
+          <span class="badge" id="stale-notes-badge" style="display:none">0</span>
+        </div>
         <div class="nav-item" data-page="clips">
           <span class="icon">🔗</span> Clips
           <span class="badge" id="clips-unread-badge" style="display:none">0</span>
@@ -2343,6 +2347,24 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div id="stale-jots-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
       </div>
       <div id="stale-jots-list"><!-- Populated by renderStaleJots() --></div>
+    </div>
+
+    <!-- Stale Notes Page -->
+    <div class="page" id="page-stale-notes" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2>📝 Stale Notes</h2>
+            <p>Notes untouched for 30+ days. Reclaim each: convert to a task, link to a project, or archive.</p>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input id="stale-notes-search" type="text" placeholder="🔍 Search stale notes…" autocomplete="off"
+            style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+            oninput="renderStaleNotes()">
+        </div>
+      </div>
+      <div id="stale-notes-list"><!-- Populated by renderStaleNotes() --></div>
     </div>
 
     <!-- Skills Page — discoverable catalog of every K2 capability -->
@@ -2857,6 +2879,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
       <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
+      <div class="mobile-more-item" data-page="stale-notes" onclick="mobileNavMore('stale-notes')" style="position:relative;"><span class="icon">📝</span>Stale Notes<span id="mobile-stale-notes-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="workers" onclick="mobileNavMore('workers')" style="position:relative;"><span class="icon">🤖</span>Workers<span id="mobile-workers-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="skills" onclick="mobileNavMore('skills')"><span class="icon">🧩</span>Skills</div>
       <div class="mobile-more-item" data-page="tasks" onclick="mobileNavMore('tasks')"><span class="icon">✅</span>Tasks</div>
@@ -3105,7 +3128,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderStaleJotsBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -3144,7 +3167,7 @@ function navigateTo(page) {
   // If the page is in a collapsible section, expand it
   const sectionPages = {
     work: ['planner','inbox','someday','waiting','review','completed','discussions','trading','growth'],
-    reference: ['stale-jots','clips','docs','decisions','accomplishments','memory','mission','ai-insights','jira-ledger']
+    reference: ['stale-jots','stale-notes','clips','docs','decisions','accomplishments','memory','mission','ai-insights','jira-ledger']
   };
   for (const [name, pages] of Object.entries(sectionPages)) {
     if (pages.includes(page)) {
@@ -3189,6 +3212,7 @@ function navigateTo(page) {
   if (page === 'jira-ledger') renderJiraLedger();
   if (page === 'action-inbox') renderActionInbox();
   if (page === 'stale-jots') renderStaleJots();
+  if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
   if (page === 'skills') renderSkills(false);
 }
@@ -4858,6 +4882,223 @@ async function staleJotsBulkAction(action) {
   }
 }
 window.staleJotsBulkAction = staleJotsBulkAction;
+
+// ═══ Stale Notes Reclaim Panel ═══
+
+function _noteLastTouch(note) {
+  return note.updatedAt || note.createdAt || note.created || null;
+}
+
+function _noteStaleDays(note) {
+  const ts = _noteLastTouch(note);
+  if (!ts) return -1;
+  const ms = Date.now() - new Date(ts).getTime();
+  return Math.floor(ms / 86400000);
+}
+
+function _staleNotes() {
+  const notArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  return (DATA.notes || [])
+    .filter(n => notArchived(n))
+    .map(n => ({ note: n, days: _noteStaleDays(n) }))
+    .filter(({ days }) => days >= 30)
+    .sort((a, b) => b.days - a.days)
+    .map(({ note }) => note);
+}
+
+function renderStaleNotesBadge() {
+  const count = _staleNotes().length;
+  const text = count > 99 ? '99+' : String(count);
+  for (const id of ['stale-notes-badge', 'mobile-stale-notes-badge']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (count) { el.style.display = ''; el.textContent = text; }
+    else { el.style.display = 'none'; }
+  }
+}
+window.renderStaleNotesBadge = renderStaleNotesBadge;
+
+function _snStripHtml(html) {
+  try {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html || '';
+    return tmp.textContent || '';
+  } catch (e) {
+    return (html || '').replace(/<[^>]*>/g, '');
+  }
+}
+
+function _snFirstNonEmptyLine(text) {
+  const lines = (text || '').split(/[\n\r]/);
+  for (const line of lines) {
+    const t = line.trim();
+    if (t) return t.slice(0, 120);
+  }
+  return '';
+}
+
+function renderStaleNotes() {
+  renderStaleNotesBadge();
+  const container = document.getElementById('stale-notes-list');
+  if (!container) return;
+  const q = (document.getElementById('stale-notes-search')?.value || '').toLowerCase().trim();
+  const all = _staleNotes();
+  let items;
+  if (q) {
+    items = all.filter(n => {
+      const title = (n.title || '').toLowerCase();
+      const body = _snStripHtml(n.text || '').toLowerCase();
+      return title.includes(q) || body.includes(q);
+    });
+  } else {
+    items = all.slice(0, 10);
+  }
+
+  if (!all.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">All caught up — no notes older than 30 days. 🎉</div>';
+    return;
+  }
+  if (!items.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">No stale notes match your search.</div>';
+    return;
+  }
+
+  const baseBtn = 'background:none;border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;white-space:nowrap;';
+  const rows = items.map(note => {
+    const rawId = String(note.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const title = (note.title && note.title.trim()) || _snFirstNonEmptyLine(_snStripHtml(note.text || '')) || '(untitled)';
+    const escTitle = title.replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+    const days = _noteStaleDays(note);
+    const ageStr = days >= 365 ? Math.floor(days / 365) + 'y untouched' : days + 'd untouched';
+    const proj = note.projectId ? (DATA.projects || []).find(p => String(p.id) === String(note.projectId)) : null;
+    const projChip = proj
+      ? '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent);font-weight:600;">' + (proj.name || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</span>'
+      : '';
+    return '<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;">'
+      + '<div style="flex:1;min-width:0;cursor:pointer;" onclick="staleNoteOpenNote(\'' + rawId + '\')">'
+      + '<div style="font-size:14px;color:var(--text);line-height:1.4;">' + escTitle + '</div>'
+      + '<div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-muted);">'
+      + '<span>' + ageStr + '</span>'
+      + (projChip ? '<span>\xb7</span>' + projChip : '')
+      + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:220px;">'
+      + '<button onclick="event.stopPropagation();staleNoteConvertToTask(\'' + rawId + '\')" title="Convert to task" style="' + baseBtn + 'border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);">➡️ Task</button>'
+      + '<button onclick="event.stopPropagation();staleNoteOpenProjectPicker(\'' + rawId + '\')" title="Link to active project" style="' + baseBtn + 'border-color:color-mix(in srgb,var(--blue,#5cb3ff) 40%,transparent);color:var(--blue,#5cb3ff);">🔗 Project</button>'
+      + '<button onclick="event.stopPropagation();staleNoteArchive(\'' + rawId + '\',event.shiftKey)" title="Archive (⇧+click to delete immediately)" style="' + baseBtn + 'color:var(--text-muted);">📦</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  const more = (!q && all.length > 10)
+    ? '<div style="text-align:center;padding:16px;font-size:12px;color:var(--text-muted);">+ ' + (all.length - 10) + ' more (use search to find them)</div>'
+    : '';
+  container.innerHTML = rows + more;
+}
+window.renderStaleNotes = renderStaleNotes;
+
+function staleNoteOpenNote(id) {
+  navigateTo('notes');
+  setTimeout(() => { if (typeof openNoteEditor === 'function') openNoteEditor(id); }, 200);
+}
+window.staleNoteOpenNote = staleNoteOpenNote;
+
+async function staleNoteArchive(id, hard) {
+  if (!window.K2Archive) return;
+  await K2Archive.archive('note', id, { hard: !!hard });
+  renderStaleNotes();
+}
+window.staleNoteArchive = staleNoteArchive;
+
+async function staleNoteConvertToTask(id) {
+  const note = (DATA.notes || []).find(n => String(n.id) === String(id));
+  if (!note) return;
+  const title = (note.title && note.title.trim()) || _snFirstNonEmptyLine(_snStripHtml(note.text || '')) || 'Untitled note';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const task = {
+    id: Date.now(), text: title, urgency: 2, importance: 2,
+    priority: 'medium', project: '', owner: 'ryan', done: false,
+    created: dateStr, messages: [], source: 'note', linkedNoteId: note.id
+  };
+  DATA.tasks.push(task);
+  const taskId = task.id;
+  const noteItem = DATA.notes.find(n => String(n.id) === String(id));
+  if (noteItem) { noteItem.archived = true; noteItem.archivedAt = new Date().toISOString(); }
+  if (typeof renderTasks === 'function') try { renderTasks(); } catch(e) {}
+  if (typeof renderDashboard === 'function') try { renderDashboard(); } catch(e) {}
+  renderStaleNotes();
+  await saveData();
+  if (window.K2Archive) {
+    K2Archive.toast({
+      message: 'Task created from note',
+      undoFn: async () => {
+        const ti = DATA.tasks.findIndex(t => t.id === taskId);
+        if (ti !== -1) DATA.tasks.splice(ti, 1);
+        await K2Archive.restore('note', id);
+        if (typeof renderTasks === 'function') try { renderTasks(); } catch(e) {}
+        renderStaleNotes();
+      },
+      durationMs: 8000
+    });
+  }
+}
+window.staleNoteConvertToTask = staleNoteConvertToTask;
+
+function staleNoteOpenProjectPicker(id) {
+  const existing = document.getElementById('stale-note-project-picker');
+  if (existing) existing.remove();
+  const activeProjects = (DATA.projects || []).filter(p => p.status !== 'archived' && !p.archived);
+  const overlay = document.createElement('div');
+  overlay.id = 'stale-note-project-picker';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  const safeId = String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const projOptions = activeProjects.length
+    ? activeProjects.map(p => {
+        const safeProjId = String(p.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const name = (p.name || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        return '<button onclick="staleNoteLinkToProject(\'' + safeId + '\',\'' + safeProjId + '\');document.getElementById(\'stale-note-project-picker\')?.remove();" style="display:block;width:100%;text-align:left;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;margin-bottom:6px;">' + name + '</button>';
+      }).join('')
+    : '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;">No active projects found.</div>';
+  overlay.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:92vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">'
+    + '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">🔗 Link to Project</div>'
+    + projOptions
+    + '<button onclick="document.getElementById(\'stale-note-project-picker\')?.remove();" style="margin-top:8px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:13px;cursor:pointer;">Cancel</button>'
+    + '</div>';
+  document.body.appendChild(overlay);
+}
+window.staleNoteOpenProjectPicker = staleNoteOpenProjectPicker;
+
+async function staleNoteLinkToProject(id, projectId) {
+  const note = (DATA.notes || []).find(n => String(n.id) === String(id));
+  if (!note) return;
+  const proj = (DATA.projects || []).find(p => String(p.id) === String(projectId));
+  if (!proj) return;
+  const prevProjectId = note.projectId;
+  const prevUpdatedAt = note.updatedAt;
+  const hadProjectId = Object.prototype.hasOwnProperty.call(note, 'projectId');
+  const hadUpdatedAt = Object.prototype.hasOwnProperty.call(note, 'updatedAt');
+  note.projectId = projectId;
+  note.updatedAt = new Date().toISOString();
+  renderStaleNotes();
+  await saveData();
+  const projName = proj.name || 'project';
+  if (window.K2Archive) {
+    K2Archive.toast({
+      message: 'Linked to ' + projName,
+      undoFn: async () => {
+        const n = (DATA.notes || []).find(x => String(x.id) === String(id));
+        if (!n) return;
+        if (hadProjectId) n.projectId = prevProjectId; else delete n.projectId;
+        if (hadUpdatedAt) n.updatedAt = prevUpdatedAt; else delete n.updatedAt;
+        renderStaleNotes();
+        await saveData();
+      },
+      durationMs: 8000
+    });
+  }
+}
+window.staleNoteLinkToProject = staleNoteLinkToProject;
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigateTo(item.dataset.page));
