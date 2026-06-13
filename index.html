@@ -10569,6 +10569,61 @@ function _agentMentionFindAll(block) {
   return found;
 }
 
+// Button-triggered K2 send: queues ONLY the line/bullet/task the cursor sits in
+// (not the whole doc) to the same DATA.k2Inline pipeline that `>k2` chips use.
+// route=classify → k2-inline-router/router.py lets Haiku pick task/note/jira/
+// dashboard. Markerless entries are safe: the router's update_jot_marker no-ops
+// when there's no inline marker, and the action still executes + pings #k2-dashboard.
+function sendBlockToK2(editor) {
+  editor = editor || window._floatToolbarEditor || window._todayEditor;
+  if (!editor || editor.isDestroyed) { window.showToast?.('Click into a jot or note line first'); return; }
+  let blockText = '';
+  try {
+    const { $from } = editor.state.selection;
+    // Nearest textblock = the single line / bullet / task at the cursor.
+    blockText = ($from.parent?.textContent || '').trim();
+  } catch (_) {}
+  blockText = blockText.replace(/「K2:[^」]*」/g, '').replace(/\s+/g, ' ').trim();
+  if (!blockText) { window.showToast?.('That line is empty — type something first'); return; }
+
+  // Identify the source surface from the editor's mounted element.
+  const elId = editor.options?.element?.id || '';
+  let source = 'note', sourceDate = null, sourceNoteId = null;
+  if (elId === 'daily-doc-today-editor') {
+    const d = new Date();
+    source = 'jot';
+    sourceDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  } else if (elId.indexOf('doc-editor-') === 0) {
+    source = 'jot';
+    sourceDate = elId.slice('doc-editor-'.length);
+  } else if (window._noteEditors) {
+    for (const [nid, ed] of Object.entries(window._noteEditors)) {
+      if (ed && ed.editor === editor) { sourceNoteId = nid; break; }
+    }
+    sourceDate = sourceNoteId;
+  }
+
+  if (!Array.isArray(DATA.k2Inline)) DATA.k2Inline = [];
+  const reqId = (typeof _k2InlineMakeId === 'function') ? _k2InlineMakeId() : ('k2-' + Date.now().toString(36));
+  DATA.k2Inline.push({
+    id: reqId,
+    source,
+    sourceDate,
+    sourceNoteId: sourceNoteId || undefined,
+    paragraph: blockText,
+    explicitAgent: 'k2',
+    explicitRoute: 'classify',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    trigger: 'button',
+  });
+  try { window.saveData?.(); } catch (_) {}
+  try { window.renderWorkersBadge?.(); } catch (_) {}
+  const snip = blockText.length > 50 ? blockText.slice(0, 50) + '…' : blockText;
+  window.showToast?.(`🤖 Sent to K2: "${snip}" — lands on the Workers page in ~3 min`);
+}
+window.sendBlockToK2 = sendBlockToK2;
+
 function detectK2Mentions(date) {
   if (!DATA.dailyDocs || !DATA.dailyDocs[date]) return { changed: false, queued: 0 };
   const doc = DATA.dailyDocs[date];
@@ -14890,6 +14945,8 @@ function createFloatingToolbar() {
     <div class="eft-divider"></div>
     <button class="eft-btn" data-cmd="h2" title="Heading">H2</button>
     <button class="eft-btn" data-cmd="link" title="Link">🔗</button>
+    <div class="eft-divider"></div>
+    <button class="eft-btn eft-k2" data-cmd="k2" title="Send this line/bullet to K2">🤖</button>
   `;
   document.body.appendChild(floatToolbarEl);
 
@@ -14918,6 +14975,10 @@ function createFloatingToolbar() {
         case 'link':
           showLinkPopover(editor);
           return; // Don't hide toolbar
+        case 'k2':
+          sendBlockToK2(editor);
+          hideFloatingToolbar();
+          return;
       }
       updateFloatingToolbar(editor);
     });
@@ -14952,7 +15013,7 @@ function showFloatingToolbar(editor) {
 
   window._floatToolbarEditor = editor;
   const coords = editor.view.coordsAtPos(from);
-  const toolbarW = 220;
+  const toolbarW = 264;
   const left = Math.max(8, Math.min(coords.left, window.innerWidth - toolbarW - 8));
   const top = coords.top > 60 ? coords.top - 44 : coords.bottom + 4;
   toolbar.style.left = left + 'px';
