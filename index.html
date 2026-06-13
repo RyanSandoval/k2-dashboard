@@ -10574,7 +10574,7 @@ function _agentMentionFindAll(block) {
 // route=classify → k2-inline-router/router.py lets Haiku pick task/note/jira/
 // dashboard. Markerless entries are safe: the router's update_jot_marker no-ops
 // when there's no inline marker, and the action still executes + pings #k2-dashboard.
-function sendBlockToK2(editor) {
+async function sendBlockToK2(editor) {
   editor = editor || window._floatToolbarEditor || window._todayEditor;
   if (!editor || editor.isDestroyed) { window.showToast?.('Click into a jot or note line first'); return; }
   let blockText = '';
@@ -10605,7 +10605,7 @@ function sendBlockToK2(editor) {
 
   if (!Array.isArray(DATA.k2Inline)) DATA.k2Inline = [];
   const reqId = (typeof _k2InlineMakeId === 'function') ? _k2InlineMakeId() : ('k2-' + Date.now().toString(36));
-  DATA.k2Inline.push({
+  const entry = {
     id: reqId,
     source,
     sourceDate,
@@ -10616,11 +10616,29 @@ function sendBlockToK2(editor) {
     status: 'pending',
     createdAt: new Date().toISOString(),
     trigger: 'button',
-  });
-  try { window.saveData?.(); } catch (_) {}
+  };
+  DATA.k2Inline.push(entry);
   try { window.renderWorkersBadge?.(); } catch (_) {}
   const snip = blockText.length > 50 ? blockText.slice(0, 50) + '…' : blockText;
   window.showToast?.(`🤖 Sent to K2: "${snip}" — lands on the Workers page in ~3 min`);
+
+  // 409-safe persist. The jot/note editors run a 1.5s debounced saveData() on
+  // every edit; if one is in flight, this PUT loses the sha race → saveData()
+  // calls loadData(), which REPLACES DATA from the server and drops this
+  // just-queued entry (the "sends to Workers then deletes itself" bug). After
+  // the reverting load, GH_SHA is fresh — re-push the entry and save again.
+  const reattach = () => {
+    if (!Array.isArray(DATA.k2Inline)) DATA.k2Inline = [];
+    if (!DATA.k2Inline.some(e => e && e.id === reqId)) DATA.k2Inline.push(entry);
+  };
+  try {
+    await window.saveData?.();
+    if (!DATA.k2Inline.some(e => e && e.id === reqId)) {
+      reattach();
+      await window.saveData?.();
+    }
+  } catch (_) {}
+  try { window.renderWorkersBadge?.(); } catch (_) {}
 }
 window.sendBlockToK2 = sendBlockToK2;
 
