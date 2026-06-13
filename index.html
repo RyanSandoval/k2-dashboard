@@ -3642,10 +3642,19 @@ function jumpToActionSource(id) {
     return;
   }
   if (item.source === 'note') {
+    // sourceId is normally the bare note id ("note-<ts>"), but some scanner
+    // runs wrote a composite "note|<noteId>|<slug>" key — pull the real id out.
+    let noteId = String(item.sourceId || '');
+    if (noteId.includes('|')) {
+      const parts = noteId.split('|');
+      noteId = parts.find(p => /^note-/.test(p)) || parts[1] || noteId;
+    }
     navigateTo('notes');
     setTimeout(() => {
-      if (typeof window.openNoteEditor === 'function') {
-        window.openNoteEditor(item.sourceId);
+      if (typeof window.openNoteEditor === 'function' && DATA.notes.some(n => n.id === noteId)) {
+        window.openNoteEditor(noteId);
+      } else {
+        showToast?.('Source note not found — it may have been deleted');
       }
     }, 80);
     return;
