@@ -3266,7 +3266,7 @@ function renderJiraLedger() {
         <div style="font-weight:600;font-size:13px;color:var(--accent);">${e.jiraKey}</div>
         <div style="font-size:11px;color:var(--text-dim);">${when}</div>
       </div>
-      <div style="margin-top:4px;font-size:13px;color:var(--text);">${(e.title||'').replace(/</g,'&lt;')}</div>
+      <div style="margin-top:4px;font-size:13px;color:var(--text);">${escapeHtml(e.title||'')}</div>
       ${e.project ? `<span class="tag tag-blue" style="font-size:9px;margin-top:6px;display:inline-block;">${e.project}</span>` : ''}
     </a>`;
   }).join('');
@@ -3895,9 +3895,8 @@ window._skillsToggleExpanded = _skillsToggleExpanded;
 function _skillsCardHtml(skill) {
   const expanded = window._skillsExpanded.has(skill.name);
   const safeName = skill.name.replace(/'/g, "\\'");
-  const escTxt = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  const surfaces = (skill.surface || []).map(s => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escTxt(s)}</code>`).join(' ');
-  const triggers = (skill.trigger || []).map(s => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escTxt(s)}</code>`).join(' ');
+  const surfaces = (skill.surface || []).map(s => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escapeHtml(s)}</code>`).join(' ');
+  const triggers = (skill.trigger || []).map(s => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escapeHtml(s)}</code>`).join(' ');
   const vikingChip = skill.vikingOnly
     ? '<span style="font-size:9px;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--accent2) 18%,transparent);color:var(--accent2);font-weight:700;">VIKING-ONLY</span>'
     : '';
@@ -3907,21 +3906,21 @@ function _skillsCardHtml(skill) {
   const invoke = skill.invoke
     ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;font-size:11px;">
         <div style="color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:4px;">Invoke</div>
-        <div><strong style="color:var(--accent);">${escTxt(skill.invoke.type || '')}</strong> → <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">${escTxt(skill.invoke.target || '')}</code></div>
-        ${skill.invoke.example ? `<pre style="margin-top:6px;font-size:10px;color:var(--text-dim);white-space:pre-wrap;word-break:break-word;background:var(--surface);padding:6px 8px;border-radius:4px;">${escTxt(skill.invoke.example)}</pre>` : ''}
+        <div><strong style="color:var(--accent);">${escapeHtml(skill.invoke.type || '')}</strong> → <code style="background:var(--surface);padding:1px 5px;border-radius:3px;">${escapeHtml(skill.invoke.target || '')}</code></div>
+        ${skill.invoke.example ? `<pre style="margin-top:6px;font-size:10px;color:var(--text-dim);white-space:pre-wrap;word-break:break-word;background:var(--surface);padding:6px 8px;border-radius:4px;">${escapeHtml(skill.invoke.example)}</pre>` : ''}
       </div>`
     : '';
   const inputs = (skill.inputs || []).length
-    ? `<div style="margin-top:6px;font-size:11px;color:var(--text-muted);"><strong>Inputs:</strong> ${(skill.inputs || []).map(escTxt).join(', ')}</div>`
+    ? `<div style="margin-top:6px;font-size:11px;color:var(--text-muted);"><strong>Inputs:</strong> ${(skill.inputs || []).map(escapeHtml).join(', ')}</div>`
     : '';
   const outputs = (skill.outputs || []).length
-    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Outputs:</strong> ${(skill.outputs || []).map(escTxt).join(', ')}</div>`
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Outputs:</strong> ${(skill.outputs || []).map(escapeHtml).join(', ')}</div>`
     : '';
   const deps = (skill.dependencies || []).length
-    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Depends on:</strong> ${(skill.dependencies || []).map(escTxt).join(', ')}</div>`
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Depends on:</strong> ${(skill.dependencies || []).map(escapeHtml).join(', ')}</div>`
     : '';
   const code = (skill.code || []).length
-    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Code:</strong> ${(skill.code || []).map(c => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escTxt(c.file)}:${escTxt(c.symbol)}</code>`).join(' ')}</div>`
+    ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);"><strong>Code:</strong> ${(skill.code || []).map(c => `<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:10px;">${escapeHtml(c.file)}:${escapeHtml(c.symbol)}</code>`).join(' ')}</div>`
     : '';
   const detail = expanded
     ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
@@ -3934,14 +3933,14 @@ function _skillsCardHtml(skill) {
     <div style="display:flex;gap:8px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:3px;">
-          <span style="font-size:14px;font-weight:700;color:var(--text);">${escTxt(skill.title || skill.name)}</span>
-          <code style="font-size:10px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px;">${escTxt(skill.name)}</code>
+          <span style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(skill.title || skill.name)}</span>
+          <code style="font-size:10px;color:var(--text-dim);background:var(--surface2);padding:1px 5px;border-radius:4px;">${escapeHtml(skill.name)}</code>
           ${_skillsStatusChip(skill.status)}
           ${vikingChip}
-          <span style="font-size:10px;color:var(--text-muted);">v${escTxt(skill.version)}</span>
+          <span style="font-size:10px;color:var(--text-muted);">v${escapeHtml(skill.version)}</span>
           ${specLink}
         </div>
-        <div style="font-size:12px;color:var(--text-dim);line-height:1.45;">${escTxt(skill.desc)}</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.45;">${escapeHtml(skill.desc)}</div>
       </div>
       <div style="color:var(--text-muted);font-size:12px;flex-shrink:0;">${expanded ? '▾' : '▸'}</div>
     </div>
@@ -4637,7 +4636,7 @@ function renderStaleJots() {
   const rows = items.map(item => {
     const safeKey = item.key.replace(/'/g, "\\'");
     const selected = window._staleJotsSelection.has(item.key);
-    const escText = (item.text || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    const escText = escapeHtml(item.text || '');
     const typeChip = item.type === 'task'
       ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-weight:600;">unchecked task</span>'
       : '';
@@ -4745,7 +4744,7 @@ function _staleJotsOpenNotePicker(key, item) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   const safeKey = key.replace(/'/g, "\\'");
-  const escText = (item.text || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const escText = escapeHtml(item.text || '');
   const noteOptions = notes.map(n => {
     const title = (n.title || 'Untitled note').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
     const safeId = String(n.id).replace(/'/g, "\\'");
@@ -4982,12 +4981,12 @@ function renderStaleNotes() {
   const rows = items.map(note => {
     const rawId = String(note.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const title = (note.title && note.title.trim()) || _snFirstNonEmptyLine(_snStripHtml(note.text || '')) || '(untitled)';
-    const escTitle = title.replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+    const escTitle = escapeHtml(title);
     const days = _noteStaleDays(note);
     const ageStr = days >= 365 ? Math.floor(days / 365) + 'y untouched' : days + 'd untouched';
     const proj = note.projectId ? (DATA.projects || []).find(p => String(p.id) === String(note.projectId)) : null;
     const projChip = proj
-      ? '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent);font-weight:600;">' + (proj.name || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</span>'
+      ? '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);color:var(--accent);font-weight:600;">' + escapeHtml(proj.name || '') + '</span>'
       : '';
     return '<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;">'
       + '<div style="flex:1;min-width:0;cursor:pointer;" onclick="staleNoteOpenNote(\'' + rawId + '\')">'
@@ -5243,8 +5242,8 @@ function renderDecisionsNeededPanel() {
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
         <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,${markerColor} 15%,transparent);color:${markerColor};border:1px solid color-mix(in srgb,${markerColor} 35%,transparent);white-space:nowrap;flex-shrink:0;">${r.marker || 'Pending'}</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:600;color:var(--text);">${(r.basename || r.fileShort || '').replace(/</g,'&lt;')}</div>
-          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4;">${(r.snippet || '').replace(/</g,'&lt;')}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);">${escapeHtml(r.basename || r.fileShort || '')}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.4;">${escapeHtml(r.snippet || '')}</div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
             <a href="${fileUrl}" style="color:var(--accent);text-decoration:none;" title="${(r.file||'').replace(/"/g,'&quot;')}">${r.fileShort || r.file}</a>
           </div>
@@ -5276,7 +5275,7 @@ function renderSpecOpenQuestionsPanel() {
       <div id="spec-q-${q.id}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
         <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,${markerColor} 15%,transparent);color:${markerColor};border:1px solid color-mix(in srgb,${markerColor} 35%,transparent);white-space:nowrap;flex-shrink:0;">${q.marker}</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;color:var(--text);line-height:1.5;">${(q.text || '').replace(/</g,'&lt;')}</div>
+          <div style="font-size:11px;color:var(--text);line-height:1.5;">${escapeHtml(q.text || '')}</div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">
             <a href="${fileUrl}" style="color:var(--accent);text-decoration:none;" title="${(q.file||'').replace(/"/g,'&quot;')}">${q.fileShort || q.file}${q.lineNo ? ':' + q.lineNo : ''}</a>
           </div>
@@ -5415,7 +5414,7 @@ function renderMissionCronList() {
     const next = j.nextRunAtMs ? _relTime(j.nextRunAtMs) : '';
     const statusLabel = running ? '● RUNNING' : (errored ? `✕ ${j.consecutiveErrors || 1} consec error${(j.consecutiveErrors||1)===1?'':'s'}` : '');
     const statusColor = running ? '#22c55e' : '#ef4444';
-    const errSnippet = !running && errored && j.lastError ? `<div style="font-size:10px;color:#ef4444;margin-top:3px;line-height:1.3;">${String(j.lastError).slice(0,140).replace(/</g,'&lt;')}</div>` : '';
+    const errSnippet = !running && errored && j.lastError ? `<div style="font-size:10px;color:#ef4444;margin-top:3px;line-height:1.3;">${escapeHtml(String(j.lastError).slice(0,140))}</div>` : '';
     const sp = spendByJob[j.id];
     const tierColor = sp ? (sp.tier === 'opus' ? '#ef4444' : sp.tier === 'sonnet' ? '#a855f7' : sp.tier === 'haiku' ? '#22c55e' : '#64748b') : null;
     const spendChip = sp && sp.dollars > 0 ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,${tierColor} 15%,transparent);color:${tierColor};border:1px solid color-mix(in srgb,${tierColor} 35%,transparent);" title="${sp.runCount} runs · ${sp.inputTokens.toLocaleString()} in + ${sp.outputTokens.toLocaleString()} out tokens">$${sp.dollars.toFixed(2)} 7d</span>` : '';
@@ -5584,15 +5583,11 @@ function renderDashWaitingFor() {
   if (!listEl) return;
   listEl.innerHTML = items.slice(0, 5).map(w => {
     const txt = (w.text || w.title || '').replace(/<[^>]*>/g, '').slice(0, 110);
-    const who = w.who ? `<span style="font-size:10px;color:var(--text-dim);margin-left:6px;">@ ${escapeHtmlMaybe(w.who)}</span>` : '';
+    const who = w.who ? `<span style="font-size:10px;color:var(--text-dim);margin-left:6px;">@ ${escapeHtml(w.who)}</span>` : '';
     return `<div onclick="navigateTo('waiting')" style="padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;line-height:1.45;">
       ${txt}${who}
     </div>`;
   }).join('');
-}
-
-function escapeHtmlMaybe(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function renderDashboard() {
@@ -5738,7 +5733,7 @@ function renderMorningBrief(today) {
   if (overdue.length > 0) {
     sections.push(`<div style="margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🚨 Overdue (${overdue.length})</div>
-      ${overdue.slice(0,3).map(t=>`<div onclick="openTaskModal(${JSON.stringify(t.id)})" style="font-size:12px;padding:6px 4px;margin:0 -4px;color:var(--text-dim);cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">· ${(t.text||'').slice(0,60).replace(/</g,'&lt;')} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
+      ${overdue.slice(0,3).map(t=>`<div onclick="openTaskModal(${JSON.stringify(t.id)})" style="font-size:12px;padding:6px 4px;margin:0 -4px;color:var(--text-dim);cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">· ${escapeHtml((t.text||'').slice(0,60))} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
       ${overdue.length>3?`<div onclick="navigateTo('tasks')" style="font-size:11px;color:var(--red);cursor:pointer;padding:4px;">+ ${overdue.length-3} more →</div>`:''}
     </div>`);
   }
@@ -7362,7 +7357,7 @@ function openProjectModal(projectId) {
           <div style="margin-top:8px;">
             <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:4px;">⚠ Pending Decisions (${p.openQuestions.length})</div>
             <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--text);line-height:1.5;">
-              ${p.openQuestions.map(q => `<li style="margin-bottom:3px;">${(typeof q === 'string' ? q : q.text || '').replace(/</g,'&lt;')}</li>`).join('')}
+              ${p.openQuestions.map(q => `<li style="margin-bottom:3px;">${escapeHtml(typeof q === 'string' ? q : q.text || '')}</li>`).join('')}
             </ul>
           </div>
         ` : '<div style="font-size:11px;color:var(--text-dim);font-style:italic;">No open questions detected.</div>'}
@@ -7616,7 +7611,6 @@ async function onDrop(event, newStatus) {
 // Render Tasks
 function formatTaskTextDisplay(text) {
   if (!text) return '';
-  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   // Split on URLs, HTML-escape plain parts, linkify URL parts
   const parts = text.split(/(https?:\/\/[^\s<>"]+)/g);
   return parts.map((part, i) => {
@@ -7630,9 +7624,9 @@ function formatTaskTextDisplay(text) {
       } catch (e) {
         label = part.length > 40 ? part.substring(0, 40) + '…' : part;
       }
-      return `<a href="${esc(part)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);font-size:11px;text-decoration:underline;" title="${esc(part)}">${esc(label)}</a>`;
+      return `<a href="${escapeHtml(part)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);font-size:11px;text-decoration:underline;" title="${escapeHtml(part)}">${escapeHtml(label)}</a>`;
     }
-    return esc(part);
+    return escapeHtml(part);
   }).join('');
 }
 
@@ -8884,14 +8878,14 @@ function renderClipsList() {
     const archiveBtn = clip.status !== 'archived'
       ? `<button class="clip-action-btn" onclick="archiveClip(${clip.id})" title="Archive">📦</button>`
       : `<button class="clip-action-btn" onclick="unarchiveClip(${clip.id})" title="Unarchive">📤</button>`;
-    const tags = (clip.tags || []).map(t => `<span class="clip-tag">${escapeHTML(t)}</span>`).join('');
+    const tags = (clip.tags || []).map(t => `<span class="clip-tag">${escapeHtml(t)}</span>`).join('');
 
     return `<div class="clip-card ${statusClass}">
       <img class="clip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">
       <div class="clip-body">
-        <a class="clip-title" href="${escapeHTML(clip.url)}" target="_blank" rel="noopener">${escapeHTML(clip.title || clip.url)}</a>
-        <div class="clip-domain">${escapeHTML(domain)}</div>
-        ${clip.description ? `<div class="clip-desc">${escapeHTML(clip.description)}</div>` : ''}
+        <a class="clip-title" href="${escapeHtml(clip.url)}" target="_blank" rel="noopener">${escapeHtml(clip.title || clip.url)}</a>
+        <div class="clip-domain">${escapeHtml(domain)}</div>
+        ${clip.description ? `<div class="clip-desc">${escapeHtml(clip.description)}</div>` : ''}
         <div class="clip-meta">
           ${tags}
           <span class="clip-time">${clipRelativeTime(clip.created)}</span>
@@ -8906,7 +8900,7 @@ function renderClipsList() {
             <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
             <div style="padding:4px 10px;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Add to Project</div>
             ${(DATA.projects||[]).filter(p=>p.status!=='done').map(p=>
-              `<div class="clip-send-option" onclick="clipToProject(${clip.id},'${p.id}')">🚀 ${escapeHTML(p.name)}</div>`
+              `<div class="clip-send-option" onclick="clipToProject(${clip.id},'${p.id}')">🚀 ${escapeHtml(p.name)}</div>`
             ).join('')}
           </div>
         </div>
@@ -8928,11 +8922,6 @@ function clipRelativeTime(dateStr) {
   if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
   if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
   return d.toLocaleDateString();
-}
-
-function escapeHTML(s) {
-  if (typeof s !== 'string') return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function toggleClipRead(id) {
@@ -9003,7 +8992,7 @@ function clipToNote(clipId) {
   if (!clip) return;
   const now = new Date();
   const dateStr = now.toISOString().slice(0,10) + ' ' + now.toTimeString().slice(0,5);
-  const noteHtml = `<h1>${escapeHTML(clip.title || 'Untitled')}</h1><p><a href="${escapeHTML(clip.url)}">${escapeHTML(clip.url)}</a></p>${clip.description ? '<p>' + escapeHTML(clip.description) + '</p>' : ''}<p></p>`;
+  const noteHtml = `<h1>${escapeHtml(clip.title || 'Untitled')}</h1><p><a href="${escapeHtml(clip.url)}">${escapeHtml(clip.url)}</a></p>${clip.description ? '<p>' + escapeHtml(clip.description) + '</p>' : ''}<p></p>`;
   const note = { id: 'note-' + Date.now(), title: clip.title || 'Clip Note', text: noteHtml, created: dateStr };
   DATA.notes.push(note);
   clip.status = 'read';
@@ -9071,7 +9060,7 @@ function openAddClipModal(prefillUrl) {
   const allTags = [...new Set((DATA.bookmarks || []).flatMap(b => b.tags || []))];
   const tagContainer = document.getElementById('clip-existing-tags');
   tagContainer.innerHTML = allTags.map(t =>
-    `<span class="clip-tag" style="cursor:pointer;" onclick="addTagToClipInput('${escapeHTML(t)}')">${escapeHTML(t)}</span>`
+    `<span class="clip-tag" style="cursor:pointer;" onclick="addTagToClipInput('${escapeHtml(t)}')">${escapeHtml(t)}</span>`
   ).join('');
 
   setTimeout(() => {
@@ -10200,7 +10189,7 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
       <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Title</label>
       <input id="jira-modal-title" type="text" value="${defaultTitle.replace(/"/g,'&quot;').slice(0,200)}" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;margin-bottom:12px;outline:none;">
       <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Description</label>
-      <textarea id="jira-modal-desc" rows="8" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;resize:vertical;">${plain.replace(/</g,'&lt;')}</textarea>
+      <textarea id="jira-modal-desc" rows="8" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;resize:vertical;">${escapeHtml(plain)}</textarea>
       <div style="display:flex;gap:12px;margin-bottom:16px;">
         <div style="flex:1;">
           <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Project</label>
@@ -11922,7 +11911,7 @@ function renderFamilyFinanceCard() {
     ? `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;${numDim}">
          <div>
            <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Top spend</span>
-           <span style="font-size:13px;color:var(--accent);font-weight:700;margin-left:6px;">${(tc.name||'').replace(/</g,'&lt;')}</span>
+           <span style="font-size:13px;color:var(--accent);font-weight:700;margin-left:6px;">${escapeHtml(tc.name||'')}</span>
          </div>
          <div style="font-size:13px;font-weight:600;">$${(tc.amountSpent||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} <span style="font-size:11px;color:var(--text-dim);font-weight:500;">(${(tc.pctOfDiscretionary||0).toFixed(0)}% · ${tc.txCount||0} tx)</span></div>
        </div>`
@@ -13301,16 +13290,16 @@ function renderAccomplishments(quarter) {
       var name = projId === '__general__' ? 'General' : (projectNames[projId] || projId);
       html += '<div style="margin-bottom:24px;">';
       html += '<div style="font-weight:700;font-size:15px;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
-      html += '<span>' + escHTML(name) + '</span><span style="font-size:12px;color:var(--text-dim);font-weight:400;">(' + tasks.length + ' completed)</span>';
+      html += '<span>' + escapeHtml(name) + '</span><span style="font-size:12px;color:var(--text-dim);font-weight:400;">(' + tasks.length + ' completed)</span>';
       html += '</div>';
       tasks.forEach(function(task) {
         var dateStr = task.completedAt ? task.completedAt.slice(5,10).replace('-','/') : '';
         html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle,var(--border));">';
         html += '<span style="color:var(--green);flex-shrink:0;margin-top:1px;">✅</span>';
         html += '<div style="flex:1;min-width:0;">';
-        html += '<span style="font-size:13px;">' + escHTML(task.text || task.title || '') + '</span>';
+        html += '<span style="font-size:13px;">' + escapeHtml(task.text || task.title || '') + '</span>';
         if (dateStr) html += ' <span style="font-size:11px;color:var(--text-dim);">[' + dateStr + ']</span>';
-        if (task.impactNote) html += '<div style="margin-top:3px;font-size:12px;color:var(--green);font-style:italic;">— ' + escHTML(task.impactNote) + '</div>';
+        if (task.impactNote) html += '<div style="margin-top:3px;font-size:12px;color:var(--green);font-style:italic;">— ' + escapeHtml(task.impactNote) + '</div>';
         html += '</div></div>';
       });
       // Add accomplishment for this project
@@ -13341,7 +13330,7 @@ function renderAccomplishments(quarter) {
       html += '<div style="margin-bottom:8px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-md);">';
       html += '<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600;">' + d + '</div>';
       items.forEach(function(item) {
-        html += '<div style="font-size:13px;margin-bottom:4px;">' + item.label + ' ' + escHTML(item.text) + '</div>';
+        html += '<div style="font-size:13px;margin-bottom:4px;">' + item.label + ' ' + escapeHtml(item.text) + '</div>';
       });
       html += '</div>';
     });
@@ -13362,8 +13351,8 @@ function renderAccomplishments(quarter) {
       html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-subtle,var(--border));">';
       html += '<span style="flex-shrink:0;">⚖️</span>';
       html += '<div style="flex:1;">';
-      html += '<span style="font-size:13px;font-weight:600;">' + escHTML(dec.decision || '') + '</span>';
-      if (dec.rationale) html += ' <span style="font-size:12px;color:var(--text-dim);">— ' + escHTML(dec.rationale) + '</span>';
+      html += '<span style="font-size:13px;font-weight:600;">' + escapeHtml(dec.decision || '') + '</span>';
+      if (dec.rationale) html += ' <span style="font-size:12px;color:var(--text-dim);">— ' + escapeHtml(dec.rationale) + '</span>';
       if (d) html += ' <span style="font-size:11px;color:var(--text-dim);">[' + d + ']</span>';
       html += '</div></div>';
     });
@@ -13384,7 +13373,7 @@ function renderAccomplishments(quarter) {
       var statusColor = isResolved ? 'var(--green)' : 'var(--yellow)';
       html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-subtle,var(--border));">';
       html += '<span>' + icon + '</span>';
-      html += '<div style="flex:1;font-size:13px;">' + escHTML(ga.text) + ' <span style="font-size:11px;color:' + statusColor + ';font-weight:600;">[' + (ga.status || 'active') + ']</span></div>';
+      html += '<div style="flex:1;font-size:13px;">' + escapeHtml(ga.text) + ' <span style="font-size:11px;color:' + statusColor + ';font-weight:600;">[' + (ga.status || 'active') + ']</span></div>';
       html += '<button onclick="toggleGrowthArea(' + ga.id + ')" style="font-size:11px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-dim);font-family:inherit;">' + (isResolved ? 'Reopen' : 'Resolve') + '</button>';
       html += '<button onclick="deleteGrowthArea(' + ga.id + ', event)" title="Delete (⇧+click to delete immediately)" style="font-size:11px;padding:3px 8px;background:none;border:1px solid var(--red);border-radius:var(--radius-sm);cursor:pointer;color:var(--red);font-family:inherit;">Delete</button>';
       html += '</div>';
@@ -13398,11 +13387,6 @@ function renderAccomplishments(quarter) {
   html += '</div>';
 
   body.innerHTML = html;
-}
-
-function escHTML(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function showAddAccomplishment(projId, quarter) {
@@ -13911,7 +13895,7 @@ function renderTimeRow(hour, min, dateStr) {
     const gb = document.createElement('div');
     gb.className = 'planner-gcal-block';
     const timeStr = ev.start.getHours() + ':' + String(ev.start.getMinutes()).padStart(2,'0');
-    gb.innerHTML = '<span class="gcal-text">' + (ev.title || 'Event').replace(/</g,'&lt;') + '</span>' +
+    gb.innerHTML = '<span class="gcal-text">' + escapeHtml(ev.title || 'Event') + '</span>' +
                    '<span class="gcal-time">' + timeStr + '</span>';
     slot.appendChild(gb);
   });
@@ -13922,8 +13906,8 @@ function renderTimeRow(hour, min, dateStr) {
     const proj = plannerGetProject(task.project);
     const tb = document.createElement('div');
     tb.className = 'planner-task-block';
-    const projBadge = proj ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);flex-shrink:0;">' + proj.name.slice(0,12).replace(/</g,'&lt;') + '</span>' : '';
-    tb.innerHTML = '<span class="task-text">' + (task.text || '').replace(/</g,'&lt;') + '</span>' +
+    const projBadge = proj ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);flex-shrink:0;">' + escapeHtml(proj.name.slice(0,12)) + '</span>' : '';
+    tb.innerHTML = '<span class="task-text">' + escapeHtml(task.text || '') + '</span>' +
                    projBadge +
                    '<span class="task-dur">' + b.durationMin + 'm</span>' +
                    '<button class="task-remove" title="Remove from timeline">✕</button>';
@@ -13977,8 +13961,8 @@ function renderPlanner(dateStr) {
           const sc = computeTaskScore(t);
           return '<div class="planner-unscheduled-task" onclick="openTaskModal(' + safeId(t.id) + ')" style="cursor:pointer;">' +
             '<span style="font-size:11px;padding:1px 5px;border-radius:4px;' + 'background:var(--accent-surface);color:var(--accent);">' + scoreLabel(t) + '</span>' +
-            '<span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (t.text || '').replace(/</g,'&lt;') + '</span>' +
-            (proj ? '<span style="font-size:11px;color:var(--text-muted);">' + proj.name.replace(/</g,'&lt;') + '</span>' : '') +
+            '<span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(t.text || '') + '</span>' +
+            (proj ? '<span style="font-size:11px;color:var(--text-muted);">' + escapeHtml(proj.name) + '</span>' : '') +
             '</div>';
         }).join('') +
         '</div>';
