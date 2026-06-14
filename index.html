@@ -1168,16 +1168,11 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       white-space: nowrap;
     }
 
-    /* ── Tidy, compact action cluster (not 44px monsters that crowd the row) ── */
+    /* ── Tap opens the note now, so hide the inline action buttons on mobile to
+         give the title its full width back. Delete + K2 + close live inside the
+         opened note editor. Date + status emoji indicators stay (they're spans). ── */
     .note-card [style*="flex-shrink:0"] button,
-    .note-card [style*="flex-shrink:0"] a {
-      min-width: 34px;
-      min-height: 34px;
-      padding: 7px !important;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
+    .note-card [style*="flex-shrink:0"] a { display: none !important; }
 
     /* ── Floating toolbar: clamp to viewport width ── */
     .editor-float-toolbar { max-width: calc(100vw - 24px); }
