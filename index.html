@@ -98,6 +98,11 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     --radius-lg: 14px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    max-width: 100vw;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     background: var(--bg);
@@ -1145,6 +1150,30 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     .quick-add select { flex: 1; }
     .charts-bottom-grid { grid-template-columns: 1fr !important; }
     .chart-container-pnl, .chart-container-wr, .chart-container-bal { height: 200px !important; }
+
+    /* ── iOS zoom fix: ensure every focusable field computes >= 16px ── */
+    input:not(#note-title-input), textarea, select { font-size: 16px !important; }
+
+    /* ── Note action buttons: Apple HIG 44×44 touch targets ── */
+    .note-card [style*="display:flex;align-items:center;gap:8px;flex-shrink:0"] button,
+    .note-card [style*="display:flex;align-items:center;gap:8px;flex-shrink:0"] a {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    /* ── Note title inline: ellipsis truncation ── */
+    .note-title-inline {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Floating toolbar: clamp to viewport width ── */
+    .editor-float-toolbar { max-width: calc(100vw - 24px); }
   }
 
   /* Time horizon toggle pills */
@@ -15025,8 +15054,8 @@ function showFloatingToolbar(editor) {
 
   window._floatToolbarEditor = editor;
   const coords = editor.view.coordsAtPos(from);
-  const toolbarW = 264;
-  const left = Math.max(8, Math.min(coords.left, window.innerWidth - toolbarW - 8));
+  const toolbarW = Math.min(264, window.innerWidth - 24);
+  const left = Math.max(12, Math.min(coords.left, window.innerWidth - toolbarW - 12));
   const top = coords.top > 60 ? coords.top - 44 : coords.bottom + 4;
   toolbar.style.left = left + 'px';
   toolbar.style.top = top + 'px';
