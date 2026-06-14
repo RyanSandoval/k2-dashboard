@@ -2954,6 +2954,9 @@ function mobileNavMore(page) {
   navigateTo(page);
   // Mark the More button as active on the tab bar, highlight drawer item
   document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+  // Pages reached via the More drawer have no direct tab — highlight the More tab instead
+  const moreTab = document.querySelector('.mobile-nav-item:last-child');
+  if (moreTab) moreTab.classList.add('active');
   document.querySelectorAll('.mobile-more-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
   });
