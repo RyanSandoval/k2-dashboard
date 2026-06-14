@@ -2970,6 +2970,18 @@ let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [],
 window.DATA = DATA; // keep module scripts in sync
 
 // ============================================================
+// HTML ESCAPING — single canonical implementation; use this everywhere
+// ============================================================
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ============================================================
 // APP LOGIC
 // ============================================================
 
@@ -12062,11 +12074,6 @@ async function dismissAdvisorItem(itemId) {
   renderDailyAdvisor();
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 function performSearch(q) {
   const results = [];
@@ -16294,7 +16301,6 @@ setTimeout(() => {
   function isArchived(item) { return !!(item && item.archived); }
   function notArchived(item) { return !(item && item.archived); }
 
-  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function escapeAttr(s) { return String(s).replace(/['"\\]/g, '\\$&'); }
 
   // Hook page navigation to refresh trash view
@@ -16582,10 +16588,6 @@ setTimeout(() => {
       e.preventDefault();
       close();
     }
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   // Global hotkey: Cmd+K / Ctrl+K
