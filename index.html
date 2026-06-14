@@ -1154,22 +1154,29 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     /* ── iOS zoom fix: ensure every focusable field computes >= 16px ── */
     input:not(#note-title-input), textarea, select { font-size: 16px !important; }
 
-    /* ── Note action buttons: Apple HIG 44×44 touch targets ── */
-    .note-card [style*="display:flex;align-items:center;gap:8px;flex-shrink:0"] button,
-    .note-card [style*="display:flex;align-items:center;gap:8px;flex-shrink:0"] a {
-      min-width: 44px;
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px;
-    }
+    /* ── Tap anywhere on a note card opens it. Text controls (title/caret/preview)
+         pass the tap through to the card so a tap can't get swallowed by the input. ── */
+    .note-card { cursor: pointer; }
+    .note-card .note-title-inline,
+    .note-card .note-caret,
+    .note-card .note-preview { pointer-events: none; }
 
     /* ── Note title inline: ellipsis truncation ── */
     .note-title-inline {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    /* ── Tidy, compact action cluster (not 44px monsters that crowd the row) ── */
+    .note-card [style*="flex-shrink:0"] button,
+    .note-card [style*="flex-shrink:0"] a {
+      min-width: 34px;
+      min-height: 34px;
+      padding: 7px !important;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* ── Floating toolbar: clamp to viewport width ── */
@@ -9408,7 +9415,7 @@ function renderNotes(page = 0) {
       }
       const previewLine = previewClean.slice(0, 140);
       return `
-        <div class="card note-card" data-note-id="${noteId}">
+        <div class="card note-card" data-note-id="${noteId}" onclick="noteCardTap('${noteId}', event)">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
               <span class="note-caret" onclick="toggleNoteExpand('${noteId}', event)"
@@ -9562,6 +9569,14 @@ function copyNoteLink(noteId, evt) {
   }
 }
 
+function noteCardTap(noteId, ev) {
+  // Mobile only: a tap anywhere on the card (except an action button/link) opens the note.
+  // Desktop keeps the existing inline-expand behavior via the caret/title handlers.
+  if (window.innerWidth > 768) return;
+  if (ev && ev.target && ev.target.closest('button, a')) return;
+  openNoteEditor(noteId);
+}
+
 function openNoteEditor(noteId) {
   let note;
   if (noteId) {
@@ -9648,16 +9663,8 @@ function openNoteEditor(noteId) {
 
   titleInput.oninput = autoSave;
   
-  // TipTap editor handles its own auto-save via onUpdate callback
-  // No need to set up bodyInput.oninput since it's now a TipTap editor
-
-  // Link callback for notes — links project to the note
-  bodyInput._richOnLink = (item) => {
-    if (item.type === 'project') {
-      note.projectId = item.id;
-      document.getElementById('note-project-link').value = item.id;
-    }
-  };
+  // TipTap editor handles its own auto-save via onUpdate callback and its own
+  // link/mention handling, so the old textarea bodyInput hooks are gone.
 
   // Cmd+S to force save, also extract tasks from [] syntax
   // TipTap editor handles its own keyboard events
