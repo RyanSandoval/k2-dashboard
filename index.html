@@ -1154,6 +1154,19 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     /* ── iOS zoom fix: ensure every focusable field computes >= 16px ── */
     input:not(#note-title-input), textarea, select { font-size: 16px !important; }
 
+    /* ── Page headers stack on mobile: title + description take the full width
+         (no more description text colliding with the action button), and the
+         action button drops to its own line, left-aligned, never wrapping. ── */
+    .page-header > div:first-child {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 12px !important;
+    }
+    .page-header > div:first-child > button {
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+
     /* ── Tap anywhere on a note card opens it. Text controls (title/caret/preview)
          pass the tap through to the card so a tap can't get swallowed by the input. ── */
     .note-card { cursor: pointer; }
