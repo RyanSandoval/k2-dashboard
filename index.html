@@ -1237,6 +1237,21 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .note-action-danger { color: var(--red); }
   .note-action-cancel { justify-content: center; color: var(--text-dim); margin-top: 4px; font-weight: 600; }
 
+  /* ── Note editor header bar: back · save status · delete, project on its own row ── */
+  .note-editor-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .note-back-btn {
+    background: none; border: none; color: var(--accent); font-size: 15px; font-family: inherit;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0; padding: 4px 0;
+  }
+  .note-save-status { margin-left: auto; font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+  .note-del-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 16px; padding: 4px; flex-shrink: 0; }
+  .note-editor-project { margin-bottom: 16px; }
+  #note-project-link {
+    padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px; font-family: inherit; max-width: 240px;
+  }
+  @media (max-width: 768px) { #note-project-link { width: 100%; max-width: none; } }
+
   /* Time horizon toggle pills */
   .time-toggle {
     display: flex;
@@ -2560,15 +2575,15 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
       <!-- Full-screen note editor -->
       <div id="note-editor-view" style="display:none;max-width:800px;margin:0 auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <button onclick="closeNoteEditor()" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;">← Back to Notes</button>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <select id="note-project-link" onchange="linkNoteToProject()" style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;">
-              <option value="">No project</option>
-            </select>
-            <span id="note-save-status" style="font-size:11px;color:var(--text-dim);">Saved</span>
-            <button onclick="deleteCurrentNote(event)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;" title="Delete (⇧+click to delete immediately)">🗑</button>
-          </div>
+        <div class="note-editor-bar">
+          <button onclick="closeNoteEditor()" class="note-back-btn">← Notes</button>
+          <span id="note-save-status" class="note-save-status">Saved</span>
+          <button onclick="deleteCurrentNote(event)" class="note-del-btn" title="Delete (⇧+click to delete immediately)">🗑</button>
+        </div>
+        <div class="note-editor-project">
+          <select id="note-project-link" onchange="linkNoteToProject()">
+            <option value="">No project</option>
+          </select>
         </div>
         <input type="text" id="note-title-input" placeholder="Note title..." style="width:100%;padding:12px 0;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:22px;font-weight:700;margin-bottom:12px;outline:none;">
         <div id="note-body-input" style="width:100%;min-height:50vh;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;line-height:1.8;outline:none;font-family:inherit;"></div>

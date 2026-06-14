@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v40-notes-feed-c';
+const CACHE_NAME = 'k2-hq-v41-editor-header';
 const ASSETS = [
   './',
   './index.html',
