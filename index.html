@@ -1167,43 +1167,75 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       align-self: flex-start;
     }
 
-    /* ── Tap anywhere on a note card opens it. Text controls (title/caret/preview)
-         pass the tap through to the card so a tap can't get swallowed by the input. ── */
-    .note-card { cursor: pointer; }
-    .note-card .note-title-inline,
-    .note-card .note-caret,
-    .note-card .note-preview { pointer-events: none; }
-
-    /* ── Note title inline: ellipsis truncation ── */
-    .note-title-inline {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* ── Note card actions stay visible on mobile, but drop to their own row
-         below the full-width title (instead of crushing it). Title gets the top
-         row; date + action buttons wrap onto a left-aligned row beneath, sized
-         as real touch targets. ── */
-    .note-card > div:first-child { flex-wrap: wrap; gap: 6px; }
-    .note-card > div:first-child > div:first-child { flex: 1 1 100%; }
-    .note-card > div:first-child > div:last-child {
-      margin-left: 0 !important;
-      width: 100%;
-      justify-content: flex-start;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-    .note-card > div:first-child > div:last-child button,
-    .note-card > div:first-child > div:last-child a {
-      font-size: 17px !important;
-      padding: 6px 8px !important;
-      line-height: 1;
-    }
+    /* ── Notes feed: a touch more breathing room per row on mobile ── */
+    .note-feed-item { padding: 14px 2px; }
+    .note-more { padding: 4px 8px; }
 
     /* ── Floating toolbar: clamp to viewport width ── */
     .editor-float-toolbar { max-width: calc(100vw - 24px); }
   }
+
+  /* ── Notes feed (mockup C): scannable list, status dot, ⋯ overflow ── */
+  .notes-feed { display: flex; flex-direction: column; }
+  .note-feed-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 13px 4px; border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .note-feed-item:last-child { border-bottom: none; }
+  .note-feed-item:hover { background: rgba(255,255,255,0.015); }
+  .note-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: #3a4150; }
+  .note-dot.dot-k2 { background: var(--accent); }
+  .note-dot.dot-warn { background: var(--yellow); }
+  .note-feed-body { flex: 1; min-width: 0; }
+  .note-feed-title {
+    font-size: 15.5px; font-weight: 650; color: var(--text); margin-bottom: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .note-feed-preview {
+    font-size: 13px; color: var(--text-dim); margin-bottom: 5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .note-feed-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #6b7280; }
+  .note-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 1px 7px; border-radius: 6px; color: var(--text-dim); text-decoration: none;
+  }
+  .note-chip-k2 { color: var(--accent); border-color: rgba(110,168,254,.4); }
+  .note-chip-warn { color: var(--yellow); border-color: rgba(252,211,77,.4); }
+  .note-more {
+    background: none; border: none; color: #5a606e; font-size: 22px; line-height: 1;
+    letter-spacing: 1px; flex-shrink: 0; padding: 2px 6px; cursor: pointer; border-radius: 8px;
+  }
+  .note-more:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── Note action sheet (bottom sheet) ── */
+  #note-action-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9998;
+    opacity: 0; transition: opacity .15s ease;
+  }
+  #note-action-backdrop.open { opacity: 1; }
+  .note-action-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto;
+    background: var(--surface); border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0; padding: 6px 8px max(10px, env(safe-area-inset-bottom));
+    transform: translateY(100%); transition: transform .2s ease;
+  }
+  #note-action-backdrop.open .note-action-sheet { transform: translateY(0); }
+  .note-action-head {
+    font-size: 13px; font-weight: 700; color: var(--text-dim);
+    padding: 12px 14px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--border);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .note-action-item {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    background: none; border: none; color: var(--text);
+    font-size: 16px; font-family: inherit; text-align: left;
+    padding: 14px; border-radius: 12px; cursor: pointer; text-decoration: none;
+  }
+  .note-action-item span { font-weight: 500; }
+  .note-action-item:hover, .note-action-item:active { background: var(--surface2); }
+  .note-action-danger { color: var(--red); }
+  .note-action-cancel { justify-content: center; color: var(--text-dim); margin-top: 4px; font-weight: 600; }
 
   /* Time horizon toggle pills */
   .time-toggle {
@@ -9542,7 +9574,7 @@ function renderNotes(page = 0) {
         ${page < totalPages-1 ? `<button onclick="renderNotes(${page+1})" style="padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;font-size:12px;font-family:inherit;">Next →</button>` : ''}
       </div>
     </div>` : '';
-    container.innerHTML = paginationHtml + pageNotes.map(note => {
+    container.innerHTML = paginationHtml + '<div class="notes-feed">' + pageNotes.map(note => {
       const noteId = note.id;
       const hasResponse = note.k2Response;
       const isPending = note.k2Status === 'pending';
@@ -9570,58 +9602,28 @@ function renderNotes(page = 0) {
         previewClean = previewClean.slice(note.title.length).replace(/^[\s\-—:|]+/, '').trim();
       }
       const previewLine = previewClean.slice(0, 140);
+      const dotClass = isPending ? 'dot-warn' : (hasResponse ? 'dot-k2' : '');
       return `
-        <div class="card note-card" data-note-id="${noteId}" onclick="noteCardTap('${noteId}', event)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
-              <span class="note-caret" onclick="toggleNoteExpand('${noteId}', event)"
-                    style="cursor:pointer;font-size:11px;color:var(--text-dim);user-select:none;width:14px;flex-shrink:0;text-align:center;">${isExpanded ? '▾' : '▸'}</span>
-              <input type="text" class="note-title-inline" value="${title}"
-                     style="background:none;border:none;font-size:14px;font-weight:600;color:var(--text);flex:1;min-width:0;outline:none;cursor:pointer;"
-                     onchange="updateNoteTitle('${noteId}', this.value)"
-                     onclick="toggleNoteExpand('${noteId}', event)"
-                     ondblclick="openNoteEditor('${noteId}'); event.stopPropagation();">
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
-              <span style="font-size:10px;color:var(--text-dim);">${note.created || ''}</span>
-              ${projectLabel ? '<span class="tag tag-blue" style="font-size:9px;">' + projectLabel + '</span>' : ''}
-              ${isPending ? '<span style="font-size:10px;color:var(--yellow);">⏳</span>' : ''}
-              ${hasResponse ? '<span style="font-size:10px;color:var(--accent);">🤖</span>' : ''}
-              <button onclick="openNoteEditor('${noteId}'); event.stopPropagation();"
-                      style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Open full editor">⤢</button>
-              <button onclick="copyNoteLink('${noteId}', event);"
-                      style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;" title="Copy link">🔗</button>
-              <button onclick="requestK2TakeFromNote('${noteId}'); event.stopPropagation();"
-                      style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px;">🤖</button>
+        <div class="note-feed-item" data-note-id="${noteId}" onclick="noteCardTap('${noteId}', event)">
+          <span class="note-dot ${dotClass}"></span>
+          <div class="note-feed-body">
+            <div class="note-feed-title">${escapeHtml(title)}</div>
+            ${previewLine ? `<div class="note-feed-preview">${escapeHtml(previewLine)}</div>` : ''}
+            <div class="note-feed-meta">
+              <span>${escapeHtml(note.created || '')}</span>
+              ${projectLabel ? `<span class="note-chip">${escapeHtml(projectLabel)}</span>` : ''}
+              ${hasResponse ? `<span class="note-chip note-chip-k2">🤖 K-2 replied</span>` : ''}
+              ${isPending ? `<span class="note-chip note-chip-warn">⏳ thinking…</span>` : ''}
               ${note.jiraTicket && note.jiraTicket.key
-                ? `<a href="https://vikingtravel.atlassian.net/browse/${note.jiraTicket.key}" target="_blank" rel="noopener" onclick="event.stopPropagation();" title="View Jira ticket" style="font-size:10px;color:var(--accent);text-decoration:none;background:rgba(74,158,255,0.1);padding:2px 6px;border-radius:4px;">🔗 ${note.jiraTicket.key}</a>`
+                ? `<a href="https://vikingtravel.atlassian.net/browse/${note.jiraTicket.key}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="note-chip note-chip-k2">🎫 ${escapeHtml(note.jiraTicket.key)}</a>`
                 : (note.jiraRequest && note.jiraRequest.status === 'pending'
-                    ? `<span title="Filing Jira ticket…" style="font-size:10px;color:var(--yellow);">⏳ filing</span>`
-                    : `<button onclick="openJiraTicketModal('${noteId}'); event.stopPropagation();" title="Send to Jira" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:2px;">🎫</button>`)}
-              <button onclick="deleteNote('${noteId}', { hard: event.shiftKey }); event.stopPropagation();"
-                      style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px;"
-                      title="Delete (⇧+click to delete immediately)">🗑</button>
+                    ? `<span class="note-chip note-chip-warn">⏳ filing</span>` : '')}
             </div>
           </div>
-          <div class="note-preview" onclick="toggleNoteExpand('${noteId}', event)"
-               style="display:${isExpanded ? 'none' : '-webkit-box'};-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;color:var(--text-dim);font-size:12px;padding-left:20px;cursor:pointer;margin-bottom:4px;">${previewLine || '<em style="opacity:0.5;">(empty)</em>'}</div>
-          <div class="note-body" style="display:${isExpanded ? 'block' : 'none'};">
-            <div class="note-editor-inline" id="note-editor-${noteId}"
-                 style="min-height:100px;border:1px solid var(--border);border-radius:8px;padding:12px;position:relative;">
-              <div onclick="openNoteEditor('${noteId}')"
-                   style="position:absolute;top:-4px;right:8px;color:var(--text-dim);cursor:pointer;font-size:12px;opacity:0.7;z-index:10;"
-                   title="Open full editor">⤢ Expand</div>
-            </div>
-            ${hasResponse ? `
-              <div style="margin-top:12px;padding:12px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
-                <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px;">🤖 K-2's Take</div>
-                <div class="md-content" style="font-size:13px;color:var(--text);line-height:1.6;">${renderMarkdown(note.k2Response)}</div>
-              </div>
-            ` : ''}
-          </div>
+          <button class="note-more" onclick="openNoteActions('${noteId}', event)" aria-label="Note actions">⋯</button>
         </div>
       `;
-    }).join('');
+    }).join('') + '</div>';
 
     // Lazy init: only expanded notes get a live editor; collapsed cards stay header-only
     pageNotes.forEach(note => {
@@ -9726,11 +9728,39 @@ function copyNoteLink(noteId, evt) {
 }
 
 function noteCardTap(noteId, ev) {
-  // Mobile only: a tap anywhere on the card (except an action button/link) opens the note.
-  // Desktop keeps the existing inline-expand behavior via the caret/title handlers.
-  if (window.innerWidth > 768) return;
+  // Tap anywhere on a feed row (except the ⋯ button or a chip link) opens the full note.
   if (ev && ev.target && ev.target.closest('button, a')) return;
   openNoteEditor(noteId);
+}
+
+function openNoteActions(noteId, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  const note = (DATA.notes || []).find(n => n.id === noteId);
+  if (!note) return;
+  closeNoteActions();
+  const hasTicket = note.jiraTicket && note.jiraTicket.key;
+  const jiraItem = hasTicket
+    ? `<a class="note-action-item" href="https://vikingtravel.atlassian.net/browse/${note.jiraTicket.key}" target="_blank" rel="noopener" onclick="closeNoteActions()">🎫 <span>View ${escapeHtml(note.jiraTicket.key)}</span></a>`
+    : `<button class="note-action-item" onclick="closeNoteActions(); openJiraTicketModal('${noteId}');">🎫 <span>Send to Jira</span></button>`;
+  const el = document.createElement('div');
+  el.id = 'note-action-backdrop';
+  el.onclick = closeNoteActions;
+  el.innerHTML = `
+    <div class="note-action-sheet" onclick="event.stopPropagation()">
+      <div class="note-action-head">${escapeHtml(note.title || 'Note')}</div>
+      <button class="note-action-item" onclick="closeNoteActions(); openNoteEditor('${noteId}');">⤢ <span>Open</span></button>
+      <button class="note-action-item" onclick="closeNoteActions(); requestK2TakeFromNote('${noteId}');">🤖 <span>Ask K-2</span></button>
+      <button class="note-action-item" onclick="closeNoteActions(); copyNoteLink('${noteId}', event);">🔗 <span>Copy link</span></button>
+      ${jiraItem}
+      <button class="note-action-item note-action-danger" onclick="closeNoteActions(); deleteNote('${noteId}');">🗑 <span>Delete</span></button>
+      <button class="note-action-item note-action-cancel" onclick="closeNoteActions()">Cancel</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+function closeNoteActions() {
+  const el = document.getElementById('note-action-backdrop');
+  if (el) el.remove();
 }
 
 function openNoteEditor(noteId) {
