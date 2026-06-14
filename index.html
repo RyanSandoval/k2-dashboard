@@ -1748,10 +1748,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;outline:none;margin-bottom:12px;"
       onkeydown="if(event.key==='Enter')checkLogin()">
     <div id="token-field" style="display:none;">
-      <input type="password" id="login-token" placeholder="GitHub token (first time only)" 
+      <input type="password" id="login-token" placeholder="Fine-grained GitHub token (first time only)"
         style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;text-align:center;outline:none;margin-bottom:12px;"
         onkeydown="if(event.key==='Enter')checkLogin()">
-      <p style="font-size:10px;color:var(--text-dim);margin-bottom:12px;">Stored in browser session only. Never sent anywhere except GitHub API.</p>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:-8px;margin-bottom:12px;line-height:1.5;">
+        Use a <b>fine-grained PAT</b> scoped to <b>this repo only</b>, permission
+        <b>Contents: read/write</b>. Never a classic token. Stored in this browser only.
+      </div>
     </div>
     <button onclick="checkLogin()" 
       style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
@@ -1792,6 +1795,14 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
     loadData();
+  }
+  // Clears stored token and access flag, then reloads to the login screen.
+  // Use this if you need to rotate or revoke the GitHub token.
+  function clearToken() {
+    localStorage.removeItem('gh_token');
+    localStorage.removeItem('k2auth');
+    GH_TOKEN = '';
+    location.reload();
   }
   // Auto-login if already authed this session
   if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
@@ -16391,10 +16402,8 @@ setTimeout(() => {
     { id: 'act-action-inbox',icon: '🎯', label: 'Open Action Inbox',  run: () => window.navigateTo && window.navigateTo('action-inbox') },
     { id: 'act-reload',      icon: '🔄', label: 'Reload data from k2-data', run: () => window.loadData && window.loadData() },
     { id: 'act-restore-last',icon: '↩️', label: 'Restore most recently archived', run: () => window.K2Archive && K2Archive.restoreLast() },
-    { id: 'act-signout',     icon: '🚪', label: 'Sign out',           run: () => {
-        if (!confirm('Sign out of K-2?')) return;
-        localStorage.removeItem('k2auth'); localStorage.removeItem('gh_token'); location.reload();
-      } },
+    { id: 'act-signout',     icon: '🚪', label: 'Sign out',           run: () => { if (!confirm('Sign out of K-2?')) return; clearToken(); } },
+    { id: 'act-forget-token',icon: '🔑', label: 'Forget token',        run: () => { if (!confirm('Remove stored GitHub token?')) return; clearToken(); } },
   ];
 
   const state = {
