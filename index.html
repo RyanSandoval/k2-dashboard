@@ -1876,6 +1876,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span class="icon">🎯</span> Action Inbox
         <span class="badge" id="action-inbox-badge" style="display:none">0</span>
       </div>
+      <div class="nav-item" data-page="activity">
+        <span class="icon">📜</span> Activity
+        <span class="badge" id="activity-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item active" data-page="jots">
         <span class="icon">✏️</span> Jots
       </div>
@@ -2388,6 +2392,23 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div id="action-inbox-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
       </div>
       <div id="action-inbox-list"><!-- Populated by renderActionInbox() --></div>
+    </div>
+
+    <!-- Activity Ledger Page -->
+    <div class="page" id="page-activity" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div>
+            <h2>📜 Activity</h2>
+            <p>Every meaningful action, linked to its source</p>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="activity-filter-btn active" data-filter="all" onclick="setActivityFilter('all',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:#000;font-weight:700;">All</button>
+            <button class="activity-filter-btn" data-filter="awaiting" onclick="setActivityFilter('awaiting',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">⏳ Awaiting you</button>
+          </div>
+        </div>
+      </div>
+      <div id="activity-list"><!-- Populated by renderActivity() --></div>
     </div>
 
     <!-- Stale Jots Page -->
@@ -2945,6 +2966,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
       <div class="mobile-more-item" data-page="action-inbox" onclick="mobileNavMore('action-inbox')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🎯</span>Action Inbox<span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
+      <div class="mobile-more-item" data-page="activity" onclick="mobileNavMore('activity')" style="position:relative;"><span class="icon">📜</span>Activity<span id="mobile-activity-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
       <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
@@ -3035,7 +3057,7 @@ function mobileNavMore(page) {
 // DATA STORE — loaded from server, synced on every change
 // ============================================================
 
-let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [], activeTriggers: [], jiraRequests: [], jiraLedger: [], staleJotState: {} };
+let DATA = { projects: [], discussions: [], tasks: [], decisions: [], notes: [], timeline: [], jots: [], dailyDocs: {}, commands: [], vikingInsights: [], trading: { books: [] }, growth: null, bookmarks: [], activeTriggers: [], jiraRequests: [], jiraLedger: [], staleJotState: {}, actionLedger: [] };
 window.DATA = DATA; // keep module scripts in sync
 
 // ============================================================
@@ -3136,6 +3158,7 @@ async function loadData() {
     DATA.jiraRequests = Array.isArray(d.jiraRequests) ? d.jiraRequests : [];
     DATA.jiraLedger = Array.isArray(d.jiraLedger) ? d.jiraLedger : [];
     DATA.actionInbox = Array.isArray(d.actionInbox) ? d.actionInbox : [];
+    DATA.actionLedger = Array.isArray(d.actionLedger) ? d.actionLedger : [];
     DATA.actionInboxMeta = d.actionInboxMeta || DATA.actionInboxMeta || {};
     DATA.staleJotState = (d.staleJotState && typeof d.staleJotState === 'object') ? d.staleJotState : {};
     DATA.combinedMm = (d.combinedMm && typeof d.combinedMm === 'object') ? d.combinedMm : null;
@@ -3212,7 +3235,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -3295,6 +3318,7 @@ function navigateTo(page) {
   if (page === 'accomplishments') renderAccomplishments(window._acomplQ || getCurrentQuarter());
   if (page === 'jira-ledger') renderJiraLedger();
   if (page === 'action-inbox') renderActionInbox();
+  if (page === 'activity') renderActivity();
   if (page === 'stale-jots') renderStaleJots();
   if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
@@ -3467,6 +3491,105 @@ function renderActionInboxBadge() {
   }
 }
 window.renderActionInboxBadge = renderActionInboxBadge;
+
+// ============================================================
+// ACTIVITY LEDGER
+// ============================================================
+window._activityFilter = 'all';
+
+function setActivityFilter(f, btn) {
+  window._activityFilter = f;
+  document.querySelectorAll('.activity-filter-btn').forEach(b => {
+    const active = b === btn;
+    b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
+    b.style.color = active ? '#000' : 'var(--text-dim)';
+    b.classList.toggle('active', active);
+  });
+  renderActivity();
+}
+
+function renderActivity() {
+  const container = document.getElementById('activity-list');
+  if (!container) return;
+  const ledger = Array.isArray(DATA.actionLedger) ? DATA.actionLedger : [];
+  const filter = window._activityFilter || 'all';
+
+  // Badge: count awaiting items
+  const awaitingCount = ledger.filter(r => r.status === 'awaiting').length;
+  const badgeText = awaitingCount > 99 ? '99+' : String(awaitingCount);
+  for (const id of ['activity-badge', 'mobile-activity-badge']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (awaitingCount) { el.style.display = ''; el.textContent = badgeText; }
+    else { el.style.display = 'none'; }
+  }
+
+  // Split into awaiting / done
+  const byNewest = (a, b) => (b.ts || '').localeCompare(a.ts || '');
+  const awaiting = ledger.filter(r => r.status === 'awaiting').sort(byNewest);
+  const done = ledger.filter(r => r.status !== 'awaiting').sort(byNewest);
+
+  // Apply filter
+  let toShow;
+  if (filter === 'awaiting') {
+    toShow = awaiting;
+  } else {
+    toShow = [...awaiting, ...done];
+  }
+
+  if (!toShow.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${ledger.length === 0 ? 'No activity yet. The K2 activity cron will populate this log.' : 'No items match the current filter.'}</div>`;
+    return;
+  }
+
+  const categoryIcon = {
+    ship: '🚀', apply: '⚙️', create: '✨', delete: '🗑️',
+    schedule: '🗓️', config: '🔧', other: '•'
+  };
+
+  const renderRow = (row) => {
+    const icon = categoryIcon[row.category] || '•';
+    const age = _actionInboxAgeStr(row.ts);
+    const actionHtml = escapeHtml(row.action);
+    const channelHtml = escapeHtml(row.channelName || '');
+    const jumpLink = row.deepLink
+      ? `<a href="${escapeHtml(row.deepLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border);color:var(--accent);text-decoration:none;white-space:nowrap;">↗ Jump to message</a>`
+      : '';
+    const awaitingChip = row.status === 'awaiting'
+      ? '<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:color-mix(in srgb,var(--yellow) 20%,transparent);color:var(--yellow);font-weight:700;">⏳ awaiting</span>'
+      : '';
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-subtle);">
+      <span style="font-size:18px;flex-shrink:0;padding-top:2px;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">${actionHtml}</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);">
+          <span>${age}</span>
+          ${channelHtml ? `<span style="color:var(--text-muted);">${channelHtml}</span>` : ''}
+          ${awaitingChip}
+          ${jumpLink}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  let html = '';
+
+  // Awaiting section (only in 'all' filter, or always in 'awaiting' filter)
+  const awaitingInView = filter === 'awaiting' ? toShow : awaiting;
+  const doneInView = filter === 'awaiting' ? [] : done;
+
+  if (awaitingInView.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">⏳ Waiting on you</div>`;
+    html += awaitingInView.map(renderRow).join('');
+  }
+
+  if (doneInView.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">Recent</div>`;
+    html += doneInView.map(renderRow).join('');
+  }
+
+  container.innerHTML = html;
+}
 
 function _actionInboxCompareSort(a, b) {
   // Pinned first (newest pinnedAt DESC)
