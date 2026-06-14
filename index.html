@@ -1181,11 +1181,25 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       white-space: nowrap;
     }
 
-    /* ── Tap opens the note now, so hide the inline action buttons on mobile to
-         give the title its full width back. Delete + K2 + close live inside the
-         opened note editor. Date + status emoji indicators stay (they're spans). ── */
-    .note-card [style*="flex-shrink:0"] button,
-    .note-card [style*="flex-shrink:0"] a { display: none !important; }
+    /* ── Note card actions stay visible on mobile, but drop to their own row
+         below the full-width title (instead of crushing it). Title gets the top
+         row; date + action buttons wrap onto a left-aligned row beneath, sized
+         as real touch targets. ── */
+    .note-card > div:first-child { flex-wrap: wrap; gap: 6px; }
+    .note-card > div:first-child > div:first-child { flex: 1 1 100%; }
+    .note-card > div:first-child > div:last-child {
+      margin-left: 0 !important;
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .note-card > div:first-child > div:last-child button,
+    .note-card > div:first-child > div:last-child a {
+      font-size: 17px !important;
+      padding: 6px 8px !important;
+      line-height: 1;
+    }
 
     /* ── Floating toolbar: clamp to viewport width ── */
     .editor-float-toolbar { max-width: calc(100vw - 24px); }
