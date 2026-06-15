@@ -3340,9 +3340,18 @@ function navigateTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   // Sync mobile tab bar
+  let mobileTabMatched = false;
   document.querySelectorAll('.mobile-nav-item').forEach(i => {
-    i.classList.toggle('active', i.dataset.page === page);
+    const match = i.dataset.page === page;
+    i.classList.toggle('active', match);
+    if (match) mobileTabMatched = true;
   });
+  // Pages only reachable via the More drawer (e.g. jots) have no direct tab —
+  // fall back to highlighting the More tab so mobile users always have a visual anchor.
+  if (!mobileTabMatched) {
+    const moreTab = document.querySelector('.mobile-nav-item:last-child');
+    if (moreTab) moreTab.classList.add('active');
+  }
   // Sync More drawer items
   document.querySelectorAll('.mobile-more-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
