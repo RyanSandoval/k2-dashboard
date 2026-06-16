@@ -3343,6 +3343,13 @@ function navigateTo(page) {
   document.querySelectorAll('.mobile-nav-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
   });
+  // If no direct tab matched, activate the More tab for drawer-only pages (e.g. jots)
+  const hasDirectTab = !!document.querySelector(`.mobile-nav-item[data-page="${page}"]`);
+  const inMoreDrawer = !!document.querySelector(`.mobile-more-item[data-page="${page}"]`);
+  if (!hasDirectTab && inMoreDrawer) {
+    const moreTab = document.querySelector('.mobile-nav-item:last-child');
+    if (moreTab) moreTab.classList.add('active');
+  }
   // Sync More drawer items
   document.querySelectorAll('.mobile-more-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
