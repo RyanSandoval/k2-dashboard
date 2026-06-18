@@ -3343,6 +3343,12 @@ function navigateTo(page) {
   document.querySelectorAll('.mobile-nav-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
   });
+  // If no direct tab matched, the page lives in the More drawer — highlight the More tab
+  const anyTabActive = !!document.querySelector('.mobile-nav-item.active');
+  if (!anyTabActive) {
+    const moreTab = document.querySelector('.mobile-nav-item:last-child');
+    if (moreTab) moreTab.classList.add('active');
+  }
   // Sync More drawer items
   document.querySelectorAll('.mobile-more-item').forEach(i => {
     i.classList.toggle('active', i.dataset.page === page);
