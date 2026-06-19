@@ -8159,6 +8159,12 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
     projectSelect.innerHTML = '<option value="">Project</option>' +
       DATA.projects.map(p => '<option value="' + p.id + '"' + (p.id == curVal ? ' selected' : '') + '>' + p.name + '</option>').join('');
   }
+
+  // Keep the Dashboard "Top Tasks" roll-up in sync — modal edits (priority,
+  // due date, text, done) call renderTasks() but not renderDashboard(), so the
+  // home-page list went stale. renderDashboard never calls back into renderTasks,
+  // so no recursion. Guarded in case it runs before renderDashboard is defined.
+  try { if (typeof renderDashboard === 'function') renderDashboard(); } catch (e) { console.error('[K2] renderTasks→renderDashboard refresh failed:', e); }
 }
 
 function parseNaturalLanguageTask(rawText) {
