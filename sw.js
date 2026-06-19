@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v41-editor-header';
+const CACHE_NAME = 'k2-hq-v42-inbox-rollup-fix';
 const ASSETS = [
   './',
   './index.html',

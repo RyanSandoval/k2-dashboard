@@ -5805,10 +5805,11 @@ function renderDashActionInbox() {
   if (!listEl) return;
   listEl.innerHTML = items.slice(0, 5).map(it => {
     const src = (it.source || it.kind || '').slice(0, 1).toUpperCase() || '•';
-    const txt = (it.text || it.title || '').replace(/<[^>]*>/g, '').slice(0, 110);
+    const full = (it.summary || it.text || it.title || '').replace(/<[^>]*>/g, '');
+    const txt = full.slice(0, 110);
     return `<div onclick="navigateTo('action-inbox')" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;line-height:1.45;">
       <span style="font-size:10px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;background:var(--surface2);border-radius:4px;color:var(--text-dim);flex-shrink:0;">${src}</span>
-      <div style="flex:1;min-width:0;">${txt}${(it.text||'').length>110?'…':''}</div>
+      <div style="flex:1;min-width:0;">${txt}${full.length>110?'…':''}</div>
     </div>`;
   }).join('');
 }
