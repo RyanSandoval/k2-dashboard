@@ -7499,28 +7499,23 @@ function navigateToJotSource(date) {
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       return;
     }
-    // Previous day — try to find the rendered container
-    let el = document.getElementById('doc-editor-' + date);
-    if (!el) {
-      const prev = document.getElementById('daily-doc-previous');
-      if (prev) {
-        const headers = prev.querySelectorAll('[data-date]');
-        headers.forEach(h => { if (h.dataset.date === date) el = h; });
-      }
-    }
-    if (!el) {
-      // Jot exists in data but isn't rendered on the page (collapsed history,
-      // pagination, etc). Tell the user instead of silently leaving them
-      // staring at today's jot.
+    // Previous days render collapsed (display:none) with an empty editor until
+    // opened. Scrolling straight to #doc-editor-DATE lands on a zero-height
+    // hidden div — which is why this used to dump you on the jots overview.
+    // Expand the day via toggleDocDay first (it shows content + inits the
+    // editor), then scroll the day header into view.
+    const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
+    if (!header) {
       if (typeof showToast === 'function') {
-        showToast(`Jot ${date} exists but isn't in the current view — search the Jots page or scroll back`);
+        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
       }
       return;
     }
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.style.transition = 'box-shadow 0.3s';
-    el.style.boxShadow = '0 0 0 2px var(--accent2)';
-    setTimeout(() => { el.style.boxShadow = ''; }, 1500);
+    if (!header.classList.contains('open') && typeof toggleDocDay === 'function') toggleDocDay(header);
+    header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    header.style.transition = 'box-shadow 0.3s';
+    header.style.boxShadow = '0 0 0 2px var(--accent2)';
+    setTimeout(() => { header.style.boxShadow = ''; }, 1500);
   }, 300);
 }
 
