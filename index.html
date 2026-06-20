@@ -12170,6 +12170,34 @@ function renderFamilyFinanceCard() {
     ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">🟡 STALE</span>`
     : '';
 
+  // Reality-corrected safe-to-spend badge (spec: k2-dashboard/spec/safe-to-spend-badge/)
+  // Shows corrected (raw − rent − CC minimums − auto-loan) as the headline; raw struck-through.
+  const sts = s.safeToSpend;
+  let safeToSpendBlock = '';
+  if (sts && typeof sts.corrected === 'number') {
+    const isRed = !stale && (sts.deltaPct || 0) > (sts.redThresholdPct || 20);
+    const correctedColor = stale ? 'var(--text-dim)' : (isRed ? '#ef4444' : '#22c55e');
+    const fco = sts.fixedCostsOmitted || {};
+    const fmt0 = (n) => '$' + Math.round(n || 0).toLocaleString();
+    const chipBg = isRed ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.12)';
+    const chipColor = isRed ? '#ef4444' : '#f59e0b';
+    const chipBorder = isRed ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.35)';
+    safeToSpendBlock = `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);${numDim}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+          <div>
+            <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Safe to spend</span>
+            <div style="font-size:24px;font-weight:800;color:${correctedColor};line-height:1.1;">${fmt0(sts.corrected)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-dim);">raw <span style="text-decoration:line-through;">${fmt0(sts.raw)}</span></div>
+            <span style="display:inline-block;margin-top:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${chipBg};color:${chipColor};border:1px solid ${chipBorder};">−${fmt0(fco.total)} (${(sts.deltaPct||0).toFixed(0)}%)</span>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Reserved: rent ${fmt0(fco.rent)} · cards ${fmt0(fco.ccMinimums)} · auto ${fmt0(fco.autoLoan)}</div>
+      </div>`;
+  }
+
   el.style.display = 'block';
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -12180,6 +12208,8 @@ function renderFamilyFinanceCard() {
       </div>
       <span style="font-size:10px;color:var(--text-dim);">${computedAgo}</span>
     </div>
+
+    ${safeToSpendBlock}
 
     <div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border);${numDim}">
       <div>
