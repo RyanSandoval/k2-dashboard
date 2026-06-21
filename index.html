@@ -2204,6 +2204,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="daily-brief-panel" style="display:none;margin-bottom:14px;"></div>
       <div id="daily-doc-today" class="daily-doc-container">
         <div id="daily-doc-today-editor" class="daily-doc-editor"></div>
+        <div id="jot-match-nudge" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;margin-top:6px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);font-size:12px;color:var(--text-dim);line-height:1.4;"></div>
       </div>
       <!-- Jot Linker suggestions (populated by updateJotLinkerSuggestions) -->
       <div id="jot-linker" style="display:none;margin:12px 0 20px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:10px;padding:12px 14px;">
@@ -4655,6 +4656,106 @@ window.renderWorkers = renderWorkers;
 // don't bury a previously-triaged line.
 
 window._staleJotsSelection = new Set();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Memory Match on Jot — keyword similarity (Jaccard, client-side, no LLM)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// TASK-001: Tokenizer + stoplist
+const _MEM_STOPLIST = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','up','about','into','then','than','that','this','these','those','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','can','not','no','i','me','my','we','our','you','your','it','its','he','she','they','them']);
+function _memTokenize(text) {
+  const tokens = (text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/);
+  const out = new Set();
+  for (const t of tokens) { if (t.length >= 3 && !_MEM_STOPLIST.has(t)) out.add(t); }
+  return out;
+}
+
+// TASK-002: Jaccard similarity score
+function _memMatchScore(setA, setB) {
+  if (!setA.size || !setB.size) return 0;
+  let intersection = 0;
+  for (const t of setA) { if (setB.has(t)) intersection++; }
+  return intersection / (setA.size + setB.size - intersection);
+}
+
+// TASK-003: Main match runner
+function _runMemoryMatch() {
+  if (!window._todayEditor) return;
+  const html = window._todayEditor.getHTML();
+  const plain = (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length < 25) { renderJotMatchNudge(null); return; }
+  const jotTerms = _memTokenize(plain);
+  const today = window._todayEditorDate || '';
+  const candidates = [];
+  // Notes (exclude archived)
+  for (const n of (window.DATA?.notes || [])) {
+    if (n.archived) continue;
+    const txt = ((n.title || '') + ' ' + (n.text || '')).replace(/<[^>]+>/g, ' ');
+    const title = (n.title && n.title.trim()) || txt.trim().split('\n')[0].slice(0, 60) || 'Untitled';
+    candidates.push({ kind: 'note', id: n.id, title, text: txt, date: (n.created || '').slice(0, 10) });
+  }
+  // Past daily docs (last 30, excluding today)
+  const docDates = Object.keys(window.DATA?.dailyDocs || {}).filter(d => d !== today).sort().reverse().slice(0, 30);
+  for (const date of docDates) {
+    const doc = (window.DATA?.dailyDocs || {})[date];
+    const txt = (doc.content || '').replace(/<[^>]+>/g, ' ');
+    const month = date.slice(5, 7);
+    const day = parseInt(date.slice(8, 10), 10);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const title = (months[parseInt(month, 10) - 1] || month) + ' ' + day;
+    candidates.push({ kind: 'doc', id: date, title, text: txt, date });
+  }
+  // Score all candidates
+  let topMatch = null, topScore = 0;
+  for (const cand of candidates) {
+    const score = _memMatchScore(jotTerms, _memTokenize(cand.text));
+    if (score > topScore) { topScore = score; topMatch = cand; }
+  }
+  if (topScore < 0.12) { renderJotMatchNudge(null); return; }
+  // Dismiss logic: stay hidden if same match was dismissed
+  if (window._memMatchDismissed && topMatch.id === window._memMatchLastId) return;
+  // New top match clears dismiss
+  if (topMatch.id !== window._memMatchLastId) window._memMatchDismissed = false;
+  renderJotMatchNudge(topMatch);
+}
+
+// TASK-005: Render nudge UI
+function renderJotMatchNudge(match) {
+  const el = document.getElementById('jot-match-nudge');
+  if (!el) return;
+  if (!match) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  window._memMatchLastId = match.id;
+  const snippet = match.text.replace(/\s+/g, ' ').trim().slice(0, 80);
+  el.innerHTML =
+    '<span style="font-size:14px;flex-shrink:0;">📎</span>' +
+    '<span style="font-weight:600;color:var(--text-muted);flex-shrink:0;">Prior note match</span>' +
+    '<span style="color:var(--text);"><strong>' + escapeHtml(match.title) + '</strong>' +
+    (match.date ? ' · <span style="color:var(--text-muted);">' + escapeHtml(match.date) + '</span>' : '') + '</span>' +
+    '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(snippet) + '…</span>' +
+    '<button onclick="_memMatchNavigate(\'' + String(match.kind).replace(/'/g,"\\'") + '\',\'' + String(match.id).replace(/'/g,"\\'") + '\');" ' +
+    'style="flex-shrink:0;padding:3px 10px;background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Compare →</button>' +
+    '<button onclick="_memMatchDismiss();" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
+  el.style.display = 'flex';
+}
+function _memMatchDismiss() {
+  window._memMatchDismissed = true;
+  const el = document.getElementById('jot-match-nudge');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+function _memMatchNavigate(kind, id) {
+  if (kind === 'note') {
+    if (typeof openNoteEditor === 'function') openNoteEditor(id);
+  } else if (kind === 'doc') {
+    navigateTo('jots');
+    setTimeout(() => _memMatchExpandDoc(id), 150);
+  }
+}
+function _memMatchExpandDoc(date) {
+  const el = document.querySelector('.jot-day-header[data-date="' + date + '"]');
+  if (!el) return;
+  if (!window._openDocDays?.has(date)) toggleDocDay(el);
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
 
 function _staleJotsTextHash(s) {
   let h = 0;
@@ -14557,6 +14658,12 @@ function debouncedJotLinker() {
 }
 window.debouncedJotLinker = debouncedJotLinker;
 
+// TASK-006: Debounce wrapper for memory match (1500ms)
+window.debouncedMemoryMatch = (function() {
+  let t = null;
+  return function() { clearTimeout(t); t = setTimeout(_runMemoryMatch, 1500); };
+})();
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Decision Resurfacer — score decision staleness & surface revisit candidates
 // ═══════════════════════════════════════════════════════════════════════════
@@ -15760,6 +15867,9 @@ window._createTodayEditor = function(today) {
       window.debouncedSaveDailyDoc(isCheckboxToggle);
       if (!isCheckboxToggle && typeof window.debouncedJotLinker === 'function') {
         window.debouncedJotLinker();
+      }
+      if (!isCheckboxToggle && typeof window.debouncedMemoryMatch === 'function') {
+        window.debouncedMemoryMatch();
       }
     },
   });
