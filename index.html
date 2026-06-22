@@ -3516,13 +3516,32 @@ function _actionInboxAgingDays(item) {
 }
 
 function _actionInboxAutoPrune() {
-  // Hide rows whose source task is already done.
+  // 1. Deduplicate by source+sourceId (scanner can produce dupes when hash drifts).
+  //    Keep the row with the earliest firstSeenAt to preserve user flags.
+  // 2. Hide rows whose source task is done/cancelled/archived.
   if (!Array.isArray(DATA.actionInbox)) return [];
   const taskById = new Map((DATA.tasks || []).map(t => [String(t.id), t]));
-  return DATA.actionInbox.filter(item => {
+
+  // Deduplicate: keep earliest firstSeenAt per source+sourceId
+  const seen = new Map();
+  for (const item of DATA.actionInbox) {
+    const key = (item.source || '') + ':' + (item.sourceId || item.id);
+    const existing = seen.get(key);
+    if (!existing) { seen.set(key, item); continue; }
+    // Keep the one with user flags (pinned/handled/dismissed), else earliest firstSeenAt
+    const existHasFlags = existing.pinned || existing.handled || existing.dismissed;
+    const itemHasFlags = item.pinned || item.handled || item.dismissed;
+    if (itemHasFlags && !existHasFlags) { seen.set(key, item); }
+    else if (!existHasFlags && !itemHasFlags) {
+      if ((item.firstSeenAt || '') < (existing.firstSeenAt || '')) seen.set(key, item);
+    }
+  }
+  const deduped = [...seen.values()];
+
+  return deduped.filter(item => {
     if (item.source === 'task') {
       const t = taskById.get(String(item.sourceId));
-      if (!t || t.done || t.status === 'done') return false;
+      if (!t || t.done || t.status === 'done' || t.status === 'cancelled' || t.status === 'canceled' || t.status === 'archived') return false;
     }
     return true;
   });
