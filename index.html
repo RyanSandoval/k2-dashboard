@@ -14810,13 +14810,13 @@ window.inboxMakeReference = inboxMakeReference;
 </script>
 <!-- Selection Toolbar -->
 <div class="selection-toolbar" id="selection-toolbar">
-  <button class="sel-btn sel-task" onclick="selectionToTask()">☑️ Task</button>
+  <button class="sel-btn sel-task" onclick="selectionToTask()" aria-label="Create task from selection">☑️ Task</button>
   <div class="sel-divider"></div>
-  <button class="sel-btn" onclick="selectionFormat('**')"><b>B</b></button>
-  <button class="sel-btn" onclick="selectionFormat('*')"><i>I</i></button>
-  <button class="sel-btn" onclick="selectionFormat('`')">&lt;/&gt;</button>
+  <button class="sel-btn" onclick="selectionFormat('**')" aria-label="Bold"><b>B</b></button>
+  <button class="sel-btn" onclick="selectionFormat('*')" aria-label="Italic"><i>I</i></button>
+  <button class="sel-btn" onclick="selectionFormat('`')" aria-label="Code">&lt;/&gt;</button>
   <div class="sel-divider"></div>
-  <button class="sel-btn" onclick="selectionHighlight()">🔖 Pin</button>
+  <button class="sel-btn" onclick="selectionHighlight()" aria-label="Pin selection">🔖 Pin</button>
 </div>
 <!-- TipTap Editor Module -->
 <script type="module">
