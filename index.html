@@ -2181,7 +2181,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span onclick="toggleShortcutsPanel()" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
       </div>
       <div style="margin-bottom:12px;">
-        <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="debouncedFilterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
       </div>
       <div id="shortcuts-panel" style="display:none;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--text-dim);column-count:2;column-gap:24px;">
         <div style="margin-bottom:6px;font-weight:700;color:var(--text);column-span:all;">⌨️ Keyboard Shortcuts</div>
@@ -2437,7 +2437,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-top:10px;">
           <input id="action-inbox-search" type="text" placeholder="🔍 Search action items…" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
-            oninput="renderActionInbox()">
+            oninput="debouncedRenderActionInbox()">
         </div>
         <div id="action-inbox-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
       </div>
@@ -2473,7 +2473,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <input id="stale-jots-search" type="text" placeholder="🔍 Search stale jots…" autocomplete="off"
             style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
-            oninput="renderStaleJots()">
+            oninput="debouncedRenderStaleJots()">
           <button onclick="staleJotsToggleSelectAll()" id="stale-jots-select-all-btn"
             style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);font-weight:600;">Select all</button>
         </div>
@@ -2501,7 +2501,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <input id="stale-notes-search" type="text" placeholder="🔍 Search stale notes…" autocomplete="off"
             style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
-            oninput="renderStaleNotes()">
+            oninput="debouncedRenderStaleNotes()">
         </div>
       </div>
       <div id="stale-notes-list"><!-- Populated by renderStaleNotes() --></div>
@@ -2520,7 +2520,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <input id="skills-search" type="text" placeholder="🔍 Search skills…" autocomplete="off"
             style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
-            oninput="renderSkills(false)">
+            oninput="debouncedRenderSkills()">
           <button onclick="window.open('https://raw.githubusercontent.com/RyanSandoval/k2-dashboard/main/skills/_manifest.json','_blank')" title="Public manifest URL" style="font-size:11px;padding:8px 12px;border-radius:8px;border:1px solid var(--accent);cursor:pointer;background:transparent;color:var(--accent);font-weight:700;">📡 Public manifest</button>
         </div>
         <div id="skills-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
@@ -2549,7 +2549,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-top:10px;">
           <input id="jira-ledger-search" type="text" placeholder="🔍 Search by key, title, or text…" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
-            oninput="renderJiraLedger()">
+            oninput="debouncedRenderJiraLedger()">
         </div>
       </div>
       <div id="jira-ledger-list"><!-- Populated by JS --></div>
@@ -2568,7 +2568,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="margin-top:10px;">
           <input id="notes-search-input" type="text" placeholder="🔍 Search notes…" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
-            oninput="renderNotes(0)">
+            oninput="debouncedRenderNotes()">
         </div>
       </div>
 
@@ -3047,6 +3047,28 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 </div>
 
 <script>
+// Generic debounce utility for UI events
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Debounced wrappers for search inputs
+const debouncedFilterDailyDocs = debounce(() => { if (typeof filterDailyDocs === 'function') filterDailyDocs(); }, 300);
+const debouncedRenderActionInbox = debounce(() => { if (typeof renderActionInbox === 'function') renderActionInbox(); }, 300);
+const debouncedRenderStaleJots = debounce(() => { if (typeof renderStaleJots === 'function') renderStaleJots(); }, 300);
+const debouncedRenderStaleNotes = debounce(() => { if (typeof renderStaleNotes === 'function') renderStaleNotes(); }, 300);
+const debouncedRenderSkills = debounce(() => { if (typeof renderSkills === 'function') renderSkills(false); }, 300);
+const debouncedRenderJiraLedger = debounce(() => { if (typeof renderJiraLedger === 'function') renderJiraLedger(); }, 300);
+const debouncedRenderNotes = debounce(() => { if (typeof renderNotes === 'function') renderNotes(0); }, 300);
+
 function setMobileActive(el) {
   document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
   el.classList.add('active');
