@@ -3221,7 +3221,11 @@ async function loadData() {
     // Persist decision ID backfill once (REQ-009 dec routing)
     if (_decBackfill) { try { await saveData(); } catch (_) {} }
   } catch(e) {
+    console.warn('[fixer] loadData failed:', e);
     console.error('Failed to load data:', e);
+    showToast('⚠️ Failed to load K2 data — ' + (e.message || 'unknown error') + '. Try refreshing.');
+    const syncEl = document.getElementById('last-sync');
+    if (syncEl) syncEl.innerHTML = '<span style="color:var(--red);">✕ Load failed</span>';
   }
 }
 
