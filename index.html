@@ -2181,7 +2181,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span onclick="toggleShortcutsPanel()" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
       </div>
       <div style="margin-bottom:12px;">
-        <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        <input type="text" id="jot-search" aria-label="Search daily notes" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
       </div>
       <div id="shortcuts-panel" style="display:none;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--text-dim);column-count:2;column-gap:24px;">
         <div style="margin-bottom:6px;font-weight:700;color:var(--text);column-span:all;">⌨️ Keyboard Shortcuts</div>
@@ -2435,7 +2435,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           </div>
         </div>
         <div style="margin-top:10px;">
-          <input id="action-inbox-search" type="text" placeholder="🔍 Search action items…" autocomplete="off"
+          <input id="action-inbox-search" aria-label="Search action items" type="text" placeholder="🔍 Search action items…" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="renderActionInbox()">
         </div>
@@ -2566,7 +2566,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <button onclick="createNewNote()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">✏️ New Note</button>
         </div>
         <div style="margin-top:10px;">
-          <input id="notes-search-input" type="text" placeholder="🔍 Search notes…" autocomplete="off"
+          <input id="notes-search-input" aria-label="Search notes" type="text" placeholder="🔍 Search notes…" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="renderNotes(0)">
         </div>
