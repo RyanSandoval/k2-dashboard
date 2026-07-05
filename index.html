@@ -14816,9 +14816,9 @@ window.inboxMakeReference = inboxMakeReference;
 <div class="selection-toolbar" id="selection-toolbar">
   <button class="sel-btn sel-task" onclick="selectionToTask()">☑️ Task</button>
   <div class="sel-divider"></div>
-  <button class="sel-btn" onclick="selectionFormat('**')"><b>B</b></button>
-  <button class="sel-btn" onclick="selectionFormat('*')"><i>I</i></button>
-  <button class="sel-btn" onclick="selectionFormat('`')">&lt;/&gt;</button>
+  <button class="sel-btn" onclick="selectionFormat('**')" aria-label="Bold"><b>B</b></button>
+  <button class="sel-btn" onclick="selectionFormat('*')" aria-label="Italic"><i>I</i></button>
+  <button class="sel-btn" onclick="selectionFormat('`')" aria-label="Code">&lt;/&gt;</button>
   <div class="sel-divider"></div>
   <button class="sel-btn" onclick="selectionHighlight()">🔖 Pin</button>
 </div>
@@ -15329,12 +15329,12 @@ function createFloatingToolbar() {
   floatToolbarEl = document.createElement('div');
   floatToolbarEl.className = 'editor-float-toolbar';
   floatToolbarEl.innerHTML = `
-    <button class="eft-btn" data-cmd="bold" title="Bold"><b>B</b></button>
-    <button class="eft-btn" data-cmd="italic" title="Italic"><i>I</i></button>
-    <button class="eft-btn" data-cmd="strike" title="Strikethrough"><s>S</s></button>
-    <button class="eft-btn" data-cmd="code" title="Code">&lt;/&gt;</button>
+    <button class="eft-btn" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
+    <button class="eft-btn" data-cmd="italic" title="Italic" aria-label="Italic"><i>I</i></button>
+    <button class="eft-btn" data-cmd="strike" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button>
+    <button class="eft-btn" data-cmd="code" title="Code" aria-label="Code">&lt;/&gt;</button>
     <div class="eft-divider"></div>
-    <button class="eft-btn" data-cmd="h2" title="Heading">H2</button>
+    <button class="eft-btn" data-cmd="h2" title="Heading" aria-label="Heading 2">H2</button>
     <button class="eft-btn" data-cmd="link" title="Link" aria-label="Link">🔗</button>
     <div class="eft-divider"></div>
     <button class="eft-btn eft-k2" data-cmd="k2" title="Send this line/bullet to K2" aria-label="Send this line/bullet to K2">🤖</button>
