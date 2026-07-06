@@ -1803,6 +1803,23 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   @media (max-width: 768px) {
     .k2pal-mobile-fab { display: flex; }
   }
+
+  /* ── Mobile touch targets (Apple HIG 44×44px minimum) ─────────────────── */
+  @media (max-width: 768px) {
+    /* "⌨️ shortcuts" inline span in jots page header */
+    span[onclick="toggleShortcutsPanel()"] {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 4px;
+    }
+
+    /* Day-group accordion headers in jots list */
+    .jot-day-header {
+      min-height: 44px;
+      padding: 4px 0;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
