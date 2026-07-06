@@ -3356,8 +3356,9 @@ function navigateTo(page) {
   });
   // Scroll to top
   document.querySelector('.main').scrollTop = 0;
-  // Auto-focus daily doc editor
+  // Auto-focus daily doc editor; also ensure previous-day headers are in the DOM
   if (page === 'jots') {
+    renderDailyDocs();
     setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 200);
   }
   if (page === 'memory') renderMemoryPage();
@@ -7514,7 +7515,15 @@ function navigateToJotSource(date) {
     if (typeof showToast === 'function') showToast(`No jot for ${date}`);
     return;
   }
+  // Clear any active search filter so the target date is included in the rendered list
+  const searchInput = document.getElementById('jot-search');
+  if (searchInput && searchInput.value) {
+    searchInput.value = '';
+    dailyDocSearchQuery = '';
+  }
   navigateTo('jots');
+  // navigateTo now calls renderDailyDocs() synchronously, so the previous-day
+  // headers are in the DOM before this setTimeout fires.
   setTimeout(() => {
     const today = getTodayStr();
     if (date === today) {
@@ -7530,7 +7539,7 @@ function navigateToJotSource(date) {
     const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
     if (!header) {
       if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+        showToast(`No jot found for ${date}`);
       }
       return;
     }
