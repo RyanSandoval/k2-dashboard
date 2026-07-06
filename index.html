@@ -11130,12 +11130,36 @@ function initTodayEditor(today) {
   }
 }
 
+// Maximum previous-day entries rendered into the DOM at once.
+// Prevents excessive node counts when months of daily docs accumulate.
+const PREV_DAYS_PAGE_SIZE = 30;
+
+function _renderPrevDayEntry(date) {
+  const dow = getDayName(date);
+  const doc = DATA.dailyDocs[date];
+  const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
+  // Get preview text (strip HTML)
+  const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
+  return `
+    <div class="jot-day-section">
+      <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
+        <span class="jot-day-toggle">${isOpen ? '▼' : '▶'}</span>
+        <span>${date} ${dow}</span>
+        ${!isOpen ? `<span style="color:var(--text-dim);font-size:11px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${previewText}</span>` : ''}
+      </div>
+      <div class="jot-day-entries" id="doc-day-${date}" style="${isOpen ? '' : 'display:none;'}">
+        <div class="daily-doc-editor" id="doc-editor-${date}"></div>
+      </div>
+    </div>
+  `;
+}
+
 function renderPreviousDays(today) {
   const container = document.getElementById('daily-doc-previous');
   if (!container) return;
 
   const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
-  
+
   // Filter by search
   const filteredDates = dailyDocSearchQuery
     ? allDates.filter(d => {
@@ -11152,33 +11176,65 @@ function renderPreviousDays(today) {
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
-    const dow = getDayName(date);
-    const doc = DATA.dailyDocs[date];
-    const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
-    // Get preview text (strip HTML)
-    const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
-    return `
-      <div class="jot-day-section">
-        <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
-          <span class="jot-day-toggle">${isOpen ? '▼' : '▶'}</span>
-          <span>${date} ${dow}</span>
-          ${!isOpen ? `<span style="color:var(--text-dim);font-size:11px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${previewText}</span>` : ''}
-        </div>
-        <div class="jot-day-entries" id="doc-day-${date}" style="${isOpen ? '' : 'display:none;'}">
-          <div class="daily-doc-editor" id="doc-editor-${date}"></div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  // When searching, show all matches; otherwise cap initial render to PREV_DAYS_PAGE_SIZE
+  // to keep DOM node count manageable as daily-docs accumulate.
+  const visibleDates = dailyDocSearchQuery ? filteredDates : filteredDates.slice(0, PREV_DAYS_PAGE_SIZE);
+  const hiddenCount = dailyDocSearchQuery ? 0 : filteredDates.length - visibleDates.length;
+
+  const loadMoreBtn = hiddenCount > 0
+    ? `<div id="prev-days-load-more" style="text-align:center;padding:12px 0 4px;">
+        <button onclick="loadMorePreviousDays()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:6px 18px;font-size:12px;cursor:pointer;font-family:inherit;">
+          Load older entries (${hiddenCount} more) ▾
+        </button>
+       </div>`
+    : '';
+
+  container.innerHTML = visibleDates.map(date => _renderPrevDayEntry(date)).join('') + loadMoreBtn;
+
+  // Remember how many we've rendered so "load more" can extend the window
+  container._prevDaysRendered = visibleDates.length;
+  container._prevDatesAll = filteredDates;
 
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
+  visibleDates.forEach(date => {
     if (dailyDocSearchQuery || window._openDocDays.has(date)) {
       initPreviousDayEditor(date);
     }
   });
+}
+
+// Appends the next PREV_DAYS_PAGE_SIZE entries without full re-render.
+function loadMorePreviousDays() {
+  const container = document.getElementById('daily-doc-previous');
+  if (!container) return;
+  const allDates = container._prevDatesAll;
+  if (!allDates) return;
+  const already = container._prevDaysRendered || 0;
+  const nextBatch = allDates.slice(already, already + PREV_DAYS_PAGE_SIZE);
+  if (nextBatch.length === 0) return;
+
+  // Remove "load more" button before appending new rows
+  const btn = document.getElementById('prev-days-load-more');
+  if (btn) btn.remove();
+
+  nextBatch.forEach(date => {
+    container.insertAdjacentHTML('beforeend', _renderPrevDayEntry(date));
+    if (window._openDocDays.has(date)) {
+      initPreviousDayEditor(date);
+    }
+  });
+
+  container._prevDaysRendered = already + nextBatch.length;
+  const remaining = allDates.length - container._prevDaysRendered;
+  if (remaining > 0) {
+    container.insertAdjacentHTML('beforeend',
+      `<div id="prev-days-load-more" style="text-align:center;padding:12px 0 4px;">
+        <button onclick="loadMorePreviousDays()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:6px 18px;font-size:12px;cursor:pointer;font-family:inherit;">
+          Load older entries (${remaining} more) ▾
+        </button>
+       </div>`
+    );
+  }
 }
 
 function toggleDocDay(element) {
