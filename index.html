@@ -1803,6 +1803,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   @media (max-width: 768px) {
     .k2pal-mobile-fab { display: flex; }
   }
+
+  /* ── ui-004: touch target minimum 44px on mobile ── */
+  @media (max-width: 768px) {
+    .jot-day-header {
+      min-height: 44px;
+      padding: 4px 0;
+    }
+    .jots-shortcuts-trigger {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 4px;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
@@ -2178,7 +2192,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="page active" id="page-jots" style="max-width:900px;margin:0 auto;">
       <div class="page-header">
         <div class="jots-date-header" id="jots-today-date"></div>
-        <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span onclick="toggleShortcutsPanel()" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
+        <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span onclick="toggleShortcutsPanel()" class="jots-shortcuts-trigger" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
       </div>
       <div style="margin-bottom:12px;">
         <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
@@ -3287,12 +3301,34 @@ async function uploadPastedImage(blob) {
 window.uploadPastedImage = uploadPastedImage;
 
 function renderAll() {
-  const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
-               renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
+  // Only render the default landing page (jots) and global widgets at load time.
+  // All other page-specific renders are deferred to navigateTo() — they fire on
+  // first visit. This keeps initial DOM under control (~1500 nodes vs 5500+) and
+  // avoids rendering hidden pages that the user may never visit in a session.
+  const fns = [
+    // Default landing page is jots — render it and its global widgets now.
+    migrateJotsToDailyDocs, renderDailyDocs, renderDailyBriefPanel,
+    // Nav badges + sidebar state (lightweight, no page-specific DOM)
+    renderStaleJotsBadge, renderStaleNotesBadge,
+    renderWorkersBadge,
+    initNavSectionStates
+  ];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
+  // Update nav badges that were previously set by full page renders.
+  // These are lightweight counts only — no DOM for hidden pages.
+  try {
+    const pendingCount = (DATA.tasks || []).filter(t => !t.done).length;
+    const badge = document.getElementById('task-count');
+    if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount > 0 ? 'inline' : 'none'; }
+    const inboxBadge = document.getElementById('inbox-badge');
+    const inboxCount = (DATA.inbox || []).filter(it => it && it.id != null && it.text && String(it.text).trim()).length;
+    if (inboxBadge) { inboxBadge.textContent = inboxCount; inboxBadge.style.display = inboxCount > 0 ? '' : 'none'; }
+    const waitingBadge = document.getElementById('waiting-badge');
+    const waitingCount = (DATA.waitingFor || []).length;
+    if (waitingBadge) { waitingBadge.textContent = waitingCount; waitingBadge.style.display = waitingCount > 0 ? '' : 'none'; }
+  } catch(e) { console.warn('[K2] renderAll badge init failed:', e); }
 }
 
 // Navigation
@@ -3377,6 +3413,17 @@ function navigateTo(page) {
   if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
   if (page === 'skills') renderSkills(false);
+  // Pages deferred from renderAll — rendered on first visit only
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'tasks') { renderTasks(); renderSmartListChips(); }
+  if (page === 'projects') renderProjects();
+  if (page === 'discussions') renderDiscussions();
+  if (page === 'decisions') renderDecisions();
+  if (page === 'notes') renderNotes(0);
+  if (page === 'ai-insights') renderAIInsights();
+  if (page === 'trading') { renderTrading(); renderCombinedMm(); }
+  if (page === 'growth') renderGrowth();
+  if (page === 'clips') renderClips();
 }
 
 function renderJiraLedger() {
@@ -7514,9 +7561,29 @@ function navigateToJotSource(date) {
     if (typeof showToast === 'function') showToast(`No jot for ${date}`);
     return;
   }
+
+  // Clear any active search filter so the target date isn't hidden by it,
+  // and pre-open the day so renderPreviousDays renders it expanded.
+  const today = getTodayStr();
+  if (date !== today) {
+    const searchEl = document.getElementById('jot-search');
+    if (searchEl && searchEl.value) {
+      searchEl.value = '';
+      dailyDocSearchQuery = '';
+    }
+    // Pre-open so renderPreviousDays builds the header in expanded state
+    if (window._openDocDays) window._openDocDays.add(date);
+  }
+
   navigateTo('jots');
+
+  // renderPreviousDays is not called by navigateTo — call it now so the target
+  // date's header element exists in the DOM before we try to scroll to it.
+  if (date !== today) {
+    try { renderPreviousDays(today); } catch(_) {}
+  }
+
   setTimeout(() => {
-    const today = getTodayStr();
     if (date === today) {
       const el = document.getElementById('daily-doc-today');
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
@@ -7530,7 +7597,7 @@ function navigateToJotSource(date) {
     const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
     if (!header) {
       if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+        showToast(`Jot ${date} not found — it may not exist in your data`);
       }
       return;
     }
