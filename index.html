@@ -7514,23 +7514,37 @@ function navigateToJotSource(date) {
     if (typeof showToast === 'function') showToast(`No jot for ${date}`);
     return;
   }
+  // Clear any active search filter so the target date isn't hidden by it,
+  // and pre-open the day so renderPreviousDays renders it expanded.
+  const today = getTodayStr();
+  if (date !== today) {
+    const searchEl = document.getElementById('jot-search');
+    if (searchEl && searchEl.value) {
+      searchEl.value = '';
+      dailyDocSearchQuery = '';
+    }
+    // Pre-open so renderPreviousDays builds the header in expanded state
+    if (window._openDocDays) window._openDocDays.add(date);
+  }
+
   navigateTo('jots');
+
+  // renderPreviousDays is not called by navigateTo — call it now so the target
+  // date's header element exists in the DOM before we try to scroll to it.
+  if (date !== today) {
+    try { renderPreviousDays(today); } catch(_) {}
+  }
+
   setTimeout(() => {
-    const today = getTodayStr();
     if (date === today) {
       const el = document.getElementById('daily-doc-today');
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       return;
     }
-    // Previous days render collapsed (display:none) with an empty editor until
-    // opened. Scrolling straight to #doc-editor-DATE lands on a zero-height
-    // hidden div — which is why this used to dump you on the jots overview.
-    // Expand the day via toggleDocDay first (it shows content + inits the
-    // editor), then scroll the day header into view.
     const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
     if (!header) {
       if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+        showToast(`Jot ${date} not found — it may not exist in your data`);
       }
       return;
     }
