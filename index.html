@@ -3287,12 +3287,34 @@ async function uploadPastedImage(blob) {
 window.uploadPastedImage = uploadPastedImage;
 
 function renderAll() {
-  const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
-               renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
+  // Only render the default landing page (jots) and global widgets at load time.
+  // All other page-specific renders are deferred to navigateTo() — they fire on
+  // first visit. This keeps initial DOM under control (~1500 nodes vs 5500+) and
+  // avoids rendering hidden pages that the user may never visit in a session.
+  const fns = [
+    // Default landing page is jots — render it and its global widgets now.
+    migrateJotsToDailyDocs, renderDailyDocs, renderDailyBriefPanel,
+    // Nav badges + sidebar state (lightweight, no page-specific DOM)
+    renderStaleJotsBadge, renderStaleNotesBadge,
+    renderWorkersBadge,
+    initNavSectionStates
+  ];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
+  // Update nav badges that were previously set by full page renders.
+  // These are lightweight counts only — no DOM for hidden pages.
+  try {
+    const pendingCount = (DATA.tasks || []).filter(t => !t.done).length;
+    const badge = document.getElementById('task-count');
+    if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount > 0 ? 'inline' : 'none'; }
+    const inboxBadge = document.getElementById('inbox-badge');
+    const inboxCount = (DATA.inbox || []).filter(it => it && it.id != null && it.text && String(it.text).trim()).length;
+    if (inboxBadge) { inboxBadge.textContent = inboxCount; inboxBadge.style.display = inboxCount > 0 ? '' : 'none'; }
+    const waitingBadge = document.getElementById('waiting-badge');
+    const waitingCount = (DATA.waitingFor || []).length;
+    if (waitingBadge) { waitingBadge.textContent = waitingCount; waitingBadge.style.display = waitingCount > 0 ? '' : 'none'; }
+  } catch(e) { console.warn('[K2] renderAll badge init failed:', e); }
 }
 
 // Navigation
@@ -3377,6 +3399,17 @@ function navigateTo(page) {
   if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
   if (page === 'skills') renderSkills(false);
+  // Pages deferred from renderAll — rendered on first visit only
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'tasks') { renderTasks(); renderSmartListChips(); }
+  if (page === 'projects') renderProjects();
+  if (page === 'discussions') renderDiscussions();
+  if (page === 'decisions') renderDecisions();
+  if (page === 'notes') renderNotes(0);
+  if (page === 'ai-insights') renderAIInsights();
+  if (page === 'trading') { renderTrading(); renderCombinedMm(); }
+  if (page === 'growth') renderGrowth();
+  if (page === 'clips') renderClips();
 }
 
 function renderJiraLedger() {
