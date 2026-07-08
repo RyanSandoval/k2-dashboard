@@ -3657,8 +3657,14 @@ function renderActivity() {
   }
 
   if (doneInView.length) {
+    const ACTIVITY_DONE_CAP = 50;
+    const cappedDone = doneInView.slice(0, ACTIVITY_DONE_CAP);
+    const hiddenDone = doneInView.length - cappedDone.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">Recent</div>`;
-    html += doneInView.map(renderRow).join('');
+    html += cappedDone.map(renderRow).join('');
+    if (hiddenDone > 0) {
+      html += `<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--text-dim);">+ ${hiddenDone} older entries not shown</div>`;
+    }
   }
 
   container.innerHTML = html;
@@ -11152,13 +11158,18 @@ function renderPreviousDays(today) {
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
+  // Cap the initial render to the most-recent N days to avoid DOM bloat.
+  // Search results show all matches (typically few). Normal view paginates.
+  const PREV_DAYS_CAP = 30;
+  const visibleDates = dailyDocSearchQuery ? filteredDates : filteredDates.slice(0, PREV_DAYS_CAP);
+  const hiddenDaysCount = dailyDocSearchQuery ? 0 : Math.max(0, filteredDates.length - PREV_DAYS_CAP);
+
+  const renderDayRow = (date) => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
     const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
     // Get preview text (strip HTML)
     const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
     return `
       <div class="jot-day-section">
         <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
@@ -11171,15 +11182,54 @@ function renderPreviousDays(today) {
         </div>
       </div>
     `;
-  }).join('');
+  };
+
+  let html = visibleDates.map(renderDayRow).join('');
+  if (hiddenDaysCount > 0) {
+    html += `<div id="prev-days-load-more" style="text-align:center;padding:14px 0;">
+      <button onclick="renderPreviousDays._loadAll()" style="font-size:12px;padding:6px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);cursor:pointer;font-family:inherit;">Show ${hiddenDaysCount} older day${hiddenDaysCount !== 1 ? 's' : ''} ▾</button>
+    </div>`;
+  }
+  container.innerHTML = html;
 
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
+  visibleDates.forEach(date => {
     if (dailyDocSearchQuery || window._openDocDays.has(date)) {
       initPreviousDayEditor(date);
     }
   });
 }
+
+// Load all previous days (bypasses cap — user explicitly requested)
+renderPreviousDays._loadAll = function() {
+  const today = getTodayStr();
+  const container = document.getElementById('daily-doc-previous');
+  if (!container) return;
+  window._previousEditors = window._previousEditors || {};
+  const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
+  const renderDayRow = (date) => {
+    const dow = getDayName(date);
+    const doc = DATA.dailyDocs[date];
+    const isOpen = window._openDocDays.has(date);
+    const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
+    return `
+      <div class="jot-day-section">
+        <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
+          <span class="jot-day-toggle">${isOpen ? '▼' : '▶'}</span>
+          <span>${date} ${dow}</span>
+          ${!isOpen ? `<span style="color:var(--text-dim);font-size:11px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${previewText}</span>` : ''}
+        </div>
+        <div class="jot-day-entries" id="doc-day-${date}" style="${isOpen ? '' : 'display:none;'}">
+          <div class="daily-doc-editor" id="doc-editor-${date}"></div>
+        </div>
+      </div>
+    `;
+  };
+  container.innerHTML = allDates.map(renderDayRow).join('');
+  allDates.forEach(date => {
+    if (window._openDocDays.has(date)) initPreviousDayEditor(date);
+  });
+};
 
 function toggleDocDay(element) {
   const date = element.dataset.date;
