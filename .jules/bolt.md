@@ -1,0 +1,3 @@
+## 2024-03-24 - Inline Event Debouncing
+**Learning:** When debouncing inline event handlers (e.g., `oninput`) in a monolithic `index.html`, attempting to define external debouncing utility functions can pollute the global scope or become detached. Instead, utilizing a self-contained inline pattern like `clearTimeout(this.to); this.to = setTimeout(() => functionName(), delay)` effectively prevents global scope pollution and main thread blocking.
+**Action:** Use the `clearTimeout(this.to); this.to = setTimeout(...)` inline pattern for debouncing events when constrained to making surgical edits in monolithic HTML files without a build process.
