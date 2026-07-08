@@ -1803,6 +1803,21 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   @media (max-width: 768px) {
     .k2pal-mobile-fab { display: flex; }
   }
+
+  /* ── Touch target minimums (Apple HIG 44×44px) ───────────────────── */
+  @media (max-width: 768px) {
+    /* Jot day-header rows: bump vertical padding so row height >= 44px */
+    .jot-day-header {
+      padding: 12px 0;
+    }
+    /* Shortcuts toggle: render as inline-flex so min-height applies */
+    .shortcuts-toggle {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 4px;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
@@ -2178,7 +2193,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="page active" id="page-jots" style="max-width:900px;margin:0 auto;">
       <div class="page-header">
         <div class="jots-date-header" id="jots-today-date"></div>
-        <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span onclick="toggleShortcutsPanel()" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
+        <p>Daily notes — just start typing. Use <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11px;">/</code> for commands &nbsp;·&nbsp; <span class="shortcuts-toggle" onclick="toggleShortcutsPanel()" style="cursor:pointer;color:var(--accent);font-size:12px;">⌨️ shortcuts</span></p>
       </div>
       <div style="margin-bottom:12px;">
         <input type="text" id="jot-search" placeholder="🔍 Search daily notes..." oninput="filterDailyDocs()" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
