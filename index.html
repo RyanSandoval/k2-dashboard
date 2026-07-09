@@ -3155,7 +3155,18 @@ async function loadData() {
     if (!res.ok) throw new Error(`GitHub API ${res.status}`);
     const file = await res.json();
     GH_SHA = file.sha;
-    const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, '')), c => c.charCodeAt(0))));
+    // GitHub returns content:"" with a download_url for files >1MB or in some edge cases.
+    // Guard against empty/missing content before decode to avoid JSON.parse('') throwing
+    // "Unexpected end of JSON input".
+    let rawContent = (file.content || '').replace(/\n/g, '');
+    if (!rawContent && file.download_url) {
+      // Fall back to direct download when the inline content field is empty
+      const dlRes = await fetch(file.download_url, { headers: ghHeaders() });
+      if (!dlRes.ok) throw new Error(`GitHub download_url fetch ${dlRes.status}`);
+      rawContent = btoa(unescape(encodeURIComponent(await dlRes.text())));
+    }
+    if (!rawContent) throw new Error('GitHub API returned empty file content');
+    const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(rawContent), c => c.charCodeAt(0))));
     DATA.projects = d.projects || [];
     DATA.discussions = d.discussions || [];
     DATA.tasks = d.tasks || [];
