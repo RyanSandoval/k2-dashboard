@@ -1092,15 +1092,18 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     width: 60px; height: 6px;
     background: var(--border);
     border-radius: 3px;
-    margin: 4px auto 12px;
+    margin: 0 auto;
     cursor: pointer;
     touch-action: manipulation;
+    /* Extend tap area to 44px tall without changing visual size */
+    padding: 19px 0;
+    box-sizing: content-box;
   }
   .mobile-more-handle:active { background: var(--text-dim); }
   .mobile-more-close {
     position: absolute;
     top: 8px; right: 12px;
-    width: 32px; height: 32px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -1802,6 +1805,17 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .k2pal-mobile-fab:active { transform: scale(0.94); }
   @media (max-width: 768px) {
     .k2pal-mobile-fab { display: flex; }
+  }
+
+  /* ── ui-004: Touch targets — Apple HIG 44×44px minimum on mobile ── */
+  @media (max-width: 768px) {
+    /* "⌨️ shortcuts" span in jots header */
+    #page-jots .page-header p span[onclick] {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 4px;
+    }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
