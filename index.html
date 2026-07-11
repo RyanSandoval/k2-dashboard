@@ -1296,7 +1296,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     cursor: pointer;
     transition: all 0.15s;
   }
-  .search-trigger:hover { border-color: var(--accent); color: var(--text); }
+  .search-trigger:hover, .search-trigger:focus-visible { border-color: var(--accent); color: var(--text); outline: none; }
   .search-trigger .search-kbd {
     margin-left: auto;
     font-size: 10px;
@@ -1898,7 +1898,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <button class="preset-switcher-manage" onclick="openPresetsManager()" type="button" title="Manage presets" aria-label="Manage presets">⚙</button>
     </div>
     <div class="preset-popover" id="preset-popover" onclick="event.stopPropagation()"></div>
-    <div class="search-trigger" onclick="window.K2Palette ? K2Palette.open() : openSearch()">
+    <div class="search-trigger" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" onclick="window.K2Palette ? K2Palette.open() : openSearch()">
       <span>🔍</span> Search...
       <span class="search-kbd">⌘K</span>
     </div>
@@ -1956,7 +1956,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <!-- WORK collapsible section -->
     <div class="nav-section">
-      <div class="nav-section-title" onclick="toggleNavSection('work')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-work-title">
+      <div class="nav-section-title" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" onclick="toggleNavSection('work')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-work-title">
         <span id="nav-section-work-arrow">▸</span> Work
       </div>
       <div id="nav-section-work-body" style="display:none;">
@@ -1992,7 +1992,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <!-- REFERENCE collapsible section -->
     <div class="nav-section">
-      <div class="nav-section-title" onclick="toggleNavSection('reference')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-reference-title">
+      <div class="nav-section-title" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" onclick="toggleNavSection('reference')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-reference-title">
         <span id="nav-section-reference-arrow">▸</span> Reference
       </div>
       <div id="nav-section-reference-body" style="display:none;">
