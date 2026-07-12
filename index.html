@@ -2051,6 +2051,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="dash-greeting" style="margin-bottom:12px;"></div>
       <div id="dash-heatmap" style="margin-bottom:16px;"></div>
 
+      <!-- Session Residue — "where you left off" — pure client-side, no cron -->
+      <div class="card" id="dash-session-residue" style="margin-bottom:12px;display:none;border-left:3px solid var(--border);padding:12px 16px;"></div>
+
       <!-- Action Inbox roll-up — top items pulled in from #k2 nightly scanner -->
       <div class="card" id="dash-action-inbox" style="margin-bottom:20px;display:none;border-left:3px solid var(--accent);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -2058,6 +2061,15 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <span onclick="navigateTo('action-inbox')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">Open inbox →</span>
         </div>
         <div id="dash-action-inbox-list"></div>
+      </div>
+
+      <!-- Floating Decision Tray — nightly scan of jots for decision-language; cron writes DATA.floatingDecisions -->
+      <div class="card" id="dash-floating-decisions" style="margin-bottom:20px;display:none;border-left:3px solid #a78bfa;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:700;">🤔 Floating Decisions <span id="dash-floating-decisions-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
+          <span style="font-size:11px;color:var(--text-dim);">decisions hiding in jots</span>
+        </div>
+        <div id="dash-floating-decisions-list"></div>
       </div>
 
       <!-- Waiting For roll-up — what's blocked on someone else -->
@@ -2080,6 +2092,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
       <!-- Family Finance Snapshot — written by K2 Family Finance Snapshot cron from family-finance/ emitter -->
       <div class="card" id="dashboard-family-finance-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
+
+      <!-- Two-of-Us Ritual — streak + 30d completion; cron writes DATA.twoOfUsRitual daily from two-of-us/ritual_streak_snapshot.py -->
+      <div class="card" id="dashboard-two-of-us-card" style="margin-bottom:20px;border-left:3px solid #ec4899;display:none;"></div>
 
       <!-- Repo Scout — freshness cron writes DATA.repoScout daily 9:30 AM PT; spec: k2-dashboard/spec/repo-scout/ -->
       <div class="card" id="dashboard-repo-scout-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
@@ -3210,6 +3225,8 @@ async function loadData() {
     DATA.actionInbox = Array.isArray(d.actionInbox) ? d.actionInbox : [];
     DATA.actionLedger = Array.isArray(d.actionLedger) ? d.actionLedger : [];
     DATA.actionInboxMeta = d.actionInboxMeta || DATA.actionInboxMeta || {};
+    DATA.floatingDecisions = Array.isArray(d.floatingDecisions) ? d.floatingDecisions : [];
+    DATA.floatingDecisionsMeta = d.floatingDecisionsMeta || {};
     DATA.staleJotState = (d.staleJotState && typeof d.staleJotState === 'object') ? d.staleJotState : {};
     DATA.combinedMm = (d.combinedMm && typeof d.combinedMm === 'object') ? d.combinedMm : null;
     DATA.k2Inline = Array.isArray(d.k2Inline) ? d.k2Inline : [];
@@ -3289,7 +3306,7 @@ window.uploadPastedImage = uploadPastedImage;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderFloatingDecisions, renderSessionResidue, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -5887,6 +5904,9 @@ function renderDashboard() {
   // Family Finance Snapshot
   renderFamilyFinanceCard();
 
+  // Two-of-Us ritual streak
+  renderTwoOfUsRitualCard();
+
   // Repo Scout freshness card
   renderRepoScoutCard();
 
@@ -7055,8 +7075,8 @@ function renderProjects() {
     archiveList.innerHTML = archived.map(p => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:8px;margin-bottom:6px;">
         <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text-dim);">${p.name}</div>
-          <div style="font-size:11px;color:var(--text-dim);">${p.description || ''} · Archived ${p.archivedAt ? new Date(p.archivedAt).toLocaleDateString() : ''}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-dim);">${escapeHtml(p.name||'')}</div>
+          <div style="font-size:11px;color:var(--text-dim);">${escapeHtml(p.description||'')} · Archived ${p.archivedAt ? new Date(p.archivedAt).toLocaleDateString() : ''}</div>
         </div>
         <div style="display:flex;gap:6px;">
           <button onclick="restoreProject('${p.id}')" style="padding:6px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Restore</button>
@@ -8175,7 +8195,7 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   if (projectSelect) {
     const curVal = projectSelect.value;
     projectSelect.innerHTML = '<option value="">Project</option>' +
-      DATA.projects.map(p => '<option value="' + p.id + '"' + (p.id == curVal ? ' selected' : '') + '>' + p.name + '</option>').join('');
+      DATA.projects.map(p => '<option value="' + escapeHtml(String(p.id||'')) + '"' + (p.id == curVal ? ' selected' : '') + '>' + escapeHtml(p.name||'') + '</option>').join('');
   }
 
   // Keep the Dashboard "Top Tasks" roll-up in sync — modal edits (priority,
@@ -8723,13 +8743,13 @@ function openCreateSmartList() {
   const ctxSel = document.getElementById('sl-rule-context');
   if (ctxSel) {
     const contexts = DATA.contexts || [];
-    ctxSel.innerHTML = '<option value="">Any</option>' + contexts.map(c => `<option value="${c}">${c}</option>`).join('');
+    ctxSel.innerHTML = '<option value="">Any</option>' + contexts.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
   }
   // Populate project dropdown
   const projSel = document.getElementById('sl-rule-project');
   if (projSel) {
     projSel.innerHTML = '<option value="__any__">Any</option><option value="">No project</option>' +
-      (DATA.projects||[]).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      (DATA.projects||[]).map(p => `<option value="${escapeHtml(String(p.id||''))}">${escapeHtml(p.name||'')}</option>`).join('');
   }
   // Reset fields
   const nameEl = document.getElementById('sl-name-input');
@@ -9842,7 +9862,7 @@ function openNoteEditor(noteId) {
 
   // Project dropdown
   const sel = document.getElementById('note-project-link');
-  sel.innerHTML = '<option value="">No project</option>' + DATA.projects.map(p => '<option value="' + p.id + '"' + (note.projectId === p.id ? ' selected' : '') + '>' + p.name + '</option>').join('');
+  sel.innerHTML = '<option value="">No project</option>' + DATA.projects.map(p => '<option value="' + escapeHtml(String(p.id||'')) + '"' + (note.projectId === p.id ? ' selected' : '') + '>' + escapeHtml(p.name||'') + '</option>').join('');
 
   // Backlinks
   renderBacklinks(note.id);
@@ -12193,6 +12213,29 @@ function renderFamilyFinanceCard() {
     ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">🟡 STALE</span>`
     : '';
 
+  // Going-out envelope burn bar (Dining + Entertainment vs $400/mo cap)
+  const eb = s.envelopeBurnRate;
+  let envelopeBlock = '';
+  if (eb && typeof eb.pct === 'number') {
+    const ebColor = eb.status === 'over' ? '#ef4444' : eb.status === 'warn' ? '#f59e0b' : '#22c55e';
+    const ebWidth = Math.min(100, eb.pct || 0);
+    const ebPctStr = (eb.pct || 0).toFixed(0);
+    const ebLabel = eb.status === 'over' ? '🔥 OVER' : eb.status === 'warn' ? '⚠ WATCH' : '✓ OK';
+    envelopeBlock = `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border);${numDim}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+          <div>
+            <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Going out $400 envelope</span>
+            <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px;background:color-mix(in srgb,${ebColor} 15%,transparent);color:${ebColor};border:1px solid color-mix(in srgb,${ebColor} 35%,transparent);">${ebLabel}</span>
+          </div>
+          <div style="font-size:13px;font-weight:700;">$${Math.round(eb.mtdSpend||0).toLocaleString()} <span style="font-size:11px;color:var(--text-dim);font-weight:500;">/ $${eb.envelopeTotal||400} (${ebPctStr}%)</span></div>
+        </div>
+        <div style="height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;">
+          <div style="height:100%;width:${ebWidth}%;background:${ebColor};border-radius:3px;transition:width 0.4s;"></div>
+        </div>
+      </div>`;
+  }
+
   // Reality-corrected safe-to-spend badge (spec: k2-dashboard/spec/safe-to-spend-badge/)
   // Shows corrected (raw − rent − CC minimums − auto-loan) as the headline; raw struck-through.
   const sts = s.safeToSpend;
@@ -12233,6 +12276,7 @@ function renderFamilyFinanceCard() {
     </div>
 
     ${safeToSpendBlock}
+    ${envelopeBlock}
 
     <div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border);${numDim}">
       <div>
@@ -12271,6 +12315,234 @@ async function _copyFFDailyBriefPrompt() {
     showToast?.('Copy failed — type: ' + phrase);
   }
 }
+
+// ===== Two-of-Us Ritual Streak Card =====
+// Cron `Two-of-Us Ritual Snapshot` writes DATA.twoOfUsRitual daily from two-of-us/ritual_streak_snapshot.py.
+// Shows current Gottman answer streak, 30-day completion rate, and today's pending question.
+function renderTwoOfUsRitualCard() {
+  const el = document.getElementById('dashboard-two-of-us-card');
+  if (!el) return;
+  const r = DATA.twoOfUsRitual;
+  if (!r || typeof r.streak !== 'number') { el.style.display = 'none'; return; }
+
+  const PINK = '#ec4899';
+  const rate = r.completionRate30d || 0;
+  const rateColor = rate >= 70 ? '#22c55e' : rate >= 40 ? '#f59e0b' : '#ef4444';
+  const streakColor = r.streak >= 3 ? '#22c55e' : r.streak >= 1 ? '#f59e0b' : 'var(--text-dim)';
+  const flame = r.streak > 0 ? '🔥' : '💤';
+  const computedAgo = r.computedAt ? _relTime(new Date(r.computedAt).getTime()) : '';
+
+  // Today / most-recent pending question
+  const t = r.today || {};
+  const names = { ryan: 'Ryan', lo: 'Lo' };
+  let pendingBlock = '';
+  if (t.question) {
+    const fully = !!t.fullyAnswered;
+    const pending = (t.pendingPartners || []).map(p => names[p] || p);
+    const badgeColor = fully ? '#22c55e' : PINK;
+    const badgeText = fully
+      ? '✓ both answered'
+      : (t.answered ? `waiting on ${pending.join(' & ')}` : 'unanswered');
+    const dateLabel = t.isToday ? 'Today' : `${t.ageDays === 1 ? 'yesterday' : (t.ageDays||0) + 'd ago'}`;
+    pendingBlock = `
+      <div style="padding:10px;border-radius:8px;background:${fully ? 'var(--surface2)' : 'color-mix(in srgb,' + PINK + ' 10%,transparent)'};border:1px solid ${fully ? 'var(--border)' : 'color-mix(in srgb,' + PINK + ' 30%,transparent)'};margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">${dateLabel}'s question</span>
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,${badgeColor} 15%,transparent);color:${badgeColor};border:1px solid color-mix(in srgb,${badgeColor} 35%,transparent);">${badgeText}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.35;">${escapeHtml(t.question)}</div>
+      </div>`;
+  }
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="font-size:14px;font-weight:700;">💞 Two of Us</div>
+        <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">Gottman ritual</span>
+      </div>
+      <span style="font-size:10px;color:var(--text-dim);">${computedAgo}</span>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;text-align:center;padding:10px 6px;border-radius:8px;background:var(--surface2);">
+        <div style="font-size:26px;font-weight:800;color:${streakColor};line-height:1;">${flame} ${r.streak}</div>
+        <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">day streak</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px 6px;border-radius:8px;background:var(--surface2);">
+        <div style="font-size:26px;font-weight:800;color:${rateColor};line-height:1;">${rate}%</div>
+        <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">30d answered</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px 6px;border-radius:8px;background:var(--surface2);">
+        <div style="font-size:26px;font-weight:800;color:var(--text);line-height:1;">${r.answered30d||0}<span style="font-size:14px;color:var(--text-dim);font-weight:600;">/${r.posted30d||0}</span></div>
+        <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">last 30 days</div>
+      </div>
+    </div>
+
+    ${pendingBlock}`;
+}
+
+// ===== Session Residue Card =====
+// Pure client-side — reads already-loaded DATA to show "where you left off" from the last active K2 session.
+// Hidden when today is already the most recent active day (no prior session to surface).
+function renderSessionResidue() {
+  const el = document.getElementById('dash-session-residue');
+  if (!el) return;
+
+  const todayStr = getTodayStr();
+  const docs = DATA.dailyDocs || {};
+
+  // Find most recent day with real jot content (look back 7 days, skip today)
+  let lastActiveDate = null;
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const textContent = (docs[key] || '').replace(/<[^>]*>/g, '').trim();
+    if (textContent.length > 10) { lastActiveDate = key; break; }
+  }
+
+  // Fallback: most recently updated task if no jot found
+  if (!lastActiveDate) {
+    const tasks = DATA.tasks || [];
+    const recent = tasks.filter(t => !t.parentId).sort((a,b) => ((b.updatedAt||b.createdAt||'') > (a.updatedAt||a.createdAt||'') ? 1 : -1))[0];
+    const ts = recent ? (recent.updatedAt || recent.createdAt || '') : '';
+    if (ts && ts.slice(0,10) !== todayStr) lastActiveDate = ts.slice(0,10);
+  }
+
+  if (!lastActiveDate || lastActiveDate === todayStr) { el.style.display = 'none'; return; }
+
+  const tasks = DATA.tasks || [];
+  const notes = DATA.notes || [];
+  const decisions = DATA.decisions || [];
+
+  // Day label
+  const prevD = new Date(); prevD.setDate(prevD.getDate() - 1);
+  const yesterdayStr = prevD.getFullYear() + '-' + String(prevD.getMonth()+1).padStart(2,'0') + '-' + String(prevD.getDate()).padStart(2,'0');
+  const dayLabel = lastActiveDate === yesterdayStr ? 'yesterday' : lastActiveDate;
+
+  // Jots: count meaningful paragraphs in that day's doc
+  const docHtml = docs[lastActiveDate] || '';
+  const jotBlocks = (docHtml.match(/<p>(?!<br\s*\/?>|&nbsp;|\s*<)/gi) || []).length;
+  const docText = (() => { const t = document.createElement('div'); t.innerHTML = docHtml; return (t.textContent||'').trim(); })();
+
+  // Tasks
+  const tasksCompleted = tasks.filter(t => (t.completedAt||'').startsWith(lastActiveDate));
+  const tasksTouched   = tasks.filter(t => !t.parentId && ((t.updatedAt||t.createdAt||'').startsWith(lastActiveDate)));
+  const tasksCreated   = tasks.filter(t => !t.parentId && (t.createdAt||'').startsWith(lastActiveDate));
+
+  // Notes + decisions
+  const notesUpdated   = notes.filter(n => (n.updated||n.created||'').startsWith(lastActiveDate));
+  const decisionsLogged = decisions.filter(d => (d.date||'').startsWith(lastActiveDate));
+
+  // Build chips
+  const chips = [];
+  if (jotBlocks > 0) chips.push(`${jotBlocks} jot${jotBlocks !== 1 ? 's' : ''}`);
+  if (tasksCompleted.length > 0) chips.push(`${tasksCompleted.length} done`);
+  else if (tasksTouched.length > 0) chips.push(`${tasksTouched.length} task${tasksTouched.length !== 1 ? 's' : ''}`);
+  if (tasksCreated.length > 0 && tasksCreated.length !== tasksTouched.length) chips.push(`${tasksCreated.length} created`);
+  if (notesUpdated.length > 0) chips.push(`${notesUpdated.length} note${notesUpdated.length !== 1 ? 's' : ''}`);
+  if (decisionsLogged.length > 0) chips.push(`${decisionsLogged.length} decision${decisionsLogged.length !== 1 ? 's' : ''}`);
+
+  if (!chips.length) { el.style.display = 'none'; return; }
+
+  // First jot snippet (or fallback to last touched task title)
+  const snippet = docText.slice(0, 120);
+  const lastTask = tasksTouched.sort((a,b) => ((b.updatedAt||b.createdAt||'') > (a.updatedAt||a.createdAt||'') ? 1 : -1))[0];
+  const taskSnippet = lastTask ? escapeHtml((lastTask.text||lastTask.title||'').slice(0, 80)) : '';
+
+  const chipHtml = chips.map(c =>
+    `<span style="background:var(--surface2);border-radius:8px;padding:2px 8px;margin-right:4px;font-size:11px;white-space:nowrap;">${c}</span>`
+  ).join('');
+
+  const snippetHtml = snippet
+    ? `<div style="font-size:12px;color:var(--text);border-left:2px solid var(--border);padding:2px 8px;font-style:italic;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:6px;">${escapeHtml(snippet)}</div>`
+    : taskSnippet
+      ? `<div style="font-size:12px;color:var(--text-dim);border-left:2px solid var(--border);padding:2px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:6px;">Last: ${taskSnippet}</div>`
+      : '';
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;">📍 Where you left off</div>
+      <span style="font-size:11px;color:var(--text-dim);">${dayLabel}</span>
+    </div>
+    <div style="line-height:2;">${chipHtml}</div>
+    ${snippetHtml}
+    <div style="margin-top:8px;display:flex;gap:12px;">
+      ${jotBlocks > 0 ? `<span onclick="navigateTo('jots')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">Jots →</span>` : ''}
+      ${tasksTouched.length > 0 ? `<span onclick="navigateTo('tasks')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">Tasks →</span>` : ''}
+    </div>`;
+}
+window.renderSessionResidue = renderSessionResidue;
+
+// ===== Floating Decision Tray =====
+// Nightly cron scans jots for decision-language patterns → writes DATA.floatingDecisions.
+// Dashboard renders unlogged items with "Log as Decision" (→ DATA.decisions) and "Dismiss".
+function renderFloatingDecisions() {
+  const card = document.getElementById('dash-floating-decisions');
+  const listEl = document.getElementById('dash-floating-decisions-list');
+  const countEl = document.getElementById('dash-floating-decisions-count');
+  if (!card || !listEl) return;
+
+  const all = Array.isArray(DATA.floatingDecisions) ? DATA.floatingDecisions : [];
+  const open = all.filter(d => !d.logged && !d.dismissed);
+  if (!open.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  if (countEl) countEl.textContent = `(${open.length})`;
+
+  listEl.innerHTML = open.slice(0, 10).map(item => {
+    const excerpt = escapeHtml((item.excerpt || '').slice(0, 180));
+    const age = item.detectedAt ? _relTime(new Date(item.detectedAt).getTime()) : '';
+    const sourceLabel = item.sourceDate ? `jot ${item.sourceDate}` : 'jot';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border-subtle);" id="fditem-${escapeHtml(item.id||'')}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        <div style="font-size:13px;line-height:1.4;flex:1;">${excerpt}</div>
+        <span style="font-size:10px;color:var(--text-dim);white-space:nowrap;flex-shrink:0;">${age}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:10px;color:var(--text-dim);">${sourceLabel}</span>
+        <button onclick="_fdLog('${escapeHtml(item.id||'')}','${excerpt.replace(/'/g,"\\'")}')"
+          style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #a78bfa;background:rgba(167,139,250,0.1);color:#a78bfa;cursor:pointer;font-weight:600;">Log as Decision</button>
+        <button onclick="_fdDismiss('${escapeHtml(item.id||'')}')"
+          style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;">Dismiss</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.renderFloatingDecisions = renderFloatingDecisions;
+
+function _fdLog(id, text) {
+  if (!Array.isArray(DATA.floatingDecisions)) return;
+  const item = DATA.floatingDecisions.find(d => d.id === id);
+  if (!item) return;
+  item.logged = true;
+  item.loggedAt = new Date().toISOString();
+  if (!Array.isArray(DATA.decisions)) DATA.decisions = [];
+  DATA.decisions.push({
+    id: 'dec-' + Date.now().toString(36),
+    decision: text,
+    date: new Date().toISOString().slice(0, 10),
+    source: 'floating-decision-tray',
+    sourceJotDate: item.sourceDate || null,
+  });
+  saveData();
+  renderFloatingDecisions();
+  showToast?.('Decision logged ✓');
+}
+window._fdLog = _fdLog;
+
+function _fdDismiss(id) {
+  if (!Array.isArray(DATA.floatingDecisions)) return;
+  const item = DATA.floatingDecisions.find(d => d.id === id);
+  if (!item) return;
+  item.dismissed = true;
+  item.dismissedAt = new Date().toISOString();
+  saveData();
+  renderFloatingDecisions();
+  showToast?.('Dismissed');
+}
+window._fdDismiss = _fdDismiss;
 
 // ===== Repo Scout Card =====
 // Spec: k2-dashboard/spec/repo-scout/; freshness cron (TASK-009 proposal) writes DATA.repoScout daily 9:30 AM PT.
