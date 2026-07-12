@@ -1296,7 +1296,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     cursor: pointer;
     transition: all 0.15s;
   }
-  .search-trigger:hover { border-color: var(--accent); color: var(--text); }
+  .search-trigger:hover, .search-trigger:focus-visible { outline: none; border-color: var(--accent); color: var(--text); }
   .search-trigger .search-kbd {
     margin-left: auto;
     font-size: 10px;
@@ -1898,7 +1898,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <button class="preset-switcher-manage" onclick="openPresetsManager()" type="button" title="Manage presets" aria-label="Manage presets">⚙</button>
     </div>
     <div class="preset-popover" id="preset-popover" onclick="event.stopPropagation()"></div>
-    <div class="search-trigger" onclick="window.K2Palette ? K2Palette.open() : openSearch()">
+    <div role="button" tabindex="0" class="search-trigger" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" onclick="window.K2Palette ? K2Palette.open() : openSearch()">
       <span>🔍</span> Search...
       <span class="search-kbd">⌘K</span>
     </div>
