@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v44-jot-source-expand';
+const CACHE_NAME = 'k2-hq-v45-hydrate-snapshot-keys';
 const ASSETS = [
   './',
   './index.html',

@@ -3231,6 +3231,20 @@ async function loadData() {
     DATA.combinedMm = (d.combinedMm && typeof d.combinedMm === 'object') ? d.combinedMm : null;
     DATA.k2Inline = Array.isArray(d.k2Inline) ? d.k2Inline : [];
     DATA.recurrenceQueue = Array.isArray(d.recurrenceQueue) ? d.recurrenceQueue : [];
+    // Cron-written snapshot keys — must be hydrated here or their dashboard cards stay hidden
+    // AND a client save would drop them from the repo (full-object PUT overwrite).
+    DATA.cronJobsMeta = d.cronJobsMeta || {};
+    DATA.cronSpend = d.cronSpend || null;
+    DATA.decisionsNeeded = Array.isArray(d.decisionsNeeded) ? d.decisionsNeeded : [];
+    DATA.decisionsNeededMeta = d.decisionsNeededMeta || {};
+    DATA.specOpenQuestions = Array.isArray(d.specOpenQuestions) ? d.specOpenQuestions : [];
+    DATA.specOpenQuestionsMeta = d.specOpenQuestionsMeta || {};
+    DATA.familyFinanceSnapshot = d.familyFinanceSnapshot || null;
+    DATA.familyFinanceSnapshotMeta = d.familyFinanceSnapshotMeta || {};
+    DATA.twoOfUsRitual = d.twoOfUsRitual || null;
+    DATA.twoOfUsRitualMeta = d.twoOfUsRitualMeta || {};
+    DATA.repoScout = d.repoScout || null;
+    DATA.k2Inbox = d.k2Inbox || null;
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
