@@ -7269,7 +7269,7 @@ function openTaskModal(taskId) {
       <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Due Date</span>
       <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
       ${dueDateDisplay}
-      ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date" aria-label="Clear due date" role="button" tabindex="0">✕</span>` : ''}
+      ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date" aria-label="Clear due date" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">✕</span>` : ''}
     </div>
 
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:var(--surface2);border-radius:8px;">
@@ -7288,7 +7288,7 @@ function openTaskModal(taskId) {
       <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Show me this on:</span>
       <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
       ${task.hideUntil && task.hideUntil > getTodayStr() ? `<span style="font-size:11px;color:var(--yellow);font-weight:600;">Hidden until ${task.hideUntil}</span>` : (task.hideUntil ? `<span style="font-size:11px;color:var(--text-dim);">Visible now</span>` : `<span style="font-size:11px;color:var(--text-dim);">Always visible</span>`)}
-      ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule" aria-label="Clear schedule" role="button" tabindex="0">✕</span>` : ''}
+      ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule" aria-label="Clear schedule" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">✕</span>` : ''}
     </div>
 
     <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
@@ -7349,7 +7349,7 @@ function openTaskModal(taskId) {
       const blockerRows = blockers.map(b => {
         return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-subtle);">
           <span onclick="openTaskModal(${safeId(b.id)})" style="flex:1;font-size:12px;cursor:pointer;color:${b.done ? 'var(--text-dim)' : 'var(--text)'};text-decoration:${b.done ? 'line-through' : 'none'};">${b.done ? '✅' : '🔒'} ${b.text || 'Untitled'}</span>
-          <span onclick="removeDependency(${safeId(task.id)},${safeId(b.id)})" style="cursor:pointer;font-size:12px;color:var(--text-dim);padding:2px 6px;border-radius:4px;" title="Remove dependency" aria-label="Remove dependency" role="button" tabindex="0">✕</span>
+          <span onclick="removeDependency(${safeId(task.id)},${safeId(b.id)})" style="cursor:pointer;font-size:12px;color:var(--text-dim);padding:2px 6px;border-radius:4px;" title="Remove dependency" aria-label="Remove dependency" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">✕</span>
         </div>`;
       }).join('');
       return `<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
@@ -9034,7 +9034,7 @@ function renderKairosTopBar() {
     const lbl = kairosLabel(a.trigger);
     const esc = a.trigger.replace(/'/g, "\\'");
     return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:12px;background:var(--accent);color:#000;font-weight:700;">'
-      + lbl + '<span onclick="deactivateTrigger(\'' + esc + '\')" style="cursor:pointer;font-size:13px;line-height:1;opacity:0.7;" title="End moment" aria-label=\'End moment\' role=\'button\' tabindex=\'0\'>✕</span></span>';
+      + lbl + '<span onclick="deactivateTrigger(\'' + esc + '\')" style="cursor:pointer;font-size:13px;line-height:1;opacity:0.7;" title="End moment" aria-label=\'End moment\' role=\'button\' tabindex=\'0\' onkeydown=\'if(event.key==="Enter"||event.key===" "){event.preventDefault();this.click()}\'>✕</span></span>';
   }).join('');
   const addBtn = '<button onclick="openKairosPicker()" style="font-size:11px;padding:4px 12px;border-radius:12px;border:1px dashed var(--border);cursor:pointer;background:transparent;color:var(--text-muted);">'
     + (active.length ? '+ another moment' : '🎯 I\'m in a moment…') + '</button>';
@@ -13232,7 +13232,7 @@ function renderInbox() {
     }
     const meta = INBOX_BUCKET_META[item.suggestedBucket] || INBOX_BUCKET_META['task'];
     // Make the bucket chip itself clickable (tap = accept suggestion). Bigger tap target.
-    const chipOnclick = 'onclick="inboxAcceptSuggestion(' + item.id + ')" role="button"';
+    const chipOnclick = 'onclick="inboxAcceptSuggestion(' + item.id + ')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}"';
     const chip = '<div ' + chipOnclick + ' title="Tap to accept: ' + escapeHtml(item.suggestionReason || meta.label) + '" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:6px 10px;min-height:32px;border-radius:10px;background:color-mix(in srgb,' + meta.color + ' 15%,transparent);color:' + meta.color + ';border:1px solid color-mix(in srgb,' + meta.color + ' 35%,transparent);white-space:nowrap;cursor:pointer;user-select:none;">' + meta.icon + ' ' + meta.label + '</div>';
     // Bumped padding to 8x12, min-height 36, min-width 36 — meets WCAG mobile tap target
     const btnStyle = 'padding:8px 10px;min-height:36px;min-width:36px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:14px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;';
