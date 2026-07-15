@@ -3603,6 +3603,7 @@ window._activityFilter = 'all';
 
 function setActivityFilter(f, btn) {
   window._activityFilter = f;
+  window._activityShowAll = false; // reset "show all" when filter changes
   document.querySelectorAll('.activity-filter-btn').forEach(b => {
     const active = b === btn;
     b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
@@ -3688,8 +3689,15 @@ function renderActivity() {
   }
 
   if (doneInView.length) {
+    const ACTIVITY_DONE_CAP = 50;
+    const showAll = !!window._activityShowAll;
+    const doneShown = showAll ? doneInView : doneInView.slice(0, ACTIVITY_DONE_CAP);
+    const doneOverflow = doneInView.length - doneShown.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">Recent</div>`;
-    html += doneInView.map(renderRow).join('');
+    html += doneShown.map(renderRow).join('');
+    if (doneOverflow > 0) {
+      html += `<div style="text-align:center;padding:12px 0;"><button onclick="window._activityShowAll=true;renderActivity()" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:12px;padding:6px 18px;cursor:pointer;">Show all ${doneInView.length} activity items</button></div>`;
+    }
   }
 
   container.innerHTML = html;
@@ -10578,6 +10586,7 @@ let dailyDocSearchQuery = '';
 
 function filterDailyDocs() {
   dailyDocSearchQuery = (document.getElementById('jot-search')?.value || '').trim().toLowerCase();
+  window._showAllPreviousDays = false; // reset page cap on new search
   renderDailyDocs();
 }
 
@@ -11186,13 +11195,22 @@ function renderPreviousDays(today) {
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
+  // Cap visible rows to reduce DOM size. Search and explicit "load older" bypass the cap.
+  const PREV_DAYS_CAP = 30;
+  const showAllPrev = !!window._showAllPreviousDays || !!dailyDocSearchQuery;
+  // Always include any open days even if they fall outside the cap window
+  const openDatesSet = window._openDocDays || new Set();
+  const visibleDates = showAllPrev
+    ? filteredDates
+    : filteredDates.filter((d, i) => i < PREV_DAYS_CAP || openDatesSet.has(d));
+  const hiddenCount = filteredDates.length - visibleDates.length;
+
+  const dayHtml = (date) => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
-    const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
+    const isOpen = dailyDocSearchQuery || openDatesSet.has(date);
     // Get preview text (strip HTML)
     const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
     return `
       <div class="jot-day-section">
         <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
@@ -11205,11 +11223,17 @@ function renderPreviousDays(today) {
         </div>
       </div>
     `;
-  }).join('');
+  };
+
+  const loadMoreBtn = hiddenCount > 0
+    ? `<div style="text-align:center;padding:14px 0;"><button onclick="window._showAllPreviousDays=true;renderPreviousDays('${today}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:12px;padding:6px 18px;cursor:pointer;">Load ${hiddenCount} older day${hiddenCount === 1 ? '' : 's'}</button></div>`
+    : '';
+
+  container.innerHTML = visibleDates.map(dayHtml).join('') + loadMoreBtn;
 
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
-    if (dailyDocSearchQuery || window._openDocDays.has(date)) {
+  visibleDates.forEach(date => {
+    if (dailyDocSearchQuery || openDatesSet.has(date)) {
       initPreviousDayEditor(date);
     }
   });
