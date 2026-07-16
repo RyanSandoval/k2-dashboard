@@ -7556,23 +7556,42 @@ function navigateToJotSource(date) {
       if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       return;
     }
-    // Previous days render collapsed (display:none) with an empty editor until
-    // opened. Scrolling straight to #doc-editor-DATE lands on a zero-height
-    // hidden div — which is why this used to dump you on the jots overview.
-    // Expand the day via toggleDocDay first (it shows content + inits the
-    // editor), then scroll the day header into view.
-    const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
-    if (!header) {
-      if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+
+    // If there's an active search query it will have filtered the target date
+    // out of the rendered list (renderPreviousDays only shows matching days).
+    // Clear the search first, re-render, then scroll — use a second setTimeout
+    // so the DOM has time to update before we query for the header.
+    function _scrollToJotHeader() {
+      // Previous days render collapsed (display:none) with an empty editor until
+      // opened. Scrolling straight to #doc-editor-DATE lands on a zero-height
+      // hidden div — which is why this used to dump you on the jots overview.
+      // Expand the day via toggleDocDay first (it shows content + inits the
+      // editor), then scroll the day header into view.
+      const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
+      if (!header) {
+        if (typeof showToast === 'function') {
+          showToast(`Jot ${date} not found — it may have been deleted`);
+        }
+        return;
       }
-      return;
+      if (!header.classList.contains('open') && typeof toggleDocDay === 'function') toggleDocDay(header);
+      header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      header.style.transition = 'box-shadow 0.3s';
+      header.style.boxShadow = '0 0 0 2px var(--accent2)';
+      setTimeout(() => { header.style.boxShadow = ''; }, 1500);
     }
-    if (!header.classList.contains('open') && typeof toggleDocDay === 'function') toggleDocDay(header);
-    header.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    header.style.transition = 'box-shadow 0.3s';
-    header.style.boxShadow = '0 0 0 2px var(--accent2)';
-    setTimeout(() => { header.style.boxShadow = ''; }, 1500);
+
+    if (dailyDocSearchQuery) {
+      // Clear the search input and re-render so the target date is in the DOM
+      dailyDocSearchQuery = '';
+      const searchEl = document.getElementById('jot-search');
+      if (searchEl) searchEl.value = '';
+      if (typeof renderPreviousDays === 'function') renderPreviousDays(today);
+      // Give the DOM one more tick to settle after the re-render
+      setTimeout(_scrollToJotHeader, 50);
+    } else {
+      _scrollToJotHeader();
+    }
   }, 300);
 }
 
