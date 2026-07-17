@@ -3317,13 +3317,39 @@ async function uploadPastedImage(blob) {
 }
 window.uploadPastedImage = uploadPastedImage;
 
+// Track which pages have been rendered at least once so we can defer
+// page-specific work until first navigation. Reduces initial DOM from
+// 6000+ nodes (all pages rendered eagerly) to ~1500 (only the active page).
+window._renderedPages = window._renderedPages || new Set();
+
 function renderAll() {
-  const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
-               renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderFloatingDecisions, renderSessionResidue, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
-  for (const fn of fns) {
-    try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
+  // Always-global: migration, floating overlays, badges, nav state.
+  // These touch elements outside any single page container.
+  const globalFns = [
+    migrateJotsToDailyDocs,
+    renderFloatingDecisions,
+    renderSessionResidue,
+    renderStaleJotsBadge,
+    renderStaleNotesBadge,
+    renderActionInboxBadge,
+    renderWorkersBadge,
+    initNavSectionStates,
+  ];
+  for (const fn of globalFns) {
+    try { fn(); } catch(e) { console.error(`[K2] renderAll (global): ${fn.name} failed:`, e); }
   }
+
+  // Render the default active page (jots) and its immediate dependencies.
+  const jotsFns = [renderDailyDocs, renderDailyBriefPanel];
+  for (const fn of jotsFns) {
+    try { fn(); } catch(e) { console.error(`[K2] renderAll (jots): ${fn.name} failed:`, e); }
+  }
+  window._renderedPages.add('jots');
+
+  // Defer all other page-specific renders to first navigation.
+  // navigateTo() calls the page renderer; _renderPageOnce() prevents double
+  // work when navigateTo() is called and the page was already rendered via a
+  // direct mutation path (e.g. renderTasks() called after toggleTask()).
 }
 
 // Navigation
@@ -3391,6 +3417,20 @@ function navigateTo(page) {
   if (page === 'jots') {
     setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 200);
   }
+
+  // Pages that were previously rendered only in renderAll() (no explicit call
+  // here) now render on first navigation. Pages already in this list continue
+  // to re-render on every visit (their render functions are cheap or stateful).
+  if (page === 'dashboard') { renderDashboard(); renderTaskHeatmap(); }
+  if (page === 'tasks') { renderTasks(); renderSmartListsNav(); }
+  if (page === 'projects') renderProjects();
+  if (page === 'notes') renderNotes();
+  if (page === 'discussions') renderDiscussions();
+  if (page === 'decisions') renderDecisions();
+  if (page === 'ai-insights') renderAIInsights();
+  if (page === 'trading') { renderTrading(); renderCombinedMm(); }
+  if (page === 'growth') renderGrowth();
+  if (page === 'clips') renderClips();
   if (page === 'memory') renderMemoryPage();
   if (page === 'mission') renderMissionPage();
   if (page === 'docs') renderDocs();
@@ -3408,6 +3448,9 @@ function navigateTo(page) {
   if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
   if (page === 'skills') renderSkills(false);
+  if (page === 'jots') { renderDailyDocs(); renderDailyBriefPanel(); }
+
+  window._renderedPages.add(page);
 }
 
 function renderJiraLedger() {
@@ -10578,6 +10621,9 @@ let dailyDocSearchQuery = '';
 
 function filterDailyDocs() {
   dailyDocSearchQuery = (document.getElementById('jot-search')?.value || '').trim().toLowerCase();
+  // Reset the page limit so clearing a search returns to the default cap (30),
+  // not an inflated value left over from a previous "Load more" click.
+  _prevDaysPageLimit = 30;
   renderDailyDocs();
 }
 
@@ -11164,12 +11210,18 @@ function initTodayEditor(today) {
   }
 }
 
+// Cap on previous-day rows rendered at once. Each collapsed row is still a DOM
+// node — with months of daily docs this grows unboundedly. Users can expand
+// with the "Load more" button below the list. Reset to default on each full
+// renderPreviousDays call (e.g. search) so the cap stays fresh.
+var _prevDaysPageLimit = 30;
+
 function renderPreviousDays(today) {
   const container = document.getElementById('daily-doc-previous');
   if (!container) return;
 
   const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
-  
+
   // Filter by search
   const filteredDates = dailyDocSearchQuery
     ? allDates.filter(d => {
@@ -11183,16 +11235,22 @@ function renderPreviousDays(today) {
     return;
   }
 
+  // When searching, show all matches (search result set is already bounded).
+  // Otherwise cap at _prevDaysPageLimit to keep DOM under control.
+  const limit = dailyDocSearchQuery ? filteredDates.length : _prevDaysPageLimit;
+  const visibleDates = filteredDates.slice(0, limit);
+  const hasMore = !dailyDocSearchQuery && filteredDates.length > limit;
+
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
+  const rowsHtml = visibleDates.map(date => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
     const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
     // Get preview text (strip HTML)
     const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
+
     return `
       <div class="jot-day-section">
         <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
@@ -11207,8 +11265,19 @@ function renderPreviousDays(today) {
     `;
   }).join('');
 
+  const loadMoreHtml = hasMore
+    ? `<div style="text-align:center;padding:16px 0;">
+        <button onclick="_prevDaysPageLimit += 30; renderPreviousDays('${today}')"
+          style="padding:6px 20px;font-size:12px;font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer;">
+          Load more (${filteredDates.length - limit} older days)
+        </button>
+      </div>`
+    : '';
+
+  container.innerHTML = rowsHtml + loadMoreHtml;
+
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
+  visibleDates.forEach(date => {
     if (dailyDocSearchQuery || window._openDocDays.has(date)) {
       initPreviousDayEditor(date);
     }
