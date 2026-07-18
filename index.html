@@ -3387,8 +3387,10 @@ function navigateTo(page) {
   });
   // Scroll to top
   document.querySelector('.main').scrollTop = 0;
-  // Auto-focus daily doc editor
+  // Re-render jots page (refreshes previous-day headers so navigateToJotSource
+  // can find the target .jot-day-header after navigating here from another page)
   if (page === 'jots') {
+    if (typeof renderDailyDocs === 'function') renderDailyDocs();
     setTimeout(() => window._todayEditor?.commands?.focus?.('end'), 200);
   }
   if (page === 'memory') renderMemoryPage();
