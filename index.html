@@ -1183,6 +1183,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
   .note-feed-item:last-child { border-bottom: none; }
   .note-feed-item:hover { background: rgba(255,255,255,0.015); }
+  .note-feed-item.note-pinned { background: rgba(255,196,0,0.05); border-left: 2px solid var(--yellow); padding-left: 8px; }
   .note-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: #3a4150; }
   .note-dot.dot-k2 { background: var(--accent); }
   .note-dot.dot-warn { background: var(--yellow); }
@@ -9632,7 +9633,8 @@ function renderNotes(page = 0) {
   const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
   const _notArchived = window.K2Archive ? K2Archive.notArchived : () => true;
-  let sortedNotes = [...DATA.notes].filter(_notArchived).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+  let sortedNotes = [...DATA.notes].filter(_notArchived).sort((a, b) =>
+    (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (b.created || '').localeCompare(a.created || ''));
   if (query) {
     sortedNotes = sortedNotes.filter(n =>
       (n.title||'').toLowerCase().includes(query) ||
@@ -9684,10 +9686,10 @@ function renderNotes(page = 0) {
       const previewLine = previewClean.slice(0, 140);
       const dotClass = isPending ? 'dot-warn' : (hasResponse ? 'dot-k2' : '');
       return `
-        <div class="note-feed-item" data-note-id="${noteId}" onclick="noteCardTap('${noteId}', event)">
+        <div class="note-feed-item${note.pinned ? ' note-pinned' : ''}" data-note-id="${noteId}" onclick="noteCardTap('${noteId}', event)">
           <span class="note-dot ${dotClass}"></span>
           <div class="note-feed-body">
-            <div class="note-feed-title">${escapeHtml(title)}</div>
+            <div class="note-feed-title">${note.pinned ? '📌 ' : ''}${escapeHtml(title)}</div>
             ${previewLine ? `<div class="note-feed-preview">${escapeHtml(previewLine)}</div>` : ''}
             <div class="note-feed-meta">
               <span>${escapeHtml(note.created || '')}</span>
@@ -9829,6 +9831,7 @@ function openNoteActions(noteId, ev) {
     <div class="note-action-sheet" onclick="event.stopPropagation()">
       <div class="note-action-head">${escapeHtml(note.title || 'Note')}</div>
       <button class="note-action-item" onclick="closeNoteActions(); openNoteEditor('${noteId}');">⤢ <span>Open</span></button>
+      <button class="note-action-item" onclick="closeNoteActions(); togglePinNote('${noteId}');">📌 <span>${note.pinned ? 'Unpin' : 'Pin'}</span></button>
       <button class="note-action-item" onclick="closeNoteActions(); requestK2TakeFromNote('${noteId}');">🤖 <span>Ask K-2</span></button>
       <button class="note-action-item" onclick="closeNoteActions(); copyNoteLink('${noteId}', event);">🔗 <span>Copy link</span></button>
       ${jiraItem}
@@ -9842,6 +9845,16 @@ function closeNoteActions() {
   const el = document.getElementById('note-action-backdrop');
   if (el) el.remove();
 }
+
+async function togglePinNote(noteId) {
+  const note = (DATA.notes || []).find(n => n.id === noteId);
+  if (!note) return;
+  note.pinned = !note.pinned;
+  await saveData();
+  if (typeof showToast === 'function') showToast(note.pinned ? '📌 Note pinned' : 'Note unpinned');
+  renderNotes();
+}
+window.togglePinNote = togglePinNote;
 
 function openNoteEditor(noteId) {
   let note;
