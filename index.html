@@ -8008,9 +8008,22 @@ function renderTaskRow(task) {
 
 function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   if (tasks.length === 0) return '';
-  // If user has explicitly toggled, respect that. Otherwise use default collapsed state.
-  var isOpen = (id in (window._focusSections || {})) ? !!window._focusSections[id] : !collapsed;
-  var shown = (limit && !isOpen) ? tasks.slice(0, limit) : tasks;
+  // Three-state expansion:
+  //   _focusSections[id] === true  → user explicitly expanded (show all)
+  //   _focusSections[id] === false → user explicitly collapsed (show nothing)
+  //   undefined                    → default: open but capped at `limit` if provided
+  var userState = window._focusSections ? window._focusSections[id] : undefined;
+  var isOpen;
+  if (userState === true) {
+    isOpen = true;
+  } else if (userState === false) {
+    isOpen = false;
+  } else {
+    isOpen = !collapsed;
+  }
+  // Apply limit: cap shown items unless the user has explicitly expanded to true
+  var isCapped = limit && tasks.length > limit && userState !== true;
+  var shown = isCapped ? tasks.slice(0, limit) : tasks;
   return '<div style="margin-bottom:20px;">' +
     '<div onclick="toggleFocusSection(\'' + id + '\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;border-radius:var(--radius-sm);transition:background 0.1s;" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'transparent\'">' +
     '<span style="font-size:14px;color:var(--text-dim);transition:transform 0.2s;' + (isOpen ? 'transform:rotate(90deg);' : '') + '">▶</span>' +
@@ -8019,7 +8032,8 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
     '<span style="font-size:12px;padding:2px 10px;border-radius:10px;background:var(--surface2);color:var(--text-dim);font-weight:600;">' + tasks.length + '</span>' +
     '</div>' +
     (isOpen ? '<ul class="task-list">' + shown.map(function(t){ return renderTaskRow(t); }).join('') + '</ul>' : '') +
-    (limit && tasks.length > limit && !isOpen ? '<div style="padding:4px 0 0 28px;font-size:12px;color:var(--accent);cursor:pointer;" onclick="toggleFocusSection(\'' + id + '\')">Show all ' + tasks.length + ' ▾</div>' : '') +
+    (isOpen && isCapped ? '<div style="padding:4px 0 0 28px;font-size:12px;color:var(--accent);cursor:pointer;" onclick="window._focusSections[\'' + id + '\']=true;renderTasks()">Show all ' + tasks.length + ' ▾</div>' : '') +
+    (!isOpen && limit && tasks.length > limit ? '<div style="padding:4px 0 0 28px;font-size:12px;color:var(--accent);cursor:pointer;" onclick="toggleFocusSection(\'' + id + '\')">Show all ' + tasks.length + ' ▾</div>' : '') +
     '</div>';
 }
 
@@ -8186,8 +8200,8 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   renderKairosTopBar();
   board.innerHTML =
     renderKairosBoardSection(visible) +
-    renderTaskSection('doToday', '🔴', 'Do Today', doToday, false, null) +
-    renderTaskSection('thisWeek', '🟡', 'This Week', thisWeek, false, null) +
+    renderTaskSection('doToday', '🔴', 'Do Today', doToday, false, 15) +
+    renderTaskSection('thisWeek', '🟡', 'This Week', thisWeek, false, 10) +
     renderTaskSection('backlog', '📋', 'Backlog', backlog, true, 5) +
     renderTaskSection('scheduled', '⏰', 'Scheduled', scheduled, true, null) +
     renderTaskSection('needsTriage', '⚠️', 'Needs Triage', needsTriage, true, null);
