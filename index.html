@@ -1095,12 +1095,21 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     margin: 4px auto 12px;
     cursor: pointer;
     touch-action: manipulation;
+    /* extend tap area to ≥44px tall (Apple HIG) without affecting visual */
+    position: relative;
+  }
+  .mobile-more-handle::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%; transform: translateY(-50%);
+    height: 44px;
   }
   .mobile-more-handle:active { background: var(--text-dim); }
   .mobile-more-close {
     position: absolute;
     top: 8px; right: 12px;
-    width: 32px; height: 32px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     background: var(--surface2);
     border: 1px solid var(--border);
