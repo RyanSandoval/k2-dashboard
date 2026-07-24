@@ -10599,6 +10599,10 @@ window._todayEditor = null;
 window._previousEditors = {};
 window._openDocDays = new Set();
 window._dailyDocSaveTimer = null;
+// DOM-size guard: how many previous-day sections to render at once.
+// "Load older days" button appends DAILY_DOCS_PREV_PER_PAGE more.
+const DAILY_DOCS_PREV_PER_PAGE = 30;
+window._dailyDocsPrevLimit = DAILY_DOCS_PREV_PER_PAGE;
 
 function getTodayStr() {
   const d = new Date();
@@ -11199,13 +11203,21 @@ function renderPreviousDays(today) {
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
+  // Without a search query, paginate so the DOM stays under the browser's
+  // ~1500-node warning threshold. Each collapsed day is ~6 nodes; 30 days ≈ 180 nodes.
+  // Search bypasses the limit so all matching days are visible.
+  const visibleDates = dailyDocSearchQuery
+    ? filteredDates
+    : filteredDates.slice(0, window._dailyDocsPrevLimit || DAILY_DOCS_PREV_PER_PAGE);
+  const hiddenCount = dailyDocSearchQuery ? 0 : filteredDates.length - visibleDates.length;
+
+  const dayHtml = visibleDates.map(date => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
     const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
     // Get preview text (strip HTML)
     const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
+
     return `
       <div class="jot-day-section">
         <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
@@ -11220,12 +11232,27 @@ function renderPreviousDays(today) {
     `;
   }).join('');
 
+  const loadMoreHtml = hiddenCount > 0
+    ? `<div style="text-align:center;padding:16px 0 8px;">
+        <button onclick="loadMorePreviousDays()" style="padding:8px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);cursor:pointer;font-size:12px;font-family:inherit;">
+          Load ${Math.min(DAILY_DOCS_PREV_PER_PAGE, hiddenCount)} older days ▾ <span style="opacity:0.6;">(${hiddenCount} remaining)</span>
+        </button>
+      </div>`
+    : '';
+
+  container.innerHTML = dayHtml + loadMoreHtml;
+
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
+  visibleDates.forEach(date => {
     if (dailyDocSearchQuery || window._openDocDays.has(date)) {
       initPreviousDayEditor(date);
     }
   });
+}
+
+function loadMorePreviousDays() {
+  window._dailyDocsPrevLimit = (window._dailyDocsPrevLimit || DAILY_DOCS_PREV_PER_PAGE) + DAILY_DOCS_PREV_PER_PAGE;
+  renderPreviousDays(getTodayStr());
 }
 
 function toggleDocDay(element) {
