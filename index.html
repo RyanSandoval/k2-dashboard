@@ -12419,13 +12419,16 @@ function renderSessionResidue() {
   const todayStr = getTodayStr();
   const docs = DATA.dailyDocs || {};
 
+  // Safely extract HTML string from a dailyDocs entry (may be a string OR {content:...} object)
+  const _docHtml = (raw) => typeof raw === 'string' ? raw : ((raw && raw.content) || '');
+
   // Find most recent day with real jot content (look back 7 days, skip today)
   let lastActiveDate = null;
   for (let i = 1; i <= 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    const textContent = (docs[key] || '').replace(/<[^>]*>/g, '').trim();
+    const textContent = _docHtml(docs[key]).replace(/<[^>]*>/g, '').trim();
     if (textContent.length > 10) { lastActiveDate = key; break; }
   }
 
@@ -12449,7 +12452,7 @@ function renderSessionResidue() {
   const dayLabel = lastActiveDate === yesterdayStr ? 'yesterday' : lastActiveDate;
 
   // Jots: count meaningful paragraphs in that day's doc
-  const docHtml = docs[lastActiveDate] || '';
+  const docHtml = _docHtml(docs[lastActiveDate]);
   const jotBlocks = (docHtml.match(/<p>(?!<br\s*\/?>|&nbsp;|\s*<)/gi) || []).length;
   const docText = (() => { const t = document.createElement('div'); t.innerHTML = docHtml; return (t.textContent||'').trim(); })();
 
