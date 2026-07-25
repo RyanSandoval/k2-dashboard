@@ -53,9 +53,10 @@ STEP 4 — Merge into tasks (deterministic, deduped):
 STEP 5 — Always disable Pieces again (even if earlier steps failed):
   Run:  `openclaw mcp configure pieces --disable && openclaw mcp reload`
 
-STEP 6 — Post a short summary to #k2-health (channel:1476441496088477788) via
-  `openclaw message send`: counts {new, updated, unanchored}, the initiatives touched, and
-  any "voice coverage OFF" note. Keep it under 8 lines. Do not paste secrets.
+STEP 6 — Make your FINAL response a short summary (the cron delivers it to #k2-health via
+  announce — do NOT call `openclaw message send` yourself, that double-posts). Include:
+  counts {new, updated, unanchored}, the initiatives touched, and any "voice coverage OFF"
+  note. Keep it under 8 lines. Do not paste secrets.
 
 Order guarantee: run STEP 5 in a finally/always sense — Pieces must return to dormant even
 if STEP 2–4 error out.
