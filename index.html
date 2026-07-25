@@ -7549,6 +7549,14 @@ function navigateToJotSource(date) {
     if (typeof showToast === 'function') showToast(`No jot for ${date}`);
     return;
   }
+  // Clear any active jot search so the target date's header is rendered in the DOM.
+  // If a search query is active, renderPreviousDays only emits matching dates —
+  // the header for an unrelated date will be absent and the scroll will silently fail.
+  if (dailyDocSearchQuery) {
+    dailyDocSearchQuery = '';
+    const searchEl = document.getElementById('jot-search');
+    if (searchEl) searchEl.value = '';
+  }
   navigateTo('jots');
   setTimeout(() => {
     const today = getTodayStr();
@@ -7565,7 +7573,7 @@ function navigateToJotSource(date) {
     const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
     if (!header) {
       if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+        showToast(`Jot ${date} not found — it may not exist in your daily docs`);
       }
       return;
     }
