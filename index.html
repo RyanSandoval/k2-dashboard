@@ -1807,6 +1807,21 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   @media (max-width: 768px) {
     .k2pal-mobile-fab { display: flex; }
   }
+
+  /* ── Touch target fixes (Apple HIG 44×44px minimum) ── */
+  @media (max-width: 768px) {
+    /* Expand ✕ close button from 32×32 to 44×44 */
+    .mobile-more-close {
+      width: 44px;
+      height: 44px;
+    }
+    /* Expand drag handle hit area; keep visual pill unchanged via padding */
+    .mobile-more-handle {
+      padding: 19px 0;
+      margin: -15px auto -3px;
+      background-clip: content-box;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
