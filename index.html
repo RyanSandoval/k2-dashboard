@@ -3360,6 +3360,41 @@ async function uploadFileToRepo(file, folder = 'attachments/notes') {
 }
 window.uploadFileToRepo = uploadFileToRepo;
 
+// ─── Authenticated image loading ─────────────────────────────────────────────
+// k2-data is a PRIVATE repo, so the raw.githubusercontent.com URLs we persist in
+// note/jot content 404 for a plain unauthenticated <img>. That's the "image
+// shows (blob preview) then disappears (swap to raw URL)" bug. On render we swap
+// those <img> srcs to authenticated object URLs fetched with GH_TOKEN. Cached by
+// raw URL so repeated notes reuse one blob; fresh pastes pre-seed the cache with
+// the object URL we already have, so there's no refetch and no 404 flash.
+const _privImgCache = new Map(); // rawUrl -> object URL
+async function _fetchPrivateImage(rawUrl) {
+  if (_privImgCache.has(rawUrl)) return _privImgCache.get(rawUrl);
+  const prefix = `https://raw.githubusercontent.com/${DATA_REPO}/main/`;
+  if (!rawUrl.startsWith(prefix)) return rawUrl; // not ours — leave untouched
+  const path = rawUrl.slice(prefix.length);
+  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, {
+    headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.raw' },
+  });
+  if (!res.ok) throw new Error(`image fetch ${res.status}`);
+  const obj = URL.createObjectURL(await res.blob());
+  _privImgCache.set(rawUrl, obj);
+  return obj;
+}
+async function hydratePrivateImages(root) {
+  if (!root || !GH_TOKEN || !root.querySelectorAll) return;
+  const prefix = `https://raw.githubusercontent.com/${DATA_REPO}/main/`;
+  for (const img of root.querySelectorAll('img')) {
+    const rawUrl = img.getAttribute('src') || '';
+    if (!rawUrl.startsWith(prefix)) continue;      // already an object URL or foreign
+    if (img.dataset.k2imgFor === rawUrl) continue; // hydration already in flight/done
+    img.dataset.k2imgFor = rawUrl;
+    try { img.src = await _fetchPrivateImage(rawUrl); }
+    catch (_) { img.dataset.k2imgFor = ''; }        // leave raw; retry on next pass
+  }
+}
+window.hydratePrivateImages = hydratePrivateImages;
+
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
@@ -3837,8 +3872,14 @@ function renderActivity() {
   }
 
   if (doneInView.length) {
+    const DONE_CAP = 100;
+    const doneShown = doneInView.slice(0, DONE_CAP);
+    const doneExtra = doneInView.length - doneShown.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">Recent</div>`;
-    html += doneInView.map(renderRow).join('');
+    html += doneShown.map(renderRow).join('');
+    if (doneExtra > 0) {
+      html += `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text-dim);">${doneExtra} older entries not shown</div>`;
+    }
   }
 
   container.innerHTML = html;
@@ -11325,12 +11366,14 @@ function initTodayEditor(today) {
   }
 }
 
+const PREV_DAYS_PAGE_SIZE = 30;
+
 function renderPreviousDays(today) {
   const container = document.getElementById('daily-doc-previous');
   if (!container) return;
 
   const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
-  
+
   // Filter by search
   const filteredDates = dailyDocSearchQuery
     ? allDates.filter(d => {
@@ -11344,16 +11387,22 @@ function renderPreviousDays(today) {
     return;
   }
 
+  // When not searching, cap the number of days rendered to avoid DOM bloat.
+  // Users with months of daily docs would otherwise push node counts into the thousands.
+  const limit = dailyDocSearchQuery ? filteredDates.length : (window._prevDayLimit || PREV_DAYS_PAGE_SIZE);
+  const visibleDates = filteredDates.slice(0, limit);
+  const hiddenCount = filteredDates.length - visibleDates.length;
+
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
+  const dayNodes = visibleDates.map(date => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
     const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
     // Get preview text (strip HTML)
     const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
+
     return `
       <div class="jot-day-section">
         <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
@@ -11366,10 +11415,16 @@ function renderPreviousDays(today) {
         </div>
       </div>
     `;
-  }).join('');
+  });
+
+  const loadMoreBtn = hiddenCount > 0
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._prevDayLimit=(window._prevDayLimit||${PREV_DAYS_PAGE_SIZE})+${PREV_DAYS_PAGE_SIZE};renderPreviousDays('${today}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:6px 18px;font-size:12px;cursor:pointer;">Load ${Math.min(hiddenCount, PREV_DAYS_PAGE_SIZE)} older days (${hiddenCount} remaining)</button></div>`
+    : '';
+
+  container.innerHTML = dayNodes.join('') + loadMoreBtn;
 
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
+  visibleDates.forEach(date => {
     if (dailyDocSearchQuery || window._openDocDays.has(date)) {
       initPreviousDayEditor(date);
     }
@@ -16125,6 +16180,11 @@ function createEditor(element, content, options = {}) {
       }
       try {
         const url = await uploadPastedImage(file);
+        // Persist the raw URL but reuse the object URL we already have for display
+        // (k2-data is private — the raw URL 404s in a plain <img>). Keying the
+        // cache on the raw URL means hydratePrivateImages shows it with no refetch
+        // and no 404 flash, so we must NOT revoke localUrl on success.
+        _privImgCache.set(url, localUrl);
         // Find the placeholder node by title=tempId and swap src.
         const { state } = view;
         let pos = null;
@@ -16135,11 +16195,11 @@ function createEditor(element, content, options = {}) {
           const tr = view.state.tr.setNodeMarkup(pos, undefined, { src: url, alt: '', title: null });
           view.dispatch(tr);
         }
+        hydratePrivateImages(view.dom);
         if (typeof window.showToast === 'function') window.showToast('Image uploaded');
       } catch (e) {
         console.error('[K2] image upload failed:', e);
         if (typeof window.showToast === 'function') window.showToast('Image upload failed: ' + e.message);
-      } finally {
         URL.revokeObjectURL(localUrl);
       }
     });
@@ -16252,6 +16312,7 @@ function createEditor(element, content, options = {}) {
     onUpdate({ editor, transaction }) {
       if (options.editable === false) return;
       handleEditorUpdate(editor);
+      hydratePrivateImages(editor.view.dom);
       if (options.onUpdate) options.onUpdate({ editor, transaction });
     },
     onSelectionUpdate({ editor }) {
@@ -16288,6 +16349,11 @@ function createEditor(element, content, options = {}) {
     bar.appendChild(btn); bar.appendChild(input);
     element.insertBefore(bar, element.firstChild);
   }
+
+  // Swap any private-repo image URLs in the freshly-mounted content to
+  // authenticated object URLs so they actually load (covers read-only notes,
+  // which never fire onUpdate).
+  setTimeout(() => { try { hydratePrivateImages(editor.view.dom); } catch (_) {} }, 0);
 
   return editor;
 }
