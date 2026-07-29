@@ -3837,8 +3837,14 @@ function renderActivity() {
   }
 
   if (doneInView.length) {
+    const DONE_CAP = 100;
+    const doneShown = doneInView.slice(0, DONE_CAP);
+    const doneExtra = doneInView.length - doneShown.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">Recent</div>`;
-    html += doneInView.map(renderRow).join('');
+    html += doneShown.map(renderRow).join('');
+    if (doneExtra > 0) {
+      html += `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text-dim);">${doneExtra} older entries not shown</div>`;
+    }
   }
 
   container.innerHTML = html;
@@ -11325,12 +11331,14 @@ function initTodayEditor(today) {
   }
 }
 
+const PREV_DAYS_PAGE_SIZE = 30;
+
 function renderPreviousDays(today) {
   const container = document.getElementById('daily-doc-previous');
   if (!container) return;
 
   const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
-  
+
   // Filter by search
   const filteredDates = dailyDocSearchQuery
     ? allDates.filter(d => {
@@ -11344,16 +11352,22 @@ function renderPreviousDays(today) {
     return;
   }
 
+  // When not searching, cap the number of days rendered to avoid DOM bloat.
+  // Users with months of daily docs would otherwise push node counts into the thousands.
+  const limit = dailyDocSearchQuery ? filteredDates.length : (window._prevDayLimit || PREV_DAYS_PAGE_SIZE);
+  const visibleDates = filteredDates.slice(0, limit);
+  const hiddenCount = filteredDates.length - visibleDates.length;
+
   // Clear stale editor state before rebuilding DOM
   window._previousEditors = {};
 
-  container.innerHTML = filteredDates.map(date => {
+  const dayNodes = visibleDates.map(date => {
     const dow = getDayName(date);
     const doc = DATA.dailyDocs[date];
     const isOpen = dailyDocSearchQuery || window._openDocDays.has(date);
     // Get preview text (strip HTML)
     const previewText = (doc.content || '').replace(/<[^>]+>/g, '').slice(0, 80);
-    
+
     return `
       <div class="jot-day-section">
         <div class="jot-day-header ${isOpen ? 'open' : ''}" data-date="${date}" onclick="toggleDocDay(this)">
@@ -11366,10 +11380,16 @@ function renderPreviousDays(today) {
         </div>
       </div>
     `;
-  }).join('');
+  });
+
+  const loadMoreBtn = hiddenCount > 0
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._prevDayLimit=(window._prevDayLimit||${PREV_DAYS_PAGE_SIZE})+${PREV_DAYS_PAGE_SIZE};renderPreviousDays('${today}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:6px 18px;font-size:12px;cursor:pointer;">Load ${Math.min(hiddenCount, PREV_DAYS_PAGE_SIZE)} older days (${hiddenCount} remaining)</button></div>`
+    : '';
+
+  container.innerHTML = dayNodes.join('') + loadMoreBtn;
 
   // Initialize read-only editors for open days
-  filteredDates.forEach(date => {
+  visibleDates.forEach(date => {
     if (dailyDocSearchQuery || window._openDocDays.has(date)) {
       initPreviousDayEditor(date);
     }
