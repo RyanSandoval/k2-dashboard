@@ -3297,34 +3297,69 @@ async function loadData() {
   }
 }
 
+// Top-level keys authored server-side by crons/automations (written to data.json
+// every ~3 min via k2_data_set.py). On save we REBASE onto the fresh server copy
+// and keep THESE keys from the server, so a stale browser copy never clobbers
+// cron output. Every other key is user-edited and stays browser-authoritative,
+// so a just-added note/jot/edit always wins. This replaces the old behavior where
+// a sha conflict (constant, given cron write frequency) made saveData() reload the
+// server copy and SILENTLY DROP the user's edit — the "my notes vanish on refresh" bug.
+const SERVER_OWNED_KEYS = new Set([
+  'cronJobs', 'cronJobsMeta', 'cronSpend',
+  'actionInbox', 'actionInboxMeta', 'actionLedger',
+  'combinedMm', 'trading',
+  'floatingDecisions', 'floatingDecisionsMeta',
+  'decisionsNeeded', 'decisionsNeededMeta',
+  'specOpenQuestions', 'specOpenQuestionsMeta',
+  'goldfishScan', 'jiraBallBack',
+  'familyFinanceSnapshot', 'familyFinanceSnapshotMeta',
+  'commitmentsMeta', 'jotPromoterMeta',
+  'vikingInsights', 'dailyAdvisor', 'k2Inbox', 'staleJotState',
+  'twoOfUsRitual', 'twoOfUsRitualMeta', 'repoScout',
+]);
+
+function _decodeGhJson(file) {
+  return JSON.parse(new TextDecoder().decode(
+    Uint8Array.from(atob(file.content.replace(/\n/g, '')), c => c.charCodeAt(0))));
+}
+
 async function saveData() {
   if (!GH_TOKEN) { console.warn('[K2] saveData: No GH_TOKEN set'); return; }
-  console.log('[K2] saveData: Starting save, tasks count:', DATA.tasks.length);
   const syncEl = document.getElementById('last-sync');
   if (syncEl) syncEl.innerHTML = '<span style="color:var(--yellow);">⏳ Saving...</span>';
-  try {
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
-    const body = {
-      message: `Data update ${new Date().toISOString()}`,
-      content: content
-    };
-    if (GH_SHA) body.sha = GH_SHA;
-    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${DATA_FILE}`, {
-      method: 'PUT',
-      headers: ghHeaders(),
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) {
-      if (res.status === 409) { await loadData(); return; }
-      throw new Error(`GitHub API ${res.status}`);
+  const url = `https://api.github.com/repos/${DATA_REPO}/contents/${DATA_FILE}`;
+  const MAX_ATTEMPTS = 6;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      // Rebase onto the CURRENT server copy so we merge on top of whatever the
+      // crons just wrote, instead of racing a stale sha and losing the edit.
+      const cur = await fetch(url, { headers: ghHeaders() });
+      if (!cur.ok) throw new Error(`GET ${cur.status}`);
+      const file = await cur.json();
+      const server = _decodeGhJson(file);
+      // Pull fresh cron-owned keys (and any key we don't have locally) into our
+      // in-memory DATA; leave every user-edited key untouched so it persists.
+      for (const k of Object.keys(server)) {
+        if (SERVER_OWNED_KEYS.has(k) || !(k in DATA)) DATA[k] = server[k];
+      }
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: ghHeaders(),
+        body: JSON.stringify({ message: `Data update ${new Date().toISOString()}`, content, sha: file.sha }),
+      });
+      if (res.status === 409 || res.status === 422) continue; // raced a cron between GET and PUT — rebase and retry
+      if (!res.ok) throw new Error(`PUT ${res.status}`);
+      const result = await res.json();
+      GH_SHA = result.content.sha;
+      window.DATA = DATA;
+      if (syncEl) syncEl.innerHTML = `<span style="color:var(--green);">✓</span> ${new Date().toLocaleTimeString()}`;
+      console.log('[K2] saveData: Success (rebased, attempt ' + attempt + '). SHA:', GH_SHA);
+      return;
+    } catch (e) {
+      console.error(`[K2] saveData attempt ${attempt} failed:`, e);
+      if (attempt === MAX_ATTEMPTS && syncEl) syncEl.innerHTML = '<span style="color:var(--red);">✕ Save failed</span>';
     }
-    const result = await res.json();
-    GH_SHA = result.content.sha;
-    if (syncEl) syncEl.innerHTML = `<span style="color:var(--green);">✓</span> ${new Date().toLocaleTimeString()}`;
-    console.log('[K2] saveData: Success! SHA:', GH_SHA);
-  } catch(e) {
-    console.error('[K2] saveData failed:', e);
-    if (syncEl) syncEl.innerHTML = '<span style="color:var(--red);">✕ Save failed</span>';
   }
 }
 
