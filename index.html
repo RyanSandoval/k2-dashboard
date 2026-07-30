@@ -7751,12 +7751,31 @@ function navigateToJotSource(date) {
     // hidden div — which is why this used to dump you on the jots overview.
     // Expand the day via toggleDocDay first (it shows content + inits the
     // editor), then scroll the day header into view.
-    const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
+    //
+    // Dates older than _prevDayLimit (default 30) are never rendered — the
+    // header won't exist in the DOM even though the data is present. Detect
+    // this case, expand the limit to cover the target date, and re-render
+    // before scrolling.
+    let header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
     if (!header) {
-      if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+      // Check whether the date exists in data but is beyond the render window
+      const allDates = Object.keys(DATA.dailyDocs || {}).filter(d => d !== today).sort().reverse();
+      const targetIndex = allDates.indexOf(date);
+      if (targetIndex === -1) {
+        // Date genuinely not present (data gap or search filtered it out)
+        if (typeof showToast === 'function') {
+          showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+        }
+        return;
       }
-      return;
+      // Date exists but is outside the rendered window — expand limit and re-render
+      window._prevDayLimit = targetIndex + 1;
+      if (typeof renderPreviousDays === 'function') renderPreviousDays(today);
+      header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
+      if (!header) {
+        if (typeof showToast === 'function') showToast(`Couldn't surface jot for ${date}`);
+        return;
+      }
     }
     if (!header.classList.contains('open') && typeof toggleDocDay === 'function') toggleDocDay(header);
     header.scrollIntoView({ behavior: 'smooth', block: 'start' });
