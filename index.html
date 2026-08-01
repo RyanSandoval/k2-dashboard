@@ -12886,7 +12886,7 @@ function renderSessionResidue() {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    const textContent = (docs[key] || '').replace(/<[^>]*>/g, '').trim();
+    const textContent = ((docs[key] && docs[key].content) || '').replace(/<[^>]*>/g, '').trim();
     if (textContent.length > 10) { lastActiveDate = key; break; }
   }
 
@@ -12910,7 +12910,7 @@ function renderSessionResidue() {
   const dayLabel = lastActiveDate === yesterdayStr ? 'yesterday' : lastActiveDate;
 
   // Jots: count meaningful paragraphs in that day's doc
-  const docHtml = docs[lastActiveDate] || '';
+  const docHtml = (docs[lastActiveDate] && docs[lastActiveDate].content) || '';
   const jotBlocks = (docHtml.match(/<p>(?!<br\s*\/?>|&nbsp;|\s*<)/gi) || []).length;
   const docText = (() => { const t = document.createElement('div'); t.innerHTML = docHtml; return (t.textContent||'').trim(); })();
 
