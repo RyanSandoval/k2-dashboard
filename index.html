@@ -1089,18 +1089,28 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
   .mobile-more-drawer.open { transform: translateY(0); }
   .mobile-more-handle {
+    width: 60px; height: 44px;
+    background: transparent;
+    border-radius: 3px;
+    margin: 0 auto 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-more-handle::before {
+    content: '';
+    display: block;
     width: 60px; height: 6px;
     background: var(--border);
     border-radius: 3px;
-    margin: 4px auto 12px;
-    cursor: pointer;
-    touch-action: manipulation;
   }
-  .mobile-more-handle:active { background: var(--text-dim); }
+  .mobile-more-handle:active::before { background: var(--text-dim); }
   .mobile-more-close {
     position: absolute;
     top: 8px; right: 12px;
-    width: 32px; height: 32px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -1823,6 +1833,18 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     .jot-day-header {
       min-height: 44px;
       padding: 4px 0;
+    }
+    /* The checkbox stays visually 18px but gets a 44px invisible hit area so
+       taps actually land on mobile (was the "can't close a commitment" bug). */
+    .task-check { position: relative; }
+    .task-check::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 44px;
+      height: 44px;
+      transform: translate(-50%, -50%);
     }
   }
 </style>
