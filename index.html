@@ -11676,7 +11676,7 @@ function renderPreviousDays(today) {
   });
 
   const loadMoreBtn = hiddenCount > 0
-    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._prevDayLimit=(window._prevDayLimit||${PREV_DAYS_PAGE_SIZE})+${PREV_DAYS_PAGE_SIZE};renderPreviousDays('${today}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:6px 18px;font-size:12px;cursor:pointer;">Load ${Math.min(hiddenCount, PREV_DAYS_PAGE_SIZE)} older days (${hiddenCount} remaining)</button></div>`
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._prevDayLimit=(window._prevDayLimit||${PREV_DAYS_PAGE_SIZE})+${PREV_DAYS_PAGE_SIZE};renderPreviousDays('${today}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${Math.min(hiddenCount, PREV_DAYS_PAGE_SIZE)} older days (${hiddenCount} remaining)</button></div>`
     : '';
 
   container.innerHTML = dayNodes.join('') + loadMoreBtn;
