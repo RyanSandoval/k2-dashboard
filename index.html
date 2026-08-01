@@ -8009,10 +8009,30 @@ function navigateToJotSource(date) {
     // hidden div — which is why this used to dump you on the jots overview.
     // Expand the day via toggleDocDay first (it shows content + inits the
     // editor), then scroll the day header into view.
+
+    // Clear any active jot search filter — it may be hiding the target date.
+    const searchInput = document.getElementById('jot-search');
+    if (searchInput && searchInput.value) {
+      searchInput.value = '';
+      if (typeof filterDailyDocs === 'function') filterDailyDocs();
+    }
+
+    // renderPreviousDays() caps output at window._prevDayLimit (default 30).
+    // For older dates that fall outside that window the header won't exist in
+    // the DOM. Compute the target date's position in the sorted list and bump
+    // the limit so it gets rendered before we try to scroll to it.
+    const allPrevDates = Object.keys(DATA.dailyDocs || {})
+      .filter(d => d !== today).sort().reverse();
+    const dateIndex = allPrevDates.indexOf(date);
+    if (dateIndex >= 0 && dateIndex >= (window._prevDayLimit || PREV_DAYS_PAGE_SIZE)) {
+      window._prevDayLimit = dateIndex + 5; // small buffer so adjacent days are also visible
+      if (typeof renderPreviousDays === 'function') renderPreviousDays(today);
+    }
+
     const header = document.querySelector(`.jot-day-header[data-date="${date}"]`);
     if (!header) {
       if (typeof showToast === 'function') {
-        showToast(`Jot ${date} isn't in the current view — clear the Jots search or scroll back`);
+        showToast(`Jot ${date} not found — it may not exist in your data`);
       }
       return;
     }
