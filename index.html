@@ -13347,25 +13347,6 @@ function showToast(msg) {
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
 }
 
-// ═══════════════════════════════════════
-// JOT DRAG-REORDER
-// ═══════════════════════════════════════
-// Legacy jot drag functions (no-ops for backward compat)
-function jotDragStart() {}
-function jotDragOver() {}
-function jotDragLeave() {}
-async function jotDrop() {}
-function initJotDragDrop() {}
-function handleJotFileAttach() {}
-function processDroppedFiles() {}
-function removePendingFile() {}
-async function editJotLinks() {}
-async function saveJotLinks() {}
-
-/* Removed legacy jot drag/drop/file code — replaced by TipTap editor */
-void function legacyJotStub() {
-}();
-
 // Click-to-navigate for note mention chips
 document.addEventListener('click', (e) => {
   const chip = e.target.closest('.mention-note');
