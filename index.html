@@ -1949,6 +1949,14 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span class="icon">🤝</span> Commitments
         <span class="badge" id="commitments-badge" style="display:none">0</span>
       </div>
+      <div class="nav-item" data-page="ball-back">
+        <span class="icon">🏓</span> Ball Back
+        <span class="badge" id="ball-back-badge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-page="goldfish-scan">
+        <span class="icon">🐟</span> Saw / Didn't Act
+        <span class="badge" id="goldfish-scan-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" data-page="activity">
         <span class="icon">📜</span> Activity
         <span class="badge" id="activity-badge" style="display:none">0</span>
@@ -2494,6 +2502,30 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
       </div>
       <div id="commitments-list"><!-- Populated by renderCommitments() --></div>
+    </div>
+
+    <!-- Jira Ball-Back Page — cron: jira_ballback_scan.py writes DATA.jiraBallBack -->
+    <div class="page" id="page-ball-back" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div>
+          <h2>🏓 Ball Back</h2>
+          <p>Jira tickets where someone replied and it's your move again. Direct @mentions first, then assignee, reporter, watching.</p>
+        </div>
+        <div id="ball-back-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="ball-back-list"><!-- Populated by renderJiraBallBack() --></div>
+    </div>
+
+    <!-- Goldfish "Saw It, Didn't Act" Page — cron writes DATA.goldfishScan each morning -->
+    <div class="page" id="page-goldfish-scan" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div>
+          <h2>🐟 Saw It, Didn't Act</h2>
+          <p>Things you looked at yesterday that imply an unfinished follow-up — pulled from Goldfish screen/browser memory each morning.</p>
+        </div>
+        <div id="goldfish-scan-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="goldfish-scan-list"><!-- Populated by renderGoldfishScan() --></div>
     </div>
 
     <!-- Activity Ledger Page -->
@@ -3068,6 +3100,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
       <div class="mobile-more-item" data-page="action-inbox" onclick="mobileNavMore('action-inbox')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🎯</span>Action Inbox<span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
+      <div class="mobile-more-item" data-page="commitments" onclick="mobileNavMore('commitments')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🤝</span>Commitments<span id="mobile-commitments-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="activity" onclick="mobileNavMore('activity')" style="position:relative;"><span class="icon">📜</span>Activity<span id="mobile-activity-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
@@ -3259,6 +3292,8 @@ async function loadData() {
     DATA.dailyAdvisor = d.dailyAdvisor || { items: [], dismissedQuotes: [], lastRunAt: null };
     DATA.jiraRequests = Array.isArray(d.jiraRequests) ? d.jiraRequests : [];
     DATA.jiraLedger = Array.isArray(d.jiraLedger) ? d.jiraLedger : [];
+    DATA.jiraBallBack = (d.jiraBallBack && typeof d.jiraBallBack === 'object') ? d.jiraBallBack : { items: [], count: 0, lastRunAt: null };
+    DATA.goldfishScan = (d.goldfishScan && typeof d.goldfishScan === 'object') ? d.goldfishScan : { items: [], count: 0, lastRunAt: null };
     DATA.actionInbox = Array.isArray(d.actionInbox) ? d.actionInbox : [];
     DATA.actionLedger = Array.isArray(d.actionLedger) ? d.actionLedger : [];
     DATA.actionInboxMeta = d.actionInboxMeta || DATA.actionInboxMeta || {};
@@ -3451,7 +3486,7 @@ window.hydratePrivateImages = hydratePrivateImages;
 function renderAll() {
   const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
                renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderCommitments, renderFloatingDecisions, renderSessionResidue, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
+               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderCommitments, renderJiraBallBack, renderGoldfishScan, renderFloatingDecisions, renderSessionResidue, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
   }
@@ -3535,6 +3570,8 @@ function navigateTo(page) {
   if (page === 'jira-ledger') renderJiraLedger();
   if (page === 'action-inbox') renderActionInbox();
   if (page === 'commitments') renderCommitments();
+  if (page === 'ball-back') renderJiraBallBack();
+  if (page === 'goldfish-scan') renderGoldfishScan();
   if (page === 'activity') renderActivity();
   if (page === 'stale-jots') renderStaleJots();
   if (page === 'stale-notes') renderStaleNotes();
@@ -3832,6 +3869,152 @@ function renderCommitments() {
   container.innerHTML = html;
 }
 window.renderCommitments = renderCommitments;
+
+// ============================================================
+// JIRA BALL-BACK  (idea 2026-07-26 #3 — "Jira Comment Response → Ball-Back Alert")
+// Cron scanner: k2-dashboard/scripts/jira_ballback_scan.py -> DATA.jiraBallBack
+// ============================================================
+function _ballBackItems() {
+  const bb = DATA.jiraBallBack || {};
+  return Array.isArray(bb.items) ? bb.items : [];
+}
+
+function renderJiraBallBackBadge() {
+  const count = _ballBackItems().filter(i => i.mentionsMe).length;
+  const text = count > 99 ? '99+' : String(count);
+  for (const id of ['ball-back-badge', 'mobile-ball-back-badge']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (count) { el.style.display = ''; el.textContent = text; }
+    else { el.style.display = 'none'; }
+  }
+}
+window.renderJiraBallBackBadge = renderJiraBallBackBadge;
+
+function renderJiraBallBack() {
+  renderJiraBallBackBadge();
+  const container = document.getElementById('ball-back-list');
+  if (!container) return;
+  const items = _ballBackItems();
+  const meta = document.getElementById('ball-back-meta');
+  if (meta) {
+    const last = DATA.jiraBallBack?.lastRunAt;
+    meta.textContent = last ? `${items.length} waiting · scanned ${_actionInboxAgeStr(last)}` : `${items.length} waiting`;
+  }
+
+  if (!items.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">Nothing waiting on you in Jira. 🎉</div>`;
+    return;
+  }
+
+  const esc = s => String(s || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;');
+  const roleChip = role => {
+    const c = role === 'assignee' ? 'var(--accent)' : (role === 'reporter' ? 'var(--yellow)' : 'var(--text-muted)');
+    return `<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,${c} 16%,transparent);color:${c};font-weight:600;">${esc(role)}</span>`;
+  };
+
+  const row = it => {
+    const asked = it.mentionsMe
+      ? '<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--red) 20%,transparent);color:var(--red);font-weight:700;">@ you</span>'
+      : '';
+    const age = it.lastCommentAt ? _actionInboxAgeStr(it.lastCommentAt) : '';
+    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;">
+      <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;">
+        <a href="${esc(it.url)}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;">${esc(it.key)}</a>
+        <span style="font-size:13px;color:var(--text);flex:1;min-width:180px;line-height:1.35;">${esc(it.summary)}</span>
+      </div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text-dim);line-height:1.45;"><strong style="color:var(--text-muted);font-weight:600;">${esc(it.lastCommenter)}:</strong> ${esc(it.snippet)}</div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        ${asked}
+        ${roleChip(it.role)}
+        <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-weight:600;">${esc(it.status)}</span>
+        ${age ? `<span style="font-size:11px;color:var(--text-muted);">replied ${age}</span>` : ''}
+      </div>
+    </div>`;
+  };
+
+  const asked = items.filter(i => i.mentionsMe);
+  const rest = items.filter(i => !i.mentionsMe);
+  let html = '';
+  if (asked.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.4px;text-transform:uppercase;padding:4px 0 8px;">🔴 Directly asked (${asked.length})</div>`;
+    html += asked.map(row).join('');
+  }
+  if (rest.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.4px;text-transform:uppercase;padding:16px 0 8px;">Ball's in your court (${rest.length})</div>`;
+    html += rest.map(row).join('');
+  }
+  container.innerHTML = html;
+}
+window.renderJiraBallBack = renderJiraBallBack;
+
+// ============================================================
+// GOLDFISH "SAW IT, DIDN'T ACT"  (idea 2026-07-26 #1)
+// Cron agentTurn queries Goldfish -> emits JSON -> goldfish_scan_sync.py -> DATA.goldfishScan
+// item shape: {id, title, why, source, url?, seenAt, suggestedAction, dismissed?}
+// ============================================================
+function _goldfishItems() {
+  const g = DATA.goldfishScan || {};
+  return (Array.isArray(g.items) ? g.items : []).filter(i => !i.dismissed);
+}
+
+function renderGoldfishScanBadge() {
+  const count = _goldfishItems().length;
+  const text = count > 99 ? '99+' : String(count);
+  for (const id of ['goldfish-scan-badge', 'mobile-goldfish-scan-badge']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (count) { el.style.display = ''; el.textContent = text; }
+    else { el.style.display = 'none'; }
+  }
+}
+window.renderGoldfishScanBadge = renderGoldfishScanBadge;
+
+async function goldfishDismiss(id) {
+  const g = DATA.goldfishScan || {};
+  const it = (g.items || []).find(x => String(x.id) === String(id));
+  if (it) { it.dismissed = true; await saveData(); }
+  renderGoldfishScan();
+}
+window.goldfishDismiss = goldfishDismiss;
+
+function renderGoldfishScan() {
+  renderGoldfishScanBadge();
+  const container = document.getElementById('goldfish-scan-list');
+  if (!container) return;
+  const items = _goldfishItems();
+  const meta = document.getElementById('goldfish-scan-meta');
+  if (meta) {
+    const last = DATA.goldfishScan?.lastRunAt;
+    meta.textContent = last ? `${items.length} open · scanned ${_actionInboxAgeStr(last)}` : `${items.length} open`;
+  }
+
+  if (!items.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">Nothing flagged. Either you acted on everything, or the morning scan hasn't run yet.</div>`;
+    return;
+  }
+
+  const esc = s => String(s || '').replace(/[<>]/g, c => c === '<' ? '&lt;' : '&gt;');
+  const html = items.map(it => {
+    const link = it.url
+      ? `<a href="${esc(it.url)}" target="_blank" rel="noopener" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border);color:var(--accent);text-decoration:none;white-space:nowrap;">↗ Open</a>`
+      : '';
+    const age = it.seenAt ? _actionInboxAgeStr(it.seenAt) : '';
+    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;">
+      <div style="font-size:14px;color:var(--text);font-weight:600;line-height:1.35;">${esc(it.title)}</div>
+      ${it.why ? `<div style="margin-top:5px;font-size:12px;color:var(--text-dim);line-height:1.45;">${esc(it.why)}</div>` : ''}
+      ${it.suggestedAction ? `<div style="margin-top:6px;font-size:12px;color:var(--text);"><strong style="font-weight:600;color:var(--text-muted);">Next:</strong> ${esc(it.suggestedAction)}</div>` : ''}
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        ${it.source ? `<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-weight:600;">${esc(it.source)}</span>` : ''}
+        ${age ? `<span style="font-size:11px;color:var(--text-muted);">saw ${age}</span>` : ''}
+        ${link}
+        <button onclick="goldfishDismiss('${esc(it.id)}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text-dim);margin-left:auto;">Dismiss</button>
+      </div>
+    </div>`;
+  }).join('');
+  container.innerHTML = html;
+}
+window.renderGoldfishScan = renderGoldfishScan;
 
 // ============================================================
 // ACTIVITY LEDGER
