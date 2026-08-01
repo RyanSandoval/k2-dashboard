@@ -8410,6 +8410,11 @@ function formatTaskTextDisplay(text) {
 window._focusSections = window._focusSections || {};
 function toggleFocusSection(id) {
   window._focusSections[id] = !window._focusSections[id];
+  // When a section is collapsed, clear its "show all" state so re-expanding
+  // starts back at the capped view (avoids stale large renders accumulating).
+  if (!window._focusSections[id] && window._focusSectionsShowAll) {
+    delete window._focusSectionsShowAll[id];
+  }
   renderTasks();
 }
 
@@ -8485,11 +8490,25 @@ function renderTaskRow(task) {
     '</li>';
 }
 
+// Maximum rows rendered per section when the section is open. Keeps DOM node
+// count under control on large task lists. Users can reveal all rows with the
+// "Show all N" button; that state is stored in window._focusSectionsShowAll.
+var TASK_SECTION_OPEN_LIMIT = 25;
+
 function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   if (tasks.length === 0) return '';
   // If user has explicitly toggled, respect that. Otherwise use default collapsed state.
   var isOpen = (id in (window._focusSections || {})) ? !!window._focusSections[id] : !collapsed;
+  // Collapsed-state cap (existing): only show `limit` rows when section is folded.
   var shown = (limit && !isOpen) ? tasks.slice(0, limit) : tasks;
+  // Open-state cap (new): when the section is expanded and has many tasks, render
+  // only TASK_SECTION_OPEN_LIMIT rows unless the user has clicked "Show all".
+  var showAll = window._focusSectionsShowAll && window._focusSectionsShowAll[id];
+  var openOverflow = 0;
+  if (isOpen && !showAll && shown.length > TASK_SECTION_OPEN_LIMIT) {
+    openOverflow = shown.length - TASK_SECTION_OPEN_LIMIT;
+    shown = shown.slice(0, TASK_SECTION_OPEN_LIMIT);
+  }
   return '<div style="margin-bottom:20px;">' +
     '<div onclick="toggleFocusSection(\'' + id + '\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;user-select:none;border-radius:var(--radius-sm);transition:background 0.1s;" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'transparent\'">' +
     '<span style="font-size:14px;color:var(--text-dim);transition:transform 0.2s;' + (isOpen ? 'transform:rotate(90deg);' : '') + '">▶</span>' +
@@ -8498,6 +8517,7 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
     '<span style="font-size:12px;padding:2px 10px;border-radius:10px;background:var(--surface2);color:var(--text-dim);font-weight:600;">' + tasks.length + '</span>' +
     '</div>' +
     (isOpen ? '<ul class="task-list">' + shown.map(function(t){ return renderTaskRow(t); }).join('') + '</ul>' : '') +
+    (isOpen && openOverflow > 0 ? '<div style="padding:6px 0 0 28px;font-size:12px;color:var(--accent);cursor:pointer;" onclick="(window._focusSectionsShowAll=window._focusSectionsShowAll||{})[' + JSON.stringify(id) + ']=true;renderTasks()">+ ' + openOverflow + ' more — Show all ' + tasks.length + ' ▾</div>' : '') +
     (limit && tasks.length > limit && !isOpen ? '<div style="padding:4px 0 0 28px;font-size:12px;color:var(--accent);cursor:pointer;" onclick="toggleFocusSection(\'' + id + '\')">Show all ' + tasks.length + ' ▾</div>' : '') +
     '</div>';
 }
