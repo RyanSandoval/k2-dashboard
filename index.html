@@ -9634,6 +9634,8 @@ let _clipsFilter = 'all';
 
 function setClipsFilter(filter, btn) {
   _clipsFilter = filter;
+  // Reset show-all when switching filters so the cap applies to the new result set.
+  window._clipsShowAll = false;
   document.querySelectorAll('.clips-filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderClipsList();
@@ -9668,7 +9670,14 @@ function renderClipsList() {
     return;
   }
 
-  container.innerHTML = clips.map(clip => {
+  // Cap initial render to keep DOM node count manageable on large clip libraries.
+  // Reset via setClipsFilter when the user switches filter tabs.
+  const CLIPS_INITIAL_LIMIT = 30;
+  const clipsLimit = window._clipsShowAll ? clips.length : CLIPS_INITIAL_LIMIT;
+  const clipsVisible = clips.slice(0, clipsLimit);
+  const clipsHidden = clips.length - clipsVisible.length;
+
+  const clipsHtml = clipsVisible.map(clip => {
     let domain = '';
     try { domain = new URL(clip.url).hostname.replace(/^www\./, ''); } catch(e) {}
     const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
@@ -9713,6 +9722,12 @@ function renderClipsList() {
       </div>
     </div>`;
   }).join('');
+
+  const clipsLoadMore = clipsHidden > 0
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._clipsShowAll=true;renderClipsList()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${clipsHidden} more clip${clipsHidden === 1 ? '' : 's'}</button></div>`
+    : '';
+
+  container.innerHTML = clipsHtml + clipsLoadMore;
 }
 
 function clipRelativeTime(dateStr) {
@@ -9986,11 +10001,19 @@ document.querySelectorAll('.filter-btn[data-group="tasks"]').forEach(btn => {
 });
 
 // Render Discussions
+// Maximum discussions rendered initially to avoid DOM bloat on large datasets.
+var DISCUSSIONS_INITIAL_LIMIT = 20;
+
 function renderDiscussions() {
   const container = document.getElementById('discussions-list');
   if (!container) return;
 
-  container.innerHTML = DATA.discussions.map(discussion => `
+  const all = DATA.discussions;
+  const limit = window._showAllDiscussions ? all.length : DISCUSSIONS_INITIAL_LIMIT;
+  const visible = all.slice(0, limit);
+  const hidden = all.length - visible.length;
+
+  const html = visible.map(discussion => `
     <div class="thread">
       <div class="thread-header" onclick="toggleThread(this)">
         <span class="thread-toggle">▶</span>
@@ -9999,7 +10022,7 @@ function renderDiscussions() {
       </div>
       <div class="thread-body">
         <p style="margin-bottom:12px;">${discussion.summary}</p>
-        
+
         ${discussion.keyPoints && discussion.keyPoints.length ? `
           <div style="margin-bottom:12px;">
             <strong style="font-size:12px;color:var(--text);margin-bottom:4px;display:block;">Key Points:</strong>
@@ -10026,6 +10049,12 @@ function renderDiscussions() {
       </div>
     </div>
   `).join('');
+
+  const loadMoreBtn = hidden > 0
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._showAllDiscussions=true;renderDiscussions()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${hidden} more discussion${hidden === 1 ? '' : 's'}</button></div>`
+    : '';
+
+  container.innerHTML = html + loadMoreBtn;
 }
 
 function toggleThread(element) {
@@ -10038,6 +10067,8 @@ let _decisionFilter = 'all';
 
 function setDecisionFilter(cat) {
   _decisionFilter = cat;
+  // Reset show-all when switching categories so the cap applies to the new result set.
+  window._showAllDecisions = false;
   document.querySelectorAll('#decision-filter-pills [data-filter]').forEach(b => {
     const active = b.dataset.filter === cat;
     b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
@@ -10061,7 +10092,13 @@ function renderDecisions() {
     return;
   }
 
-  container.innerHTML = sorted.map(decision => {
+  // Cap initial render to avoid DOM bloat. Reset by setDecisionFilter when category changes.
+  const DECISIONS_INITIAL_LIMIT = 25;
+  const decLimit = window._showAllDecisions ? sorted.length : DECISIONS_INITIAL_LIMIT;
+  const decVisible = sorted.slice(0, decLimit);
+  const decHidden = sorted.length - decVisible.length;
+
+  const decHtml = decVisible.map(decision => {
     const cat = decision.category || 'other';
     const color = catColors[cat] || 'var(--text-dim)';
     const safeId = String(decision.id || '').replace(/'/g, "\\'");
@@ -10080,6 +10117,12 @@ function renderDecisions() {
       </div>
     </div>`;
   }).join('');
+
+  const decLoadMore = decHidden > 0
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._showAllDecisions=true;renderDecisions()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${decHidden} more decision${decHidden === 1 ? '' : 's'}</button></div>`
+    : '';
+
+  container.innerHTML = decHtml + decLoadMore;
 }
 
 async function deleteDecision(id, e) {
