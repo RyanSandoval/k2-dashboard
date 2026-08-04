@@ -9631,9 +9631,11 @@ document.addEventListener('keydown', (e) => {
 // ============================================================
 
 let _clipsFilter = 'all';
+const CLIPS_PAGE_SIZE = 25;
 
 function setClipsFilter(filter, btn) {
   _clipsFilter = filter;
+  window._clipsPage = 0; // reset to first page on filter change
   document.querySelectorAll('.clips-filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderClipsList();
@@ -9668,7 +9670,14 @@ function renderClipsList() {
     return;
   }
 
-  container.innerHTML = clips.map(clip => {
+  // Paginate to avoid DOM bloat when there are many clips.
+  const page = window._clipsPage || 0;
+  const start = page * CLIPS_PAGE_SIZE;
+  const visibleClips = clips.slice(start, start + CLIPS_PAGE_SIZE);
+  const hiddenCount = clips.length - (start + visibleClips.length);
+  const hasPrev = page > 0;
+
+  const cardsHtml = visibleClips.map(clip => {
     let domain = '';
     try { domain = new URL(clip.url).hostname.replace(/^www\./, ''); } catch(e) {}
     const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
@@ -9697,15 +9706,7 @@ function renderClipsList() {
       <div class="clip-actions">
         <div style="position:relative;">
           <button class="clip-action-btn" onclick="toggleClipSendMenu(${clip.id},this)" title="Send to…" aria-label="Send to…">→</button>
-          <div class="clip-send-menu" id="clip-send-menu-${clip.id}" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-            <div class="clip-send-option" onclick="clipToTask(${clip.id})">✅ Create Task</div>
-            <div class="clip-send-option" onclick="clipToNote(${clip.id})">📝 Create Note</div>
-            <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
-            <div style="padding:4px 10px;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Add to Project</div>
-            ${(DATA.projects||[]).filter(p=>p.status!=='done').map(p=>
-              `<div class="clip-send-option" onclick="clipToProject(${clip.id},'${p.id}')">🚀 ${escapeHtml(p.name)}</div>`
-            ).join('')}
-          </div>
+          <div class="clip-send-menu" id="clip-send-menu-${clip.id}" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
         </div>
         ${readBtn}
         ${archiveBtn}
@@ -9713,6 +9714,18 @@ function renderClipsList() {
       </div>
     </div>`;
   }).join('');
+
+  const prevBtn = hasPrev
+    ? `<button onclick="window._clipsPage=${page-1};renderClipsList()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">← Newer</button>`
+    : '';
+  const nextBtn = hiddenCount > 0
+    ? `<button onclick="window._clipsPage=${page+1};renderClipsList()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${Math.min(hiddenCount, CLIPS_PAGE_SIZE)} more (${hiddenCount} remaining) →</button>`
+    : '';
+  const pagerHtml = (hasPrev || hiddenCount > 0)
+    ? `<div style="display:flex;gap:8px;justify-content:center;padding:16px 0;">${prevBtn}${nextBtn}</div>`
+    : '';
+
+  container.innerHTML = cardsHtml + pagerHtml;
 }
 
 function clipRelativeTime(dateStr) {
@@ -9766,6 +9779,20 @@ function deleteClip(id, e) {
 function toggleClipSendMenu(clipId, btn) {
   const menu = document.getElementById('clip-send-menu-' + clipId);
   if (!menu) return;
+  // Lazy-populate on first open to avoid rendering all project options for every clip card at
+  // page-load time. The menu is hidden by default, so content is not needed until first open.
+  if (menu.dataset.populated !== '1') {
+    const projectOptions = (DATA.projects||[]).filter(p=>p.status!=='done').map(p=>
+      `<div class="clip-send-option" onclick="clipToProject(${clipId},'${p.id}')">🚀 ${escapeHtml(p.name)}</div>`
+    ).join('');
+    menu.innerHTML =
+      `<div class="clip-send-option" onclick="clipToTask(${clipId})">✅ Create Task</div>` +
+      `<div class="clip-send-option" onclick="clipToNote(${clipId})">📝 Create Note</div>` +
+      `<div style="border-top:1px solid var(--border);margin:4px 0;"></div>` +
+      `<div style="padding:4px 10px;font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Add to Project</div>` +
+      projectOptions;
+    menu.dataset.populated = '1';
+  }
   // Close all other menus first
   document.querySelectorAll('.clip-send-menu').forEach(m => { if (m !== menu) m.style.display = 'none'; });
   menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
@@ -10038,6 +10065,7 @@ let _decisionFilter = 'all';
 
 function setDecisionFilter(cat) {
   _decisionFilter = cat;
+  window._decisionsPage = 0; // reset to first page on filter change
   document.querySelectorAll('#decision-filter-pills [data-filter]').forEach(b => {
     const active = b.dataset.filter === cat;
     b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
@@ -10061,7 +10089,13 @@ function renderDecisions() {
     return;
   }
 
-  container.innerHTML = sorted.map(decision => {
+  const DECISIONS_PAGE_SIZE = 30;
+  const decPage = window._decisionsPage || 0;
+  const decStart = decPage * DECISIONS_PAGE_SIZE;
+  const visibleDecisions = sorted.slice(decStart, decStart + DECISIONS_PAGE_SIZE);
+  const decHiddenCount = sorted.length - (decStart + visibleDecisions.length);
+
+  const decCardsHtml = visibleDecisions.map(decision => {
     const cat = decision.category || 'other';
     const color = catColors[cat] || 'var(--text-dim)';
     const safeId = String(decision.id || '').replace(/'/g, "\\'");
@@ -10080,6 +10114,12 @@ function renderDecisions() {
       </div>
     </div>`;
   }).join('');
+
+  const decLoadMoreBtn = decHiddenCount > 0
+    ? `<div style="text-align:center;padding:16px 0;"><button onclick="window._decisionsPage=${decPage+1};renderDecisions()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${Math.min(decHiddenCount, DECISIONS_PAGE_SIZE)} older (${decHiddenCount} remaining)</button></div>`
+    : '';
+
+  container.innerHTML = decCardsHtml + decLoadMoreBtn;
 }
 
 async function deleteDecision(id, e) {
