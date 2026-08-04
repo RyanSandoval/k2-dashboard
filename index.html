@@ -16491,6 +16491,19 @@ const EmptyItemBackspace = Extension.create({
   },
 });
 
+// Heuristic: does pasted plain text contain markdown structure worth rendering?
+function looksLikeMarkdown(t) {
+  if (!t) return false;
+  return /^#{1,6}\s/m.test(t)            // headings
+    || /^\s*[-*+]\s+\S/m.test(t)        // bullet list
+    || /^\s*\d+\.\s+\S/m.test(t)      // ordered list
+    || /^\s*>\s+\S/m.test(t)            // blockquote
+    || /```/.test(t)                       // code fence
+    || /\*\*[^*]+\*\*/.test(t)         // bold
+    || /`[^`]+`/.test(t)                   // inline code
+    || /\[[^\]]+\]\([^)]+\)/.test(t); // link
+}
+
 function createEditor(element, content, options = {}) {
   const extensions = [
     StarterKit.configure({
@@ -16619,20 +16632,34 @@ function createEditor(element, content, options = {}) {
     editorProps: {
       attributes: { class: 'ProseMirror' },
       handlePaste(view, event) {
-        const items = event.clipboardData && event.clipboardData.items;
-        if (!items) return false;
+        const cd = event.clipboardData;
+        const items = cd && cd.items;
         const files = [];
-        for (const it of items) {
-          if (it.kind === 'file') {
-            const f = it.getAsFile();
-            if (f) files.push(f);
+        if (items) {
+          for (const it of items) {
+            if (it.kind === 'file') {
+              const f = it.getAsFile();
+              if (f) files.push(f);
+            }
           }
         }
-        if (!files.length) return false;
-        event.preventDefault();
-        const a = handleImageFiles(view, files);
-        const b = handleAttachmentFiles(view, files);
-        return a || b;
+        if (files.length) {
+          event.preventDefault();
+          const a = handleImageFiles(view, files);
+          const b = handleAttachmentFiles(view, files);
+          return a || b;
+        }
+        // Markdown paste -> styled rich content. Only when the clipboard is plain
+        // text (no HTML alternative) and it actually looks like markdown, so normal
+        // rich paste and plain prose are left untouched.
+        const md = cd && cd.getData('text/plain');
+        const htmlAlt = cd && cd.getData('text/html');
+        if (md && !htmlAlt && window.renderMarkdown && looksLikeMarkdown(md)) {
+          event.preventDefault();
+          editor.commands.insertContent(window.renderMarkdown(md));
+          return true;
+        }
+        return false;
       },
       handleDrop(view, event) {
         const files = event.dataTransfer && event.dataTransfer.files;
