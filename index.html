@@ -3516,13 +3516,66 @@ async function hydratePrivateImages(root) {
 }
 window.hydratePrivateImages = hydratePrivateImages;
 
-function renderAll() {
-  const fns = [renderDashboard, renderProjects, renderTasks, renderDiscussions,
-               renderDecisions, renderNotes, migrateJotsToDailyDocs, renderDailyDocs,
-               renderAIInsights, renderTrading, renderGrowth, renderInbox, renderSomeday, renderWaitingFor, renderTaskHeatmap, renderSmartListsNav, renderSmartListChips, renderClips, renderActionInbox, renderCommitments, renderJiraBallBack, renderGoldfishScan, renderFloatingDecisions, renderSessionResidue, renderActivity, renderStaleJotsBadge, renderStaleNotesBadge, renderCombinedMm, renderDailyBriefPanel, renderWorkersBadge, initNavSectionStates];
-  for (const fn of fns) {
-    try { fn(); } catch(e) { console.error(`[K2] renderAll: ${fn.name} failed:`, e); }
+// Re-render whichever page the user is currently viewing. Called by renderAll()
+// after a data refresh so the visible page stays in sync without eagerly
+// populating every hidden page on load (which was the source of ~5000 excess
+// DOM nodes from tasks, notes, clips, etc. all rendered simultaneously).
+function _rerenderCurrentPage() {
+  // Resolve the active page: prefer the JS-tracked key, fall back to the DOM active class.
+  var page = window._currentPage;
+  if (!page) {
+    var activePage = document.querySelector('.page.active');
+    if (activePage) page = activePage.id.replace(/^page-/, '');
   }
+  if (!page || page === 'dashboard') return; // dashboard already rendered above
+  try {
+    if (page === 'projects')      renderProjects();
+    else if (page === 'tasks')    { renderSmartListChips(); renderTasks(); }
+    else if (page === 'discussions') renderDiscussions();
+    else if (page === 'decisions') renderDecisions();
+    else if (page === 'notes')    renderNotes();
+    else if (page === 'jots')     renderDailyDocs();
+    else if (page === 'ai-insights') renderAIInsights();
+    else if (page === 'trading')  { renderTrading(); renderCombinedMm(); }
+    else if (page === 'growth')   renderGrowth();
+    else if (page === 'clips')    renderClips();
+    else if (page === 'inbox')    renderInbox();
+    else if (page === 'someday')  renderSomeday();
+    else if (page === 'waiting')  renderWaitingFor();
+    else if (page === 'action-inbox') renderActionInbox();
+    else if (page === 'commitments')  renderCommitments();
+    else if (page === 'ball-back')    renderJiraBallBack();
+    else if (page === 'goldfish-scan') renderGoldfishScan();
+    else if (page === 'activity') renderActivity();
+    else if (page === 'stale-jots')   renderStaleJots();
+    else if (page === 'stale-notes')  renderStaleNotes();
+    else if (page === 'workers')  renderWorkers();
+    else if (page === 'skills')   renderSkills(false);
+    else if (page === 'memory')   renderMemoryPage();
+    else if (page === 'mission')  renderMissionPage();
+    else if (page === 'docs')     renderDocs();
+    else if (page === 'completed') renderCompleted();
+    else if (page === 'planner')  renderPlanner(window._plannerDate || getTodayStr());
+    else if (page === 'accomplishments') renderAccomplishments(window._acomplQ || getCurrentQuarter());
+    else if (page === 'jira-ledger') renderJiraLedger();
+    else if (page === 'review')   renderReviewPage();
+  } catch(e) {
+    console.warn('[K2] _rerenderCurrentPage:', page, e);
+  }
+}
+
+function renderAll() {
+  // Only render global/badge items and the dashboard on load. All other pages
+  // are rendered lazily when the user navigates to them (navigateTo wires this).
+  // On data refresh (loadData -> renderAll), _rerenderCurrentPage() re-renders
+  // whichever page is currently visible so it picks up the latest data.
+  const fns = [migrateJotsToDailyDocs, renderDashboard, renderFloatingDecisions,
+               renderSessionResidue, renderStaleJotsBadge, renderStaleNotesBadge,
+               renderWorkersBadge, renderTaskHeatmap, initNavSectionStates];
+  for (const fn of fns) {
+    try { fn(); } catch(e) { console.error('[K2] renderAll: ' + fn.name + ' failed:', e); }
+  }
+  _rerenderCurrentPage();
 }
 
 // Navigation
@@ -3555,6 +3608,9 @@ function initNavSectionStates() {
 }
 
 function navigateTo(page) {
+  // Track the active page so renderAll() can re-render it after a data refresh
+  // without needing to eagerly populate every hidden page on load.
+  window._currentPage = page;
   // If the page is in a collapsible section, expand it
   const sectionPages = {
     work: ['planner','inbox','someday','waiting','review','completed','discussions','trading','growth'],
@@ -3610,6 +3666,18 @@ function navigateTo(page) {
   if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
   if (page === 'skills') renderSkills(false);
+  // Pages removed from renderAll() (lazy render): trigger here on first visit.
+  if (page === 'projects') renderProjects();
+  if (page === 'tasks') { renderSmartListChips(); renderTasks(); }
+  if (page === 'discussions') renderDiscussions();
+  if (page === 'decisions') renderDecisions();
+  if (page === 'notes') renderNotes();
+  if (page === 'jots') renderDailyDocs();
+  if (page === 'ai-insights') renderAIInsights();
+  if (page === 'trading') { renderTrading(); renderCombinedMm(); }
+  if (page === 'growth') renderGrowth();
+  if (page === 'clips') renderClips();
+  if (page === 'dashboard') { renderFloatingDecisions(); renderSessionResidue(); renderTaskHeatmap(); }
 }
 
 function renderJiraLedger() {
@@ -4136,12 +4204,18 @@ function renderActivity() {
   const doneInView = filter === 'awaiting' ? [] : done;
 
   if (awaitingInView.length) {
+    const AWAITING_CAP = 50;
+    const awaitingShown = awaitingInView.slice(0, AWAITING_CAP);
+    const awaitingExtra = awaitingInView.length - awaitingShown.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">⏳ Waiting on you</div>`;
-    html += awaitingInView.map(renderRow).join('');
+    html += awaitingShown.map(renderRow).join('');
+    if (awaitingExtra > 0) {
+      html += `<div style="text-align:center;padding:12px;font-size:12px;color:var(--text-dim);">${awaitingExtra} older awaiting entries not shown</div>`;
+    }
   }
 
   if (doneInView.length) {
-    const DONE_CAP = 100;
+    const DONE_CAP = 50;
     const doneShown = doneInView.slice(0, DONE_CAP);
     const doneExtra = doneInView.length - doneShown.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;padding:16px 0 6px;">Recent</div>`;
@@ -5361,14 +5435,25 @@ function _staleJotsCollectVisible() {
   return items.filter(i => i.text.toLowerCase().includes(q) || i.date.includes(q));
 }
 
+var STALE_JOTS_PAGE_SIZE = 40;
+
 function renderStaleJots() {
   renderStaleJotsBadge();
   const container = document.getElementById('stale-jots-list');
   const metaEl = document.getElementById('stale-jots-meta');
   if (!container) return;
-  const items = _staleJotsCollectVisible();
+  const allVisible = _staleJotsCollectVisible();
   const all = _staleJotsCollectCandidates();
-  // Prune selection of anything no longer visible
+
+  // Paginate: search shows all matches; no-search caps at STALE_JOTS_PAGE_SIZE per page.
+  const q = (document.getElementById('stale-jots-search')?.value || '').toLowerCase().trim();
+  var page = q ? 0 : (window._staleJotsPage || 0);
+  var pageStart = page * STALE_JOTS_PAGE_SIZE;
+  var items = q ? allVisible : allVisible.slice(pageStart, pageStart + STALE_JOTS_PAGE_SIZE);
+  var hiddenCount = q ? 0 : Math.max(0, allVisible.length - (pageStart + items.length));
+  var hasPrev = !q && page > 0;
+
+  // Prune selection of anything no longer in the current page view
   const visibleKeys = new Set(items.map(i => i.key));
   for (const k of Array.from(window._staleJotsSelection)) {
     if (!visibleKeys.has(k)) window._staleJotsSelection.delete(k);
@@ -5376,14 +5461,17 @@ function renderStaleJots() {
   _staleJotsSyncBulkUI();
 
   if (metaEl) {
-    const q = (document.getElementById('stale-jots-search')?.value || '').trim();
     metaEl.textContent = q
-      ? `${items.length} of ${all.length} stale jot lines match.`
+      ? `${allVisible.length} of ${all.length} stale jot lines match.`
       : `${all.length} stale jot lines — daily-doc entries older than 7 days, not linked to a task or note.`;
   }
 
-  if (!items.length) {
+  if (!allVisible.length) {
     container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${all.length === 0 ? 'No stale jots. Inbox zero on old daily docs! 🎉' : 'No matches for your search.'}</div>`;
+    return;
+  }
+  if (!items.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">No matches for your search.</div>`;
     return;
   }
 
@@ -5415,7 +5503,17 @@ function renderStaleJots() {
     </div>`;
   }).join('');
 
-  container.innerHTML = rows;
+  var prevBtn = hasPrev
+    ? `<button onclick="window._staleJotsPage=${page-1};renderStaleJots()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">← Newer ${STALE_JOTS_PAGE_SIZE}</button>`
+    : '';
+  var nextBtn = hiddenCount > 0
+    ? `<button onclick="window._staleJotsPage=${page+1};renderStaleJots()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Load ${Math.min(hiddenCount, STALE_JOTS_PAGE_SIZE)} older (${hiddenCount} remaining) →</button>`
+    : '';
+  var pagerHtml = (prevBtn || nextBtn)
+    ? `<div style="display:flex;gap:12px;justify-content:center;padding:16px 0;">${prevBtn}${nextBtn}</div>`
+    : '';
+
+  container.innerHTML = rows + pagerHtml;
 }
 window.renderStaleJots = renderStaleJots;
 
