@@ -18016,6 +18016,7 @@ setTimeout(() => {
     backdrop: null,
     input: null,
     resultsEl: null,
+    cachedIndex: null,
   };
 
   function ensureDom() {
@@ -18064,6 +18065,8 @@ setTimeout(() => {
     state.query = '';
     state.input.value = '';
     state.active = 0;
+    // ⚡ Bolt: Cache index once on open instead of computing on every keystroke
+    state.cachedIndex = buildIndex();
     refresh();
     // Focus immediately (iOS requires synchronous focus from user gesture for keyboard)
     state.input.focus();
@@ -18072,6 +18075,7 @@ setTimeout(() => {
   function close() {
     state.open = false;
     if (state.backdrop) state.backdrop.classList.remove('open');
+    state.cachedIndex = null; // free memory
   }
   function toggle() { state.open ? close() : open(); }
 
@@ -18139,7 +18143,8 @@ setTimeout(() => {
 
   function refresh() {
     const q = state.query.trim();
-    const index = buildIndex();
+    // Use cached index built during open()
+    const index = state.cachedIndex || buildIndex();
     let scored;
     if (!q) {
       // Empty query: pages + actions only, in declared order
