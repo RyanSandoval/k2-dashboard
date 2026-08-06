@@ -180,6 +180,18 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     border-radius: 10px;
     font-weight: 700;
   }
+  /* Sidebar nav drag-to-reorder (pinned items) */
+  .nav-item[draggable="true"] { cursor: grab; }
+  .nav-item.nav-dragging { opacity: 0.45; cursor: grabbing; }
+  .nav-item.nav-drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+  .nav-item.nav-drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+  .nav-reset-order {
+    margin: 4px var(--sp-1) 0; padding: 4px var(--sp-3);
+    font-size: 11px; color: var(--text-muted); cursor: pointer;
+    border-radius: var(--radius-sm); opacity: 0.7;
+    transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  }
+  .nav-reset-order:hover { color: var(--text); background: var(--surface2); opacity: 1; }
   .sidebar-footer {
     margin-top: auto;
     padding: var(--sp-3) var(--sp-5);
@@ -6071,6 +6083,92 @@ window.staleNoteLinkToProject = staleNoteLinkToProject;
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigateTo(item.dataset.page));
 });
+
+// ===== Sidebar nav: drag to reorder pinned items (native DnD, persisted) =====
+// Whole item is draggable, but a real drag is required to fire — click-to-navigate is untouched.
+(function () {
+  const ORDER_KEY = 'k2_nav_order';
+  let dragEl = null;
+
+  const container = () => {
+    const first = document.querySelector('.nav-item[data-page="dashboard"]');
+    return first ? first.closest('.nav-section') : null;
+  };
+  const items = (c) => Array.from(c.querySelectorAll(':scope > .nav-item[data-page]'));
+  const loadOrder = () => { try { return JSON.parse(localStorage.getItem(ORDER_KEY)) || null; } catch (e) { return null; } };
+
+  function saveOrder(c) {
+    try { localStorage.setItem(ORDER_KEY, JSON.stringify(items(c).map(i => i.dataset.page))); } catch (e) {}
+    updateResetVisibility(c);
+  }
+
+  function applyNavOrder() {
+    const c = container(); if (!c) return;
+    const order = loadOrder(); if (!order || !order.length) return;
+    const byPage = {}; items(c).forEach(i => byPage[i.dataset.page] = i);
+    order.forEach(pg => { if (byPage[pg]) { c.appendChild(byPage[pg]); delete byPage[pg]; } });
+    // ponytail: newly-added pages not in the saved order fall to the end; Reset restores defaults.
+    items(c).forEach(i => { if (byPage[i.dataset.page]) c.appendChild(i); });
+  }
+
+  const clearCues = (c) => c && c.querySelectorAll('.nav-drop-before,.nav-drop-after')
+    .forEach(el => el.classList.remove('nav-drop-before', 'nav-drop-after'));
+
+  function onDragStart(e) {
+    dragEl = this; this.classList.add('nav-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', this.dataset.page); } catch (_) {}
+  }
+  function onDragEnd() { if (dragEl) dragEl.classList.remove('nav-dragging'); clearCues(container()); dragEl = null; }
+  function onDragOver(e) {
+    if (!dragEl || this === dragEl) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    const r = this.getBoundingClientRect();
+    const after = (e.clientY - r.top) > r.height / 2;
+    this.classList.remove('nav-drop-before', 'nav-drop-after');
+    this.classList.add(after ? 'nav-drop-after' : 'nav-drop-before');
+  }
+  function onDragLeave() { this.classList.remove('nav-drop-before', 'nav-drop-after'); }
+  function onDrop(e) {
+    e.preventDefault(); this.classList.remove('nav-drop-before', 'nav-drop-after');
+    const c = container();
+    if (!dragEl || this === dragEl || !c) return;
+    const r = this.getBoundingClientRect();
+    const after = (e.clientY - r.top) > r.height / 2;
+    c.insertBefore(dragEl, after ? this.nextSibling : this);
+    saveOrder(c);
+  }
+
+  function ensureResetControl(c) {
+    if (c.querySelector('.nav-reset-order')) return;
+    const btn = document.createElement('div');
+    btn.className = 'nav-reset-order';
+    btn.textContent = '⤺ Reset order';
+    btn.title = 'Restore the default sidebar order';
+    btn.addEventListener('click', () => { try { localStorage.removeItem(ORDER_KEY); } catch (e) {} location.reload(); });
+    c.appendChild(btn);
+    updateResetVisibility(c);
+  }
+  function updateResetVisibility(c) {
+    const btn = c && c.querySelector('.nav-reset-order');
+    if (btn) btn.style.display = loadOrder() ? '' : 'none';
+  }
+
+  function init() {
+    const c = container(); if (!c) return;
+    applyNavOrder();
+    items(c).forEach(i => {
+      i.setAttribute('draggable', 'true');
+      i.addEventListener('dragstart', onDragStart);
+      i.addEventListener('dragend', onDragEnd);
+      i.addEventListener('dragover', onDragOver);
+      i.addEventListener('dragleave', onDragLeave);
+      i.addEventListener('drop', onDrop);
+    });
+    ensureResetControl(c);
+  }
+  init();
+})();
 
 // Render Dashboard
 // ═══ Memory Page ═══
