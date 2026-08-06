@@ -1961,7 +1961,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <button class="preset-switcher-manage" onclick="openPresetsManager()" type="button" title="Manage presets" aria-label="Manage presets">⚙</button>
     </div>
     <div class="preset-popover" id="preset-popover" onclick="event.stopPropagation()"></div>
-    <div class="search-trigger" onclick="window.K2Palette ? K2Palette.open() : openSearch()">
+    <div class="search-trigger" onclick="window.K2Palette ? K2Palette.open() : openSearch()" role="button" tabindex="0" aria-label="Search" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){window.K2Palette ? K2Palette.open() : openSearch();event.preventDefault();}">
       <span>🔍</span> Search...
       <span class="search-kbd">⌘K</span>
     </div>
@@ -2111,8 +2111,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">⟳ <span id="last-sync">just now</span></span>
-        <div onclick="forceAppRefresh()" title="Force-refresh: clear SW cache + reload" style="cursor:pointer;color:var(--text-dim);font-size:14px;white-space:nowrap;flex-shrink:0;padding:0 2px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-dim)'">🔄</div>
-        <div onclick="openSettings()" style="cursor:pointer;color:var(--accent);font-size:12px;white-space:nowrap;flex-shrink:0;font-weight:600;">⚙️ Settings</div>
+        <div onclick="forceAppRefresh()" title="Force-refresh: clear SW cache + reload" style="cursor:pointer;color:var(--text-dim);font-size:14px;white-space:nowrap;flex-shrink:0;padding:0 2px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-dim)'" role="button" tabindex="0" aria-label="Force refresh" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){forceAppRefresh();event.preventDefault();}">🔄</div>
+        <div onclick="openSettings()" style="cursor:pointer;color:var(--accent);font-size:12px;white-space:nowrap;flex-shrink:0;font-weight:600;" role="button" tabindex="0" aria-label="Settings" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){openSettings();event.preventDefault();}">⚙️ Settings</div>
       </div>
     </div>
   </div>
@@ -15972,9 +15972,9 @@ window.inboxMakeReference = inboxMakeReference;
 <div class="selection-toolbar" id="selection-toolbar">
   <button class="sel-btn sel-task" onclick="selectionToTask()">☑️ Task</button>
   <div class="sel-divider"></div>
-  <button class="sel-btn" onclick="selectionFormat('**')"><b>B</b></button>
-  <button class="sel-btn" onclick="selectionFormat('*')"><i>I</i></button>
-  <button class="sel-btn" onclick="selectionFormat('`')">&lt;/&gt;</button>
+  <button class="sel-btn" onclick="selectionFormat('**')" aria-label="Bold"><b>B</b></button>
+  <button class="sel-btn" onclick="selectionFormat('*')" aria-label="Italic"><i>I</i></button>
+  <button class="sel-btn" onclick="selectionFormat('`')" aria-label="Code">&lt;/&gt;</button>
   <div class="sel-divider"></div>
   <button class="sel-btn" onclick="selectionHighlight()">🔖 Pin</button>
 </div>
@@ -16485,12 +16485,12 @@ function createFloatingToolbar() {
   floatToolbarEl = document.createElement('div');
   floatToolbarEl.className = 'editor-float-toolbar';
   floatToolbarEl.innerHTML = `
-    <button class="eft-btn" data-cmd="bold" title="Bold"><b>B</b></button>
-    <button class="eft-btn" data-cmd="italic" title="Italic"><i>I</i></button>
-    <button class="eft-btn" data-cmd="strike" title="Strikethrough"><s>S</s></button>
-    <button class="eft-btn" data-cmd="code" title="Code">&lt;/&gt;</button>
+    <button class="eft-btn" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
+    <button class="eft-btn" data-cmd="italic" title="Italic" aria-label="Italic"><i>I</i></button>
+    <button class="eft-btn" data-cmd="strike" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button>
+    <button class="eft-btn" data-cmd="code" title="Code" aria-label="Code">&lt;/&gt;</button>
     <div class="eft-divider"></div>
-    <button class="eft-btn" data-cmd="h2" title="Heading">H2</button>
+    <button class="eft-btn" data-cmd="h2" title="Heading" aria-label="Heading">H2</button>
     <button class="eft-btn" data-cmd="link" title="Link" aria-label="Link">🔗</button>
     <div class="eft-divider"></div>
     <button class="eft-btn eft-k2" data-cmd="k2" title="Send this line/bullet to K2" aria-label="Send this line/bullet to K2">🤖</button>
