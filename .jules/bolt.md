@@ -1,0 +1,3 @@
+## 2024-07-10 - Inline Debouncing for Single-File Architecture
+**Learning:** In a monolithic architecture like K-2 (where everything lives in one massive `index.html`), introducing external libraries (like Lodash for `debounce`) or even a centralized debounce utility function pollutes the global scope and adds complexity. However, executing `oninput` handlers synchronously block the main thread and cause UI stutter.
+**Action:** Use a self-contained inline debounce pattern directly on the DOM element: `clearTimeout(this.to); this.to = setTimeout(() => functionName(), 250)`. This safely scopes the timeout ID to the input element itself (`this`) without polluting global state.
