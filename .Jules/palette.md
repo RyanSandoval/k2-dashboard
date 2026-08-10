@@ -5,3 +5,7 @@
 ## 2024-05-24 - Interactive DIVs missing keyboard handlers
 **Learning:** Adding `role="button"`, `tabindex="0"`, and `aria-label` to a `div` element makes it discoverable by screen readers and focusable via keyboard, but it does *not* automatically map the `Enter` or `Space` key to trigger the `onclick` handler. This creates a keyboard trap where elements can be focused but not activated.
 **Action:** When converting `div` elements to buttons (instead of using native `<button>` tags), ensure an `onkeydown` event listener is also added to map `Enter` and `Space` keys to the click action.
+
+## 2025-02-18 - Interactive DIVs missing keyboard accessibility (Sidebar Nav)
+**Learning:** The `nav-section-title` elements in the sidebar acting as accordions (Work, Reference) were created as standard `div` tags with `onclick` handlers. Without `role="button"`, `tabindex="0"`, `aria-label`, and `onkeydown` listeners, they were completely invisible to screen readers and impossible to navigate to via keyboard.
+**Action:** Always ensure that interactive structural elements (like accordions or section headers that toggle content) receive full keyboard accessibility attributes, particularly the `onkeydown` handler to allow 'Enter' and 'Space' activation.
