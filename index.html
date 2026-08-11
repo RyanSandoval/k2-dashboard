@@ -3071,7 +3071,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div style="display:flex;gap:10px;margin-bottom:14px;">
         <div style="flex:0 0 auto;">
           <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Icon</label>
-          <input id="sl-icon-input" type="text" value="📋" maxlength="2" style="width:52px;text-align:center;font-size:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;">
+          <input id="sl-icon-input" aria-label="Smart list icon" type="text" value="📋" maxlength="2" style="width:52px;text-align:center;font-size:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;">
         </div>
         <div style="flex:1;">
           <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Name</label>
@@ -5364,7 +5364,7 @@ function renderJotMatchNudge(match) {
     '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(snippet) + '…</span>' +
     '<button onclick="_memMatchNavigate(\'' + String(match.kind).replace(/'/g,"\\'") + '\',\'' + String(match.id).replace(/'/g,"\\'") + '\');" ' +
     'style="flex-shrink:0;padding:3px 10px;background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Compare →</button>' +
-    '<button onclick="_memMatchDismiss();" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
+    '<button onclick="_memMatchDismiss();" aria-label="Dismiss match nudge" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
   el.style.display = 'flex';
 }
 function _memMatchDismiss() {
@@ -7733,7 +7733,7 @@ function renderGrowth() {
       const priorityColor = item.priority === 'high' ? '#f87171' : item.priority === 'medium' ? '#fbbf24' : 'var(--text-dim)';
       const cadenceBadge = item.cadence ? `<span style="font-size:10px;background:var(--surface2);color:var(--text-dim);padding:2px 6px;border-radius:4px;margin-left:6px;">${item.cadence}</span>` : '';
       html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
-        <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleGrowthItem('${p.id}',${idx},this.checked)" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;">
+        <input type="checkbox" ${item.done ? 'checked' : ''} aria-label="Toggle growth item" onchange="toggleGrowthItem('${p.id}',${idx},this.checked)" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;">
         <div style="flex:1;">
           <span style="font-size:13px;color:${item.done ? 'var(--text-dim)' : 'var(--text)'};${item.done ? 'text-decoration:line-through;' : ''}">${item.text}</span>
           ${cadenceBadge}
@@ -8494,7 +8494,7 @@ function openProjectModal(projectId) {
 
     <div style="margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:10px 12px;border:1px solid var(--border);">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);">
-        <input type="checkbox" ${p.useSpecDriven ? 'checked' : ''} onchange="toggleProjectSpecDriven('${p.id}', this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent);">
+        <input type="checkbox" ${p.useSpecDriven ? 'checked' : ''} aria-label="Toggle project spec driven" onchange="toggleProjectSpecDriven('${p.id}', this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent);">
         <span style="font-weight:600;">📐 Use spec-driven-dev skill</span>
       </label>
       <div style="font-size:10px;color:var(--text-dim);margin-top:4px;margin-left:22px;line-height:1.4;">
@@ -8812,7 +8812,7 @@ function renderTaskRow(task) {
     '<div class="task-meta">' + projectName + ' • ' + task.created + (task.source === 'jot' ? ' • 📝 from jot' : '') + (parentTask ? ' • <span style="color:var(--text-dim);">↳ ' + (parentTask.text || 'parent') + '</span>' : '') + '</div>' +
     '</div>' +
     actionBtns +
-    '<button onclick="event.stopPropagation();quickSetHideUntil(' + taskId + ',this)" title="Schedule: hide until date" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;color:' + ((task.hideUntil && task.hideUntil > getTodayStr()) ? 'var(--yellow)' : 'var(--text-muted)') + ';flex-shrink:0;">⏰</button>' +
+    '<button onclick="event.stopPropagation();quickSetHideUntil(' + taskId + ',this)" aria-label="Set hide until date" title="Schedule: hide until date" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;color:' + ((task.hideUntil && task.hideUntil > getTodayStr()) ? 'var(--yellow)' : 'var(--text-muted)') + ';flex-shrink:0;">⏰</button>' +
     '<div class="task-priority ' + scoreClass(taskScoreRaw(task)) + '" title="U' + (task.urgency||2) + '×I' + (task.importance||2) + ' — click task to edit">' + scoreLabel(task) + '</div>' +
     staleBanner +
     '</li>';
@@ -11382,7 +11382,7 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
         <button id="jira-modal-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;" aria-label="Close">×</button>
       </div>
       <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Title</label>
-      <input id="jira-modal-title" type="text" value="${defaultTitle.replace(/"/g,'&quot;').slice(0,200)}" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;margin-bottom:12px;outline:none;">
+      <input id="jira-modal-title" aria-label="Jira task title" type="text" value="${defaultTitle.replace(/"/g,'&quot;').slice(0,200)}" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;margin-bottom:12px;outline:none;">
       <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Description</label>
       <textarea id="jira-modal-desc" rows="8" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;resize:vertical;">${escapeHtml(plain)}</textarea>
       <div style="display:flex;gap:12px;margin-bottom:16px;">
@@ -11396,7 +11396,7 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
         </div>
         <div style="flex:1;">
           <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Labels (comma-separated)</label>
-          <input id="jira-modal-labels" type="text" value="async" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;">
+          <input id="jira-modal-labels" aria-label="Jira task labels" type="text" value="async" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;">
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;">
@@ -14706,7 +14706,7 @@ function renderReviewPage() {
           escapeHtml(draft.reflections[step.textarea.key] || '') + '</textarea>'
         : '';
       return '<div class="review-step" data-step="' + step.i + '" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;transition:opacity 0.2s;' + (checked ? 'opacity:0.55;' : '') + '">' +
-        '<input type="checkbox" ' + (checked ? 'checked' : '') + ' ' +
+        '<input type="checkbox" aria-label="Mark review step completed" ' + (checked ? 'checked' : '') + ' ' +
         'onchange="(function(cb,i){var d=window._reviewDraft=window._reviewDraft||{completedSteps:[],reflections:{wentWell:\'\',didntGo:\'\',priority:\'\'}};if(cb.checked){if(!d.completedSteps.includes(i))d.completedSteps.push(i);}else{d.completedSteps=d.completedSteps.filter(function(x){return x!==i;});}cb.closest(\'.review-step\').style.opacity=cb.checked?\'0.55\':\'1\';})(this,' + step.i + ')" ' +
         'style="margin-top:2px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;">' +
         '<div style="flex:1;">' +
