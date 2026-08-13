@@ -2031,7 +2031,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <!-- WORK collapsible section -->
     <div class="nav-section">
-      <div class="nav-section-title" onclick="toggleNavSection('work')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-work-title">
+      <div class="nav-section-title" onclick="toggleNavSection('work')" role="button" tabindex="0" aria-label="Toggle Work section" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavSection('work');}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-work-title">
         <span id="nav-section-work-arrow">▸</span> Work
       </div>
       <div id="nav-section-work-body" style="display:none;">
@@ -2067,7 +2067,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <!-- REFERENCE collapsible section -->
     <div class="nav-section">
-      <div class="nav-section-title" onclick="toggleNavSection('reference')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-reference-title">
+      <div class="nav-section-title" onclick="toggleNavSection('reference')" role="button" tabindex="0" aria-label="Toggle Reference section" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavSection('reference');}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-reference-title">
         <span id="nav-section-reference-arrow">▸</span> Reference
       </div>
       <div id="nav-section-reference-body" style="display:none;">
@@ -6112,7 +6112,15 @@ async function staleNoteLinkToProject(id, projectId) {
 window.staleNoteLinkToProject = staleNoteLinkToProject;
 
 document.querySelectorAll('.nav-item').forEach(item => {
+  item.setAttribute('role', 'button');
+  item.setAttribute('tabindex', '0');
   item.addEventListener('click', () => navigateTo(item.dataset.page));
+  item.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      navigateTo(item.dataset.page);
+    }
+  });
 });
 
 // ===== Sidebar nav: drag to reorder pinned items (native DnD, persisted) =====
