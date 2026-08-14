@@ -5,3 +5,7 @@
 ## 2024-05-24 - Interactive DIVs missing keyboard handlers
 **Learning:** Adding `role="button"`, `tabindex="0"`, and `aria-label` to a `div` element makes it discoverable by screen readers and focusable via keyboard, but it does *not* automatically map the `Enter` or `Space` key to trigger the `onclick` handler. This creates a keyboard trap where elements can be focused but not activated.
 **Action:** When converting `div` elements to buttons (instead of using native `<button>` tags), ensure an `onkeydown` event listener is also added to map `Enter` and `Space` keys to the click action.
+
+## 2024-05-24 - Unlabelled/Orphaned Checkboxes
+**Learning:** Multiple checkboxes in the application (like the smart list stale task filter or rendered daily jot tasks) lacked explicit accessible names. Some were placed adjacently to `<label>` elements without a `for` attribute linking them, and others were wrapped inside a `<label>` but missing text directly inside the label tag, rendering them "unlabelled" to screen readers.
+**Action:** Always ensure checkboxes have an accessible name. Use the `for` attribute on a `<label>` to explicitly link it to a checkbox ID, or provide an `aria-label` directly on the `<input type="checkbox">` if generating a semantic association via `<label>` isn't feasible or the wrapper label is visually empty.
