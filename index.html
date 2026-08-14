@@ -3102,7 +3102,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <input id="sl-rule-duesoon" type="number" min="0" max="365" placeholder="e.g. 0=today" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Stale tasks only</label>
+          <label for="sl-rule-stale" style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Stale tasks only</label>
           <input id="sl-rule-stale" type="checkbox" style="width:16px;height:16px;cursor:pointer;">
         </div>
       </div>
@@ -11526,7 +11526,7 @@ function migrateJotsToDailyDocs() {
       if (jot.done !== undefined && (text.match(/\[\s*\]/) || text.match(/\[x\]/i))) {
         // Task item
         const cleanText = text.replace(/\[\s*\]/g, '').replace(/\[x\]/gi, '').trim();
-        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" ${jot.done ? 'checked' : ''}></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
+        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" aria-label="Toggle task" ${jot.done ? 'checked' : ''}></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
       } else {
         html += `<p>${timeSpan}${text}${mentions}</p>`;
       }
