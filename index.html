@@ -3650,7 +3650,31 @@ function initNavSectionStates() {
   });
 }
 
+// Removes transient body-appended overlays/pickers that may be orphaned when the
+// user navigates away without closing them. Call at the top of navigateTo() to
+// prevent DOM node accumulation as usage grows.
+function _cleanupTransientUI() {
+  const TRANSIENT_IDS = [
+    'stale-jot-note-picker',
+    'stale-note-project-picker',
+    'quick-hide-until-picker',
+    'kairos-picker-overlay',
+    'context-picker-overlay',
+    'note-action-backdrop',
+    'shortcuts-help',
+    'waiting-inline-form',
+  ];
+  for (const id of TRANSIENT_IDS) {
+    document.getElementById(id)?.remove();
+  }
+  // Capture popover is a reused singleton — hide it and clear its input rather
+  // than destroying it, so the next open doesn't need to rebuild the DOM.
+  try { if (typeof closeCapturePopover === 'function') closeCapturePopover(); } catch (e) {}
+}
+
 function navigateTo(page) {
+  // Prune any orphaned transient overlays left open from the previous page.
+  _cleanupTransientUI();
   // Track the active page so renderAll() can re-render it after a data refresh
   // without needing to eagerly populate every hidden page on load.
   window._currentPage = page;
