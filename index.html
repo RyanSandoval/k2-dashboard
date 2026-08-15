@@ -3268,7 +3268,7 @@ const debouncedRenderActionInbox = debounce(() => { if (typeof renderActionInbox
 const debouncedRenderStaleJots = debounce(() => { if (typeof renderStaleJots === 'function') renderStaleJots(); }, 250);
 const debouncedRenderStaleNotes = debounce(() => { if (typeof renderStaleNotes === 'function') renderStaleNotes(); }, 250);
 const debouncedRenderSkills = debounce(() => { if (typeof renderSkills === 'function') renderSkills(false); }, 250);
-const debouncedRenderJiraLedger = debounce(() => { if (typeof renderJiraLedger === 'function') renderJiraLedger(); }, 250);
+const debouncedRenderJiraLedger = debounce(() => { window._jiraLedgerPage = 0; if (typeof renderJiraLedger === 'function') renderJiraLedger(); }, 250);
 const debouncedRenderNotes = debounce(() => { if (typeof renderNotes === 'function') renderNotes(0); }, 250);
 const debouncedFilterDocs = debounce(() => { if (typeof filterDocs === 'function') filterDocs(); }, 250);
 const debouncedRenderDepDropdown = debounce((el, id) => { if (typeof renderDepDropdown === 'function') renderDepDropdown(el, id); }, 250);
@@ -3749,7 +3749,15 @@ function renderJiraLedger() {
          ${pending.map(r => `<div style="font-size:12px;color:var(--text-dim);margin:4px 0;">${(r.title||'').slice(0,120)} <span style="opacity:0.6;">— ${r.status}</span></div>`).join('')}
        </div>`
     : '';
-  const rows = filtered.map(e => {
+  // Cap rendered rows to avoid DOM bloat as the ledger grows with ticket volume.
+  const JIRA_LEDGER_PAGE_SIZE = 30;
+  const jiraLedgerPage = window._jiraLedgerPage || 0;
+  const jiraLedgerStart = jiraLedgerPage * JIRA_LEDGER_PAGE_SIZE;
+  const visibleEntries = filtered.slice(jiraLedgerStart, jiraLedgerStart + JIRA_LEDGER_PAGE_SIZE);
+  const jiraLedgerHidden = filtered.length - (jiraLedgerStart + visibleEntries.length);
+  const jiraLedgerHasPrev = jiraLedgerPage > 0;
+
+  const rows = visibleEntries.map(e => {
     const url = `https://vikingtravel.atlassian.net/browse/${e.jiraKey}`;
     const when = e.createdAt ? new Date(e.createdAt).toLocaleString() : '';
     return `<a href="${url}" target="_blank" rel="noopener" class="card" style="display:block;text-decoration:none;color:inherit;margin-bottom:8px;padding:12px;">
@@ -3761,6 +3769,15 @@ function renderJiraLedger() {
       ${e.project ? `<span class="tag tag-blue" style="font-size:9px;margin-top:6px;display:inline-block;">${e.project}</span>` : ''}
     </a>`;
   }).join('');
+  const jiraPrevBtn = jiraLedgerHasPrev
+    ? `<button onclick="window._jiraLedgerPage=${jiraLedgerPage-1};renderJiraLedger()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">← Newer</button>`
+    : '';
+  const jiraNextBtn = jiraLedgerHidden > 0
+    ? `<button onclick="window._jiraLedgerPage=${jiraLedgerPage+1};renderJiraLedger()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 18px;min-height:44px;font-size:12px;cursor:pointer;">Older ${Math.min(jiraLedgerHidden, JIRA_LEDGER_PAGE_SIZE)} (${jiraLedgerHidden} remaining) →</button>`
+    : '';
+  const jiraPagerHtml = (jiraLedgerHasPrev || jiraLedgerHidden > 0)
+    ? `<div style="display:flex;gap:8px;justify-content:center;padding:16px 0;">${jiraPrevBtn}${jiraNextBtn}</div>`
+    : '';
   const emptyHowItWorks = `
     <div style="max-width:680px;margin:24px auto;padding:24px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;">
       <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">🎫 How the Jira Ledger works</div>
@@ -3794,7 +3811,7 @@ function renderJiraLedger() {
       </div>
     </div>`;
   container.innerHTML = pendingHtml + (filtered.length
-    ? rows
+    ? rows + jiraPagerHtml
     : (search
         ? `<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">No tickets match your search.</div>`
         : emptyHowItWorks));
@@ -7777,12 +7794,22 @@ function renderGrowth() {
   if (checkins.length === 0) {
     html += '<p style="font-size:13px;color:var(--text-dim);font-style:italic;">No check-ins yet. First one coming soon.</p>';
   } else {
-    checkins.slice().reverse().forEach(c => {
+    // Cap rendered check-ins to avoid DOM bloat as monthly entries accumulate.
+    // Most recent entries are most useful; user can expand to see the rest.
+    const GROWTH_CHECKINS_CAP = 6;
+    const showAllCheckins = window._growthCheckinsShowAll;
+    const sorted = checkins.slice().reverse();
+    const visibleCheckins = showAllCheckins ? sorted : sorted.slice(0, GROWTH_CHECKINS_CAP);
+    const hiddenCheckinCount = sorted.length - visibleCheckins.length;
+    visibleCheckins.forEach(c => {
       html += `<div style="border-top:1px solid var(--border);padding:12px 0;">
         <div style="font-weight:600;font-size:13px;color:var(--accent);margin-bottom:6px;">${c.date||''}</div>
         <div style="font-size:13px;color:var(--text);white-space:pre-wrap;">${c.notes||''}</div>
       </div>`;
     });
+    if (hiddenCheckinCount > 0) {
+      html += `<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--accent);cursor:pointer;" onclick="window._growthCheckinsShowAll=true;renderGrowth()">+ ${hiddenCheckinCount} older check-ins — Show all ${sorted.length} ▾</div>`;
+    }
   }
 
   html += '</div>';
@@ -14440,6 +14467,15 @@ function renderCompleted(filter) {
     return db - da;
   });
 
+  // Cap "all" view to avoid DOM bloat as the completed task list grows.
+  // Other filter tabs are already bounded by time window.
+  const COMPLETED_ALL_CAP = 100;
+  let completedCapOverflow = 0;
+  if (filter === 'all' && filtered.length > COMPLETED_ALL_CAP) {
+    completedCapOverflow = filtered.length - COMPLETED_ALL_CAP;
+    filtered = filtered.slice(0, COMPLETED_ALL_CAP);
+  }
+
   // Stats
   const totalCompleted = allDone.length;
   const thisWeekCount = allDone.filter(t => { const d = taskDate(t); return d && d >= thisWeekStart; }).length;
@@ -14538,7 +14574,9 @@ function renderCompleted(filter) {
       <div style="font-size:13px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">${label} <span style="font-weight:400;color:var(--text-muted);font-size:12px;">(${tasks.length})</span></div>
       <div>${taskRows}</div>
     </div>`;
-  }).join('');
+  }).join('') + (completedCapOverflow > 0
+    ? `<div style="text-align:center;padding:16px;font-size:12px;color:var(--text-dim);">Showing most recent ${COMPLETED_ALL_CAP} of ${allDone.length} completed tasks. Use the Week / Month filters to narrow the view.</div>`
+    : '');
 }
 
 async function reopenCompletedTask(taskId) {
