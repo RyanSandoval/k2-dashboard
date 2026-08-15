@@ -3280,6 +3280,10 @@ const debouncedUpdateCapturePreview = debounce((val) => { if (typeof updateCaptu
 // Data stored in a PRIVATE repo (RyanSandoval/k2-data) — never in the public repo
 const DATA_REPO = 'RyanSandoval/k2-data';
 const DATA_FILE = 'data.json';
+// Cron telemetry lives in its own file (telemetry split, 2026-08-15). It changes
+// every few minutes; data.json does not. Keeping them apart stops a ~1MB rewrite
+// on every heartbeat. See scripts/k2-cron-snapshot.sh.
+const CRON_FILE = 'cron-snapshot.json';
 let GH_TOKEN = localStorage.getItem('gh_token') || '';
 let GH_SHA = '';
 
@@ -3289,6 +3293,27 @@ function ghHeaders() {
     'Accept': 'application/vnd.github.v3+json',
     'Content-Type': 'application/json'
   };
+}
+
+// Hydrate DATA.cronJobs from the sidecar file. Never throws — the pulse indicator
+// is a nice-to-have, so a missing or malformed snapshot degrades to whatever
+// data.json still carries (or an empty list) rather than failing the whole load.
+async function loadCronSnapshot() {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${CRON_FILE}`, {
+      headers: ghHeaders()
+    });
+    if (!res.ok) return;                       // 404 until the writer's first run
+    const file = await res.json();
+    const raw = (file.content || '').replace(/\n/g, '');
+    if (!raw) return;
+    const snap = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(raw), c => c.charCodeAt(0))));
+    if (!Array.isArray(snap.jobs)) return;
+    DATA.cronJobs = snap.jobs;
+    DATA.cronJobsMeta = { snapshotAtMs: snap.snapshotAtMs, count: snap.count };
+  } catch (e) {
+    console.warn('[cron-snapshot] load failed, using data.json fallback:', e);
+  }
 }
 
 async function loadData() {
@@ -3393,6 +3418,7 @@ async function loadData() {
     DATA.twoOfUsRitualMeta = d.twoOfUsRitualMeta || {};
     DATA.repoScout = d.repoScout || null;
     DATA.k2Inbox = d.k2Inbox || null;
+    await loadCronSnapshot();
     window._dataLoaded = true;
     window.DATA = DATA; // expose to module scripts and other contexts
     renderAll();
