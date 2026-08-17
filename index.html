@@ -1967,7 +1967,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
     <div id="sidebar-capture-row" style="padding:0 10px 6px;">
       <div style="display:flex;gap:6px;">
-        <input id="sidebar-capture-input" type="text" placeholder="⚡ Capture…"
+        <input id="sidebar-capture-input" type="text" placeholder="⚡ Capture…" aria-label="Capture"
           style="flex:1;padding:7px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border-color var(--dur-fast);"
           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){if(v.match(/^https?:\/\//)){quickCaptureClip(v);this.value='';this.blur();}else{const _pc=parseCapture(v);const _pv=parsedCapturePreview(_pc);addToInbox(v);this.value='';this.blur();showToast(_pv.meta?'📋 '+_pv.text+(_pv.meta?' · '+_pv.meta:''):'Captured to inbox');}}}"
           onfocus="this.style.borderColor='var(--accent)'"
@@ -2526,7 +2526,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           </div>
         </div>
         <div style="margin-top:10px;">
-          <input id="action-inbox-search" type="text" placeholder="🔍 Search action items…" autocomplete="off"
+          <input id="action-inbox-search" type="text" placeholder="🔍 Search action items…" aria-label="Search action items" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="debouncedRenderActionInbox()">
         </div>
@@ -2597,7 +2597,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input id="stale-jots-search" type="text" placeholder="🔍 Search stale jots…" autocomplete="off"
+          <input id="stale-jots-search" type="text" placeholder="🔍 Search stale jots…" aria-label="Search stale jots" autocomplete="off"
             style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="debouncedRenderStaleJots()">
           <button onclick="staleJotsToggleSelectAll()" id="stale-jots-select-all-btn"
@@ -2625,7 +2625,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input id="stale-notes-search" type="text" placeholder="🔍 Search stale notes…" autocomplete="off"
+          <input id="stale-notes-search" type="text" placeholder="🔍 Search stale notes…" aria-label="Search stale notes" autocomplete="off"
             style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="debouncedRenderStaleNotes()">
         </div>
@@ -2644,7 +2644,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <button onclick="renderSkills(true)" title="Refetch manifest" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;color:var(--text);">🔄 Refresh</button>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input id="skills-search" type="text" placeholder="🔍 Search skills…" autocomplete="off"
+          <input id="skills-search" type="text" placeholder="🔍 Search skills…" aria-label="Search skills" autocomplete="off"
             style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="debouncedRenderSkills()">
           <button onclick="window.open('https://raw.githubusercontent.com/RyanSandoval/k2-dashboard/main/skills/_manifest.json','_blank')" title="Public manifest URL" style="font-size:11px;padding:8px 12px;border-radius:8px;border:1px solid var(--accent);cursor:pointer;background:transparent;color:var(--accent);font-weight:700;">📡 Public manifest</button>
@@ -2673,7 +2673,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <h2>🎫 Jira Ledger</h2>
         <p>Every Jira ticket filed from K-2 (notes + cron + fire button). Click a row to open in Jira.</p>
         <div style="margin-top:10px;">
-          <input id="jira-ledger-search" type="text" placeholder="🔍 Search by key, title, or text…" autocomplete="off"
+          <input id="jira-ledger-search" type="text" placeholder="🔍 Search by key, title, or text…" aria-label="Search Jira ledger" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="debouncedRenderJiraLedger()">
         </div>
@@ -2692,7 +2692,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <button onclick="createNewNote()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">✏️ New Note</button>
         </div>
         <div style="margin-top:10px;">
-          <input id="notes-search-input" type="text" placeholder="🔍 Search notes…" autocomplete="off"
+          <input id="notes-search-input" type="text" placeholder="🔍 Search notes…" aria-label="Search notes" autocomplete="off"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
             oninput="debouncedRenderNotes()">
         </div>
@@ -2939,7 +2939,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <p style="color:var(--text-dim);font-size:13px;margin:0;">Zero-friction capture. Everything lands here first.</p>
       </div>
       <div style="display:flex;gap:10px;margin-bottom:var(--sp-5);">
-        <input type="text" id="inbox-input" placeholder="Capture a thought, task, or idea…"
+        <input type="text" id="inbox-input" placeholder="Capture a thought, task, or idea…" aria-label="Capture a thought, task, or idea"
           style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;"
           onkeydown="if(event.key==='Enter'){addToInbox(this.value.trim());this.value='';}">
         <button onclick="(function(){var v=document.getElementById('inbox-input').value.trim();if(v){addToInbox(v);document.getElementById('inbox-input').value='';}})();"
@@ -12786,7 +12786,7 @@ function openCapturePopover() {
     pop.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">⚡ Quick Capture → Inbox</div>
-        <input id="global-capture-input" type="text" placeholder="What's on your mind?"
+        <input id="global-capture-input" type="text" placeholder="What's on your mind?" aria-label="What's on your mind?"
           style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--text);font-size:15px;outline:none;font-family:inherit;caret-color:var(--accent);"
           oninput="debouncedUpdateCapturePreview(this.value)"
           onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){addToInbox(v);closeCapturePopover();}}else if(event.key==='Escape'){closeCapturePopover();}">
