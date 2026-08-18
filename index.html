@@ -3295,6 +3295,25 @@ function ghHeaders() {
   };
 }
 
+// GitHub's contents API returns content:"" once a file crosses 1MB. The download_url
+// fallback can't be used from the browser: any custom header (Authorization) forces a
+// CORS preflight and raw.githubusercontent.com answers OPTIONS with 403. The blobs API
+// serves the same bytes base64-encoded up to 100MB and does support CORS.
+// Returns { sha, data } or throws.
+async function ghGetJsonFile(path) {
+  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, { headers: ghHeaders() });
+  if (!res.ok) { const e = new Error(`GitHub API ${res.status}`); e.status = res.status; throw e; }
+  const file = await res.json();
+  let raw = (file.content || '').replace(/\n/g, '');
+  if (!raw) {
+    const blob = await fetch(`https://api.github.com/repos/${DATA_REPO}/git/blobs/${file.sha}`, { headers: ghHeaders() });
+    if (!blob.ok) throw new Error(`GitHub blobs API ${blob.status}`);
+    raw = ((await blob.json()).content || '').replace(/\n/g, '');
+  }
+  if (!raw) throw new Error('GitHub returned empty file content');
+  return { sha: file.sha, data: JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(raw), c => c.charCodeAt(0)))) };
+}
+
 // Hydrate DATA.cronJobs from the sidecar file. Never throws — the pulse indicator
 // is a nice-to-have, so a missing or malformed snapshot degrades to whatever
 // data.json still carries (or an empty list) rather than failing the whole load.
@@ -3319,29 +3338,15 @@ async function loadCronSnapshot() {
 async function loadData() {
   if (!GH_TOKEN) return;
   try {
-    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${DATA_FILE}`, {
-      headers: ghHeaders()
-    });
-    if (res.status === 404) {
-      // First run — create the file
-      await saveData();
-      return;
+    let loaded;
+    try {
+      loaded = await ghGetJsonFile(DATA_FILE);
+    } catch (err) {
+      if (err.status === 404) { await saveData(); return; }  // first run — create the file
+      throw err;
     }
-    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-    const file = await res.json();
-    GH_SHA = file.sha;
-    // GitHub returns content:"" with a download_url for files >1MB or in some edge cases.
-    // Guard against empty/missing content before decode to avoid JSON.parse('') throwing
-    // "Unexpected end of JSON input".
-    let rawContent = (file.content || '').replace(/\n/g, '');
-    if (!rawContent && file.download_url) {
-      // Fall back to direct download when the inline content field is empty
-      const dlRes = await fetch(file.download_url, { headers: ghHeaders() });
-      if (!dlRes.ok) throw new Error(`GitHub download_url fetch ${dlRes.status}`);
-      rawContent = btoa(unescape(encodeURIComponent(await dlRes.text())));
-    }
-    if (!rawContent) throw new Error('GitHub API returned empty file content');
-    const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(rawContent), c => c.charCodeAt(0))));
+    GH_SHA = loaded.sha;
+    const d = loaded.data;
     DATA.projects = d.projects || [];
     DATA.discussions = d.discussions || [];
     DATA.tasks = d.tasks || [];
@@ -3455,11 +3460,6 @@ const SERVER_OWNED_KEYS = new Set([
   'twoOfUsRitual', 'twoOfUsRitualMeta', 'repoScout',
 ]);
 
-function _decodeGhJson(file) {
-  return JSON.parse(new TextDecoder().decode(
-    Uint8Array.from(atob(file.content.replace(/\n/g, '')), c => c.charCodeAt(0))));
-}
-
 async function saveData() {
   if (!GH_TOKEN) { console.warn('[K2] saveData: No GH_TOKEN set'); return; }
   const syncEl = document.getElementById('last-sync');
@@ -3470,10 +3470,9 @@ async function saveData() {
     try {
       // Rebase onto the CURRENT server copy so we merge on top of whatever the
       // crons just wrote, instead of racing a stale sha and losing the edit.
-      const cur = await fetch(url, { headers: ghHeaders() });
-      if (!cur.ok) throw new Error(`GET ${cur.status}`);
-      const file = await cur.json();
-      const server = _decodeGhJson(file);
+      const cur = await ghGetJsonFile(DATA_FILE);
+      const file = { sha: cur.sha };
+      const server = cur.data;
       // Pull fresh cron-owned keys (and any key we don't have locally) into our
       // in-memory DATA; leave every user-edited key untouched so it persists.
       for (const k of Object.keys(server)) {
@@ -8264,10 +8263,8 @@ function openTaskModal(taskId) {
     }
     // Reload data from GitHub silently
     try {
-      const res = await fetch(`https://api.github.com/repos/RyanSandoval/k2-data/contents/data.json`, { headers: ghHeaders() });
-      if (!res.ok) return;
-      const file = await res.json();
-      const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g, '')), c => c.charCodeAt(0))));
+      const file = await ghGetJsonFile(DATA_FILE);
+      const d = file.data;
       const freshTask = (d.tasks || []).find(t => t.id == taskId);
       if (!freshTask) return;
       const currentTask = DATA.tasks.find(t => t.id == taskId);
