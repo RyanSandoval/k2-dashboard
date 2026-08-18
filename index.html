@@ -3103,7 +3103,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Stale tasks only</label>
-          <input id="sl-rule-stale" type="checkbox" style="width:16px;height:16px;cursor:pointer;">
+          <input id="sl-rule-stale" type="checkbox" style="width:16px;height:16px;cursor:pointer;" aria-label="Stale tasks only">
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px;">
@@ -7758,7 +7758,7 @@ function renderGrowth() {
       const priorityColor = item.priority === 'high' ? '#f87171' : item.priority === 'medium' ? '#fbbf24' : 'var(--text-dim)';
       const cadenceBadge = item.cadence ? `<span style="font-size:10px;background:var(--surface2);color:var(--text-dim);padding:2px 6px;border-radius:4px;margin-left:6px;">${item.cadence}</span>` : '';
       html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
-        <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleGrowthItem('${p.id}',${idx},this.checked)" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;">
+        <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleGrowthItem('${p.id}',${idx},this.checked)" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;" aria-label="Toggle growth item completion">
         <div style="flex:1;">
           <span style="font-size:13px;color:${item.done ? 'var(--text-dim)' : 'var(--text)'};${item.done ? 'text-decoration:line-through;' : ''}">${item.text}</span>
           ${cadenceBadge}
@@ -8093,7 +8093,7 @@ function openTaskModal(taskId) {
 
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${modalDueInfo && modalDueInfo.overdue ? 'border-left:3px solid var(--red);' : ''}">
       <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Due Date</span>
-      <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
+      <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;" aria-label="Due date">
       ${dueDateDisplay}
       ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date" aria-label="Clear due date" role="button" tabindex="0">✕</span>` : ''}
     </div>
@@ -8112,7 +8112,7 @@ function openTaskModal(taskId) {
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${task.hideUntil && task.hideUntil > getTodayStr() ? 'border-left:3px solid var(--yellow);' : ''}">
       <span style="font-size:16px;flex-shrink:0;">⏰</span>
       <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Show me this on:</span>
-      <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
+      <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;" aria-label="Hide task until date">
       ${task.hideUntil && task.hideUntil > getTodayStr() ? `<span style="font-size:11px;color:var(--yellow);font-weight:600;">Hidden until ${task.hideUntil}</span>` : (task.hideUntil ? `<span style="font-size:11px;color:var(--text-dim);">Visible now</span>` : `<span style="font-size:11px;color:var(--text-dim);">Always visible</span>`)}
       ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule" aria-label="Clear schedule" role="button" tabindex="0">✕</span>` : ''}
     </div>
@@ -8517,7 +8517,7 @@ function openProjectModal(projectId) {
 
     <div style="margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:10px 12px;border:1px solid var(--border);">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);">
-        <input type="checkbox" ${p.useSpecDriven ? 'checked' : ''} onchange="toggleProjectSpecDriven('${p.id}', this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent);">
+        <input type="checkbox" ${p.useSpecDriven ? 'checked' : ''} onchange="toggleProjectSpecDriven('${p.id}', this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent);" aria-label="Use spec-driven-dev skill">
         <span style="font-weight:600;">📐 Use spec-driven-dev skill</span>
       </label>
       <div style="font-size:10px;color:var(--text-dim);margin-top:4px;margin-left:22px;line-height:1.4;">
@@ -9717,7 +9717,7 @@ function quickSetHideUntil(taskId, btn) {
   const picker = document.createElement('div');
   picker.id = 'quick-hide-until-picker';
   picker.style.cssText = 'position:absolute;z-index:999;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
-  picker.innerHTML = '<span style="font-size:11px;font-weight:600;color:var(--text-dim);white-space:nowrap;">⏰ Show on:</span><input type="date" id="quick-hide-until-input" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:12px;"><button onclick="document.getElementById(\'quick-hide-until-picker\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:14px;padding:0 2px;" aria-label="Close">✕</button>';
+  picker.innerHTML = '<span style="font-size:11px;font-weight:600;color:var(--text-dim);white-space:nowrap;">⏰ Show on:</span><input type="date" id="quick-hide-until-input" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:12px;" aria-label="Hide task until date"><button onclick="document.getElementById(\'quick-hide-until-picker\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:14px;padding:0 2px;" aria-label="Close">✕</button>';
   const rect = btn.getBoundingClientRect();
   picker.style.top = (rect.bottom + window.scrollY + 4) + 'px';
   picker.style.left = Math.max(4, rect.left + window.scrollX - 120) + 'px';
@@ -11146,7 +11146,7 @@ function convertTextToHTML(text) {
     // Handle task items ([] or [x])
     if (line.match(/^\s*\[\s*\]\s+/) || line.match(/^\s*\[x\]\s+/i)) {
       const checked = line.match(/^\s*\[x\]\s+/i) ? 'true' : 'false';
-      const checkboxHtml = checked === 'true' ? '<input type="checkbox" checked>' : '<input type="checkbox">';
+      const checkboxHtml = checked === 'true' ? '<input type="checkbox" checked aria-label="Toggle task completion">' : '<input type="checkbox" aria-label="Toggle task completion">';
       const taskText = line.replace(/^\s*\[[x\s]*\]\s+/i, '');
       result.push(`<ul data-type="taskList"><li data-type="taskItem" data-checked="${checked}"><label>${checkboxHtml}</label><div><p>${taskText}</p></div></li></ul>`);
       i++;
@@ -11549,7 +11549,7 @@ function migrateJotsToDailyDocs() {
       if (jot.done !== undefined && (text.match(/\[\s*\]/) || text.match(/\[x\]/i))) {
         // Task item
         const cleanText = text.replace(/\[\s*\]/g, '').replace(/\[x\]/gi, '').trim();
-        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" ${jot.done ? 'checked' : ''}></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
+        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" ${jot.done ? 'checked' : ''} aria-label="Toggle task completion"></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
       } else {
         html += `<p>${timeSpan}${text}${mentions}</p>`;
       }
@@ -14731,7 +14731,7 @@ function renderReviewPage() {
       return '<div class="review-step" data-step="' + step.i + '" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;transition:opacity 0.2s;' + (checked ? 'opacity:0.55;' : '') + '">' +
         '<input type="checkbox" ' + (checked ? 'checked' : '') + ' ' +
         'onchange="(function(cb,i){var d=window._reviewDraft=window._reviewDraft||{completedSteps:[],reflections:{wentWell:\'\',didntGo:\'\',priority:\'\'}};if(cb.checked){if(!d.completedSteps.includes(i))d.completedSteps.push(i);}else{d.completedSteps=d.completedSteps.filter(function(x){return x!==i;});}cb.closest(\'.review-step\').style.opacity=cb.checked?\'0.55\':\'1\';})(this,' + step.i + ')" ' +
-        'style="margin-top:2px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;">' +
+        'style="margin-top:2px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;" aria-label="Toggle review step completion">' +
         '<div style="flex:1;">' +
         '<div style="font-size:14px;font-weight:600;color:var(--text);">' + escapeHtml(step.title) + '</div>' +
         '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + escapeHtml(step.desc) + '</div>' +
@@ -16308,7 +16308,7 @@ function showDatePickerForSlash(editor) {
     </div>
   `).join('') + `
     <div style="padding:6px 8px;border-top:1px solid var(--border-subtle);margin-top:4px;">
-      <input type="date" id="slash-date-custom" style="width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;" value="${iso(today)}">
+      <input type="date" id="slash-date-custom" style="width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;" value="${iso(today)}" aria-label="Custom date">
     </div>`;
 
   document.body.appendChild(picker);
@@ -18105,7 +18105,7 @@ setTimeout(() => {
       <div class="k2pal" role="dialog" aria-label="Command palette">
         <div class="k2pal-search">
           <span class="k2pal-search-icon">⌘</span>
-          <input class="k2pal-input" type="text" placeholder="Search pages, notes, tasks, projects, or run an action…" autocomplete="off" spellcheck="false">
+          <input class="k2pal-input" type="text" placeholder="Search pages, notes, tasks, projects, or run an action…" autocomplete="off" spellcheck="false" aria-label="Command palette search">
           <button class="k2pal-close-btn" aria-label="Close" type="button">✕</button>
         </div>
         <div class="k2pal-results"></div>
