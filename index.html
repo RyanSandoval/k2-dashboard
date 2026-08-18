@@ -22,7 +22,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com us.i.posthog.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' api.github.com https://raw.githubusercontent.com esm.sh *.esm.sh us.i.posthog.com cdn.jsdelivr.net https://corsproxy.io; img-src 'self' data: blob: *; font-src 'self' data: fonts.gstatic.com; frame-src 'none'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net esm.sh *.esm.sh us-assets.i.posthog.com us.i.posthog.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' esm.sh *.esm.sh us.i.posthog.com cdn.jsdelivr.net https://corsproxy.io; img-src 'self' data: blob: *; font-src 'self' data: fonts.gstatic.com; frame-src 'none'; object-src 'none';">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K2 Command Center</title>
@@ -1879,16 +1879,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <input type="password" id="login-code" placeholder="Access code" 
       style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;text-align:center;outline:none;margin-bottom:12px;"
       onkeydown="if(event.key==='Enter')checkLogin()">
-    <div id="token-field" style="display:none;">
-      <input type="password" id="login-token" placeholder="Fine-grained GitHub token (first time only)"
-        style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;text-align:center;outline:none;margin-bottom:12px;"
-        onkeydown="if(event.key==='Enter')checkLogin()">
-      <div style="font-size:11px;color:var(--text-dim);margin-top:-8px;margin-bottom:12px;line-height:1.5;">
-        Use a <b>fine-grained PAT</b> scoped to <b>this repo only</b>, permission
-        <b>Contents: read/write</b>. Never a classic token. Stored in this browser only.
-      </div>
-    </div>
-    <button onclick="checkLogin()" 
+    <button onclick="checkLogin()"
       style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
       Enter
     </button>
@@ -1896,50 +1887,39 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   </div>
 </div>
 <script>
-  const ACCESS_HASH = "b72653265c6bad2943d9235c8725b57920e6e5e1ff76165410094e7ae3c9bb99"; // SHA-256 of access code
-  async function sha256(str) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
   async function checkLogin() {
     const code = document.getElementById('login-code').value;
-    const hash = await sha256(code);
-    if (hash !== ACCESS_HASH) {
+    let res;
+    try {
+      res = await fetch('/api/login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+    } catch (e) {
+      document.getElementById('login-error').style.display = 'block';
+      return;
+    }
+    if (!res.ok) {
       document.getElementById('login-error').style.display = 'block';
       document.getElementById('login-code').value = '';
       return;
     }
-    // Check if we have a token already
-    let token = localStorage.getItem('gh_token');
-    const tokenInput = document.getElementById('login-token');
-    if (!token && tokenInput.value) {
-      token = tokenInput.value.trim();
-    }
-    if (!token) {
-      // Show token field
-      document.getElementById('token-field').style.display = 'block';
-      document.getElementById('login-token').focus();
-      if (!tokenInput.value) return;
-    }
-    localStorage.setItem('k2auth', 'true');
-    localStorage.setItem('gh_token', token);
-    GH_TOKEN = token;
+    K2_AUTHED = true;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
     loadData();
   }
-  // Clears stored token and access flag, then reloads to the login screen.
-  // Use this if you need to rotate or revoke the GitHub token.
-  function clearToken() {
-    localStorage.removeItem('gh_token');
-    localStorage.removeItem('k2auth');
-    GH_TOKEN = '';
+  // Logs out: clears the server session cookie, then reloads to the login screen.
+  async function clearToken() {
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+    } catch (e) {}
     location.reload();
   }
-  // Auto-login if already authed this session
-  if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
-    document.getElementById('login-screen').style.display = 'none';
-  }
+  // Session restore happens in the DOMContentLoaded handler (k2HasSession),
+  // which also sets K2_AUTHED and kicks off loadData().
 </script>
 
 <div class="app" id="app-main" style="display:none;">
@@ -3284,34 +3264,29 @@ const DATA_FILE = 'data.json';
 // every few minutes; data.json does not. Keeping them apart stops a ~1MB rewrite
 // on every heartbeat. See scripts/k2-cron-snapshot.sh.
 const CRON_FILE = 'cron-snapshot.json';
-let GH_TOKEN = localStorage.getItem('gh_token') || '';
+// Auth is a server-side HttpOnly session cookie (/api/login). No GitHub token
+// ever reaches the browser — every repo call goes through /api/*.
+let K2_AUTHED = false;
+async function k2HasSession() {
+  try { return (await fetch('/api/session', { credentials: 'same-origin' })).ok; }
+  catch (e) { return false; }
+}
 let GH_SHA = '';
 
-function ghHeaders() {
-  return {
-    'Authorization': `token ${GH_TOKEN}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json'
-  };
-}
-
-// GitHub's contents API returns content:"" once a file crosses 1MB. The download_url
-// fallback can't be used from the browser: any custom header (Authorization) forces a
-// CORS preflight and raw.githubusercontent.com answers OPTIONS with 403. The blobs API
-// serves the same bytes base64-encoded up to 100MB and does support CORS.
-// Returns { sha, data } or throws.
+// Reads go through the serverless layer. The >1MB blobs-API fallback that used to
+// live here now lives in api/_lib/gh.js, server-side, so no client can get it wrong
+// again (that was the c2d34e3 outage). Returns { sha, data } or throws; err.status
+// is preserved so loadData()'s 404 first-run branch still works.
 async function ghGetJsonFile(path) {
-  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, { headers: ghHeaders() });
-  if (!res.ok) { const e = new Error(`GitHub API ${res.status}`); e.status = res.status; throw e; }
-  const file = await res.json();
-  let raw = (file.content || '').replace(/\n/g, '');
-  if (!raw) {
-    const blob = await fetch(`https://api.github.com/repos/${DATA_REPO}/git/blobs/${file.sha}`, { headers: ghHeaders() });
-    if (!blob.ok) throw new Error(`GitHub blobs API ${blob.status}`);
-    raw = ((await blob.json()).content || '').replace(/\n/g, '');
+  if (path === DATA_FILE) {
+    const res = await fetch('/api/data', { credentials: 'same-origin' });
+    if (!res.ok) { const e = new Error(`/api/data ${res.status}`); e.status = res.status; throw e; }
+    return await res.json();                      // { sha, data }
   }
-  if (!raw) throw new Error('GitHub returned empty file content');
-  return { sha: file.sha, data: JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(raw), c => c.charCodeAt(0)))) };
+  const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { credentials: 'same-origin' });
+  if (!res.ok) { const e = new Error(`/api/file ${res.status}`); e.status = res.status; throw e; }
+  const file = await res.json();                  // { sha, content }
+  return { sha: file.sha, data: JSON.parse(file.content) };
 }
 
 // Hydrate DATA.cronJobs from the sidecar file. Never throws — the pulse indicator
@@ -3319,14 +3294,11 @@ async function ghGetJsonFile(path) {
 // data.json still carries (or an empty list) rather than failing the whole load.
 async function loadCronSnapshot() {
   try {
-    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${CRON_FILE}`, {
-      headers: ghHeaders()
-    });
+    const res = await fetch(`/api/file?path=${encodeURIComponent(CRON_FILE)}`, { credentials: 'same-origin' });
     if (!res.ok) return;                       // 404 until the writer's first run
     const file = await res.json();
-    const raw = (file.content || '').replace(/\n/g, '');
-    if (!raw) return;
-    const snap = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(raw), c => c.charCodeAt(0))));
+    if (!file.content) return;
+    const snap = JSON.parse(file.content);
     if (!Array.isArray(snap.jobs)) return;
     DATA.cronJobs = snap.jobs;
     DATA.cronJobsMeta = { snapshotAtMs: snap.snapshotAtMs, count: snap.count };
@@ -3336,7 +3308,7 @@ async function loadCronSnapshot() {
 }
 
 async function loadData() {
-  if (!GH_TOKEN) return;
+  if (!K2_AUTHED) return;
   try {
     let loaded;
     try {
@@ -3461,10 +3433,9 @@ const SERVER_OWNED_KEYS = new Set([
 ]);
 
 async function saveData() {
-  if (!GH_TOKEN) { console.warn('[K2] saveData: No GH_TOKEN set'); return; }
+  if (!K2_AUTHED) { console.warn('[K2] saveData: no session'); return; }
   const syncEl = document.getElementById('last-sync');
   if (syncEl) syncEl.innerHTML = '<span style="color:var(--yellow);">⏳ Saving...</span>';
-  const url = `https://api.github.com/repos/${DATA_REPO}/contents/${DATA_FILE}`;
   const MAX_ATTEMPTS = 6;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
@@ -3478,16 +3449,16 @@ async function saveData() {
       for (const k of Object.keys(server)) {
         if (SERVER_OWNED_KEYS.has(k) || !(k in DATA)) DATA[k] = server[k];
       }
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
-      const res = await fetch(url, {
+      const res = await fetch('/api/data', {
         method: 'PUT',
-        headers: ghHeaders(),
-        body: JSON.stringify({ message: `Data update ${new Date().toISOString()}`, content, sha: file.sha }),
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: DATA, sha: file.sha, message: `Data update ${new Date().toISOString()}` }),
       });
       if (res.status === 409 || res.status === 422) continue; // raced a cron between GET and PUT — rebase and retry
       if (!res.ok) throw new Error(`PUT ${res.status}`);
       const result = await res.json();
-      GH_SHA = result.content.sha;
+      GH_SHA = result.sha;
       window.DATA = DATA;
       if (syncEl) syncEl.innerHTML = `<span style="color:var(--green);">✓</span> ${new Date().toLocaleTimeString()}`;
       console.log('[K2] saveData: Success (rebased, attempt ' + attempt + '). SHA:', GH_SHA);
@@ -3502,7 +3473,7 @@ async function saveData() {
 // Upload a pasted/dropped image File or Blob to k2-data and return the raw GitHub URL.
 // Stored at images/notes/<ts>-<rand>.<ext>. Used by Tiptap paste/drop handlers.
 async function uploadPastedImage(blob) {
-  if (!GH_TOKEN) throw new Error('No GH_TOKEN — sign in first');
+  if (!K2_AUTHED) throw new Error('Not signed in');
   const mime = blob.type || 'image/png';
   const ext = (mime.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
   const rand = Math.random().toString(36).slice(2, 8);
@@ -3515,9 +3486,10 @@ async function uploadPastedImage(blob) {
     bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
   }
   const content = btoa(bin);
-  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, {
+  const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`, {
     method: 'PUT',
-    headers: ghHeaders(),
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: `Upload pasted image ${path}`, content }),
   });
   if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
@@ -3527,7 +3499,7 @@ window.uploadPastedImage = uploadPastedImage;
 
 // Upload any file type to the data repo. Returns { url, name }.
 async function uploadFileToRepo(file, folder = 'attachments/notes') {
-  if (!GH_TOKEN) throw new Error('No GH_TOKEN — sign in first');
+  if (!K2_AUTHED) throw new Error('Not signed in');
   const rand = Math.random().toString(36).slice(2, 8);
   const safeName = (file.name || 'file').toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/-+/g, '-').slice(-60);
   const path = `${folder}/${Date.now()}-${rand}-${safeName}`;
@@ -3539,9 +3511,10 @@ async function uploadFileToRepo(file, folder = 'attachments/notes') {
     bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
   }
   const content = btoa(bin);
-  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, {
+  const res = await fetch(`/api/file?path=${encodeURIComponent(path)}`, {
     method: 'PUT',
-    headers: ghHeaders(),
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: 'Upload attachment ' + path, content }),
   });
   if (!res.ok) throw new Error(`upload ${res.status}: ${await res.text()}`);
@@ -3553,7 +3526,7 @@ window.uploadFileToRepo = uploadFileToRepo;
 // k2-data is a PRIVATE repo, so the raw.githubusercontent.com URLs we persist in
 // note/jot content 404 for a plain unauthenticated <img>. That's the "image
 // shows (blob preview) then disappears (swap to raw URL)" bug. On render we swap
-// those <img> srcs to authenticated object URLs fetched with GH_TOKEN. Cached by
+// those <img> srcs to object URLs fetched through /api/blob. Cached by
 // raw URL so repeated notes reuse one blob; fresh pastes pre-seed the cache with
 // the object URL we already have, so there's no refetch and no 404 flash.
 const _privImgCache = new Map(); // rawUrl -> object URL
@@ -3562,16 +3535,14 @@ async function _fetchPrivateImage(rawUrl) {
   const prefix = `https://raw.githubusercontent.com/${DATA_REPO}/main/`;
   if (!rawUrl.startsWith(prefix)) return rawUrl; // not ours — leave untouched
   const path = rawUrl.slice(prefix.length);
-  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${path}`, {
-    headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.raw' },
-  });
+  const res = await fetch(`/api/blob?path=${encodeURIComponent(path)}`, { credentials: 'same-origin' });
   if (!res.ok) throw new Error(`image fetch ${res.status}`);
   const obj = URL.createObjectURL(await res.blob());
   _privImgCache.set(rawUrl, obj);
   return obj;
 }
 async function hydratePrivateImages(root) {
-  if (!root || !GH_TOKEN || !root.querySelectorAll) return;
+  if (!root || !K2_AUTHED || !root.querySelectorAll) return;
   const prefix = `https://raw.githubusercontent.com/${DATA_REPO}/main/`;
   for (const img of root.querySelectorAll('img')) {
     const rawUrl = img.getAttribute('src') || '';
@@ -6260,12 +6231,10 @@ async function loadMemoryFeed(forceReload) {
   // Fetch all in parallel
   const results = await Promise.all(dates.map(async date => {
     try {
-      const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/memory/${date}.md`, { headers: ghHeaders() });
-      if (res.status === 404) return { date, content: null };
-      if (!res.ok) return { date, content: null };
+      const res = await fetch(`/api/file?path=${encodeURIComponent('memory/' + date + '.md')}`, { credentials: 'same-origin' });
+      if (!res.ok) return { date, content: null };   // 404 = no note that day
       const file = await res.json();
-      const md = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g,'')), c=>c.charCodeAt(0)));
-      return { date, content: md };
+      return { date, content: file.content };
     } catch(e) { return { date, content: null }; }
   }));
 
@@ -6300,11 +6269,10 @@ async function loadLongtermMemory() {
   if (!el) return;
   el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;">Loading...</div>';
   try {
-    const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/MEMORY.md`, { headers: ghHeaders() });
+    const res = await fetch('/api/file?path=MEMORY.md', { credentials: 'same-origin' });
     if (res.status === 404) { el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;font-style:italic;">MEMORY.md not found in k2-data repo.</div>'; return; }
     if (!res.ok) throw new Error(res.status);
-    const file = await res.json();
-    const md = new TextDecoder().decode(Uint8Array.from(atob(file.content.replace(/\n/g,'')), c=>c.charCodeAt(0)));
+    const md = (await res.json()).content;
     el.innerHTML = `<div style="white-space:pre-wrap;font-family:inherit;">${renderMarkdown(md)}</div>`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--red);font-size:12px;">Error: ${e.message}</div>`;
@@ -14035,9 +14003,9 @@ function renderGCalWidget() {
 }
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
-    GH_TOKEN = localStorage.getItem('gh_token');
+document.addEventListener('DOMContentLoaded', async () => {
+  if (await k2HasSession()) {
+    K2_AUTHED = true;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
     loadData().then(() => {
@@ -18083,7 +18051,6 @@ setTimeout(() => {
     { id: 'act-reload',      icon: '🔄', label: 'Reload data from k2-data', run: () => window.loadData && window.loadData() },
     { id: 'act-restore-last',icon: '↩️', label: 'Restore most recently archived', run: () => window.K2Archive && K2Archive.restoreLast() },
     { id: 'act-signout',     icon: '🚪', label: 'Sign out',           run: () => { if (!confirm('Sign out of K-2?')) return; clearToken(); } },
-    { id: 'act-forget-token',icon: '🔑', label: 'Forget token',        run: () => { if (!confirm('Remove stored GitHub token?')) return; clearToken(); } },
   ];
 
   const state = {

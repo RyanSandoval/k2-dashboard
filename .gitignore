@@ -1,1 +1,4 @@
 data.json
+.vercel-secrets.local
+.vercel
+.DS_Store
