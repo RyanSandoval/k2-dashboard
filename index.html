@@ -3644,6 +3644,16 @@ function renderAll() {
     try { fn(); } catch(e) { console.error('[K2] renderAll: ' + fn.name + ' failed:', e); }
   }
   _rerenderCurrentPage();
+  // DOM node count monitor — warns when growth approaches perf-impacting territory.
+  // 1500 = watch threshold; 2500 = investigate threshold.
+  try {
+    const nodeCount = document.querySelectorAll('*').length;
+    if (nodeCount >= 2500) {
+      console.warn('[K2] DOM node count is high (' + nodeCount + '). Consider auditing unbounded render sections or adding pagination.');
+    } else if (nodeCount >= 1500) {
+      console.info('[K2] DOM node count: ' + nodeCount + ' (watch — growth expected as k2-data scales).');
+    }
+  } catch(e) { /* non-critical monitor — swallow silently */ }
 }
 
 // Navigation
@@ -6941,7 +6951,12 @@ function renderFilteredAIInsights() {
     return bDate.localeCompare(aDate);
   });
 
-  gridContainer.innerHTML = filteredInsights.map(insight => {
+  // Cap rendered cards to prevent unbounded DOM growth as vikingInsights scales.
+  const AI_INSIGHTS_CAP = 50;
+  const insightsOverflow = filteredInsights.length - AI_INSIGHTS_CAP;
+  const insightsToRender = filteredInsights.slice(0, AI_INSIGHTS_CAP);
+
+  gridContainer.innerHTML = insightsToRender.map(insight => {
     const impactColor = insight.impact === 'High' ? 'var(--red)' : 
                        insight.impact === 'Medium' ? 'var(--yellow)' : 'var(--green)';
     const statusColor = insight.status === 'New' ? 'var(--accent)' :
@@ -6996,6 +7011,10 @@ function renderFilteredAIInsights() {
       </div>
     `;
   }).join('');
+
+  if (insightsOverflow > 0) {
+    gridContainer.innerHTML += `<div style="grid-column:1/-1;text-align:center;color:var(--text-dim);padding:14px;font-size:12px;">+ ${insightsOverflow} more — narrow with a filter to see them.</div>`;
+  }
 }
 
 function setupAIInsightsFilters() {
