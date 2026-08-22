@@ -1888,8 +1888,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <b>Contents: read/write</b>. Never a classic token. Stored in this browser only.
       </div>
     </div>
-    <button onclick="checkLogin()" 
-      style="width:100%;padding:12px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+    <button onclick="checkLogin()"
+      style="width:100%;padding:12px;min-height:44px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
       Enter
     </button>
     <p id="login-error" style="color:var(--red);font-size:12px;margin-top:12px;display:none;">Wrong code. Try again.</p>
@@ -6941,7 +6941,10 @@ function renderFilteredAIInsights() {
     return bDate.localeCompare(aDate);
   });
 
-  gridContainer.innerHTML = filteredInsights.map(insight => {
+  const INSIGHTS_CAP = 30;
+  const insightsOverflow = Math.max(0, filteredInsights.length - INSIGHTS_CAP);
+  const visibleInsights = filteredInsights.slice(0, INSIGHTS_CAP);
+  gridContainer.innerHTML = visibleInsights.map(insight => {
     const impactColor = insight.impact === 'High' ? 'var(--red)' : 
                        insight.impact === 'Medium' ? 'var(--yellow)' : 'var(--green)';
     const statusColor = insight.status === 'New' ? 'var(--accent)' :
@@ -6996,6 +6999,9 @@ function renderFilteredAIInsights() {
       </div>
     `;
   }).join('');
+  if (insightsOverflow > 0) {
+    gridContainer.innerHTML += `<div style="grid-column:1/-1;text-align:center;padding:16px;font-size:12px;color:var(--text-dim);">Showing ${INSIGHTS_CAP} of ${filteredInsights.length} insights — use filters to narrow results</div>`;
+  }
 }
 
 function setupAIInsightsFilters() {
@@ -13573,7 +13579,10 @@ function renderDailyAdvisor() {
     el.innerHTML = header + `<div style="font-size:12px;color:var(--text-dim);font-style:italic;">✨ Nothing hidden in your jots from the last 14 days. Backlog is what it is — go do the work.</div>`;
     return;
   }
-  const rows = items.map(it => {
+  const ADVISOR_CAP = 5;
+  const shown = items.slice(0, ADVISOR_CAP);
+  const overflow = items.length - shown.length;
+  const rows = shown.map(it => {
     const idAttr = encodeURIComponent(it.id || '');
     const kind = it.kind === 'unresolved-question' ? '❓ unresolved question' : '🔍 hidden task';
     const dateStr = it.sourceJotDate ? `<span style="font-size:11px;color:var(--text-dim);margin-left:6px;">— ${escapeHtml(it.sourceJotDate)}</span>` : '';
@@ -13593,7 +13602,10 @@ function renderDailyAdvisor() {
         </div>
       </div>`;
   }).join('');
-  el.innerHTML = header + rows;
+  const overflowHtml = overflow > 0
+    ? `<div style="padding:8px 0;font-size:11px;color:var(--text-dim);text-align:center;">+ ${overflow} more — dismiss these to surface them</div>`
+    : '';
+  el.innerHTML = header + rows + overflowHtml;
 }
 
 async function promoteAdvisorItem(itemId) {
@@ -13974,10 +13986,12 @@ function renderTaskHeatmap() {
     else if (t.dueDate === today) byProject[key].dueToday++;
   }
 
-  const chips = Object.entries(byProject)
+  const HEATMAP_CAP = 10;
+  const allChips = Object.entries(byProject)
     .filter(([,c]) => c.total > 0)
-    .sort((a,b) => (b[1].overdue - a[1].overdue) || (b[1].dueToday - a[1].dueToday))
-    .map(([projId, counts]) => {
+    .sort((a,b) => (b[1].overdue - a[1].overdue) || (b[1].dueToday - a[1].dueToday));
+  const chipOverflow = Math.max(0, allChips.length - HEATMAP_CAP);
+  const chips = allChips.slice(0, HEATMAP_CAP).map(([projId, counts]) => {
       const proj = (DATA.projects||[]).find(p => p.id === projId);
       const name = proj ? proj.name : (projId === '__none__' ? 'Unassigned' : projId);
       const short = name.length > 22 ? name.slice(0,20)+'…' : name;
@@ -13987,6 +14001,9 @@ function renderTaskHeatmap() {
       else { bg='var(--surface2)'; color='var(--text-dim)'; label=`${counts.total} open`; }
       return `<span onclick="navigateTo('tasks')" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:${bg};border-radius:20px;cursor:pointer;white-space:nowrap;font-size:11px;font-weight:600;color:${color};transition:opacity 0.15s;" onmouseover="this.style.opacity=.75" onmouseout="this.style.opacity=1">${short} <span style="opacity:0.75;font-weight:400;">${label}</span></span>`;
     });
+  if (chipOverflow > 0) {
+    chips.push(`<span onclick="navigateTo('tasks')" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--surface2);border-radius:20px;cursor:pointer;white-space:nowrap;font-size:11px;font-weight:600;color:var(--text-dim);transition:opacity 0.15s;" onmouseover="this.style.opacity=.75" onmouseout="this.style.opacity=1">+${chipOverflow} more</span>`);
+  }
 
   el.innerHTML = chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${chips.join('')}</div>` : '';
 }
