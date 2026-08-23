@@ -13508,7 +13508,20 @@ function renderRepoScoutCard() {
   const driftColor = { behind: '#ef4444', current: '#22c55e', unknown: '#94a3b8' };
   const driftLabel = { behind: 'BEHIND', current: 'OK', unknown: '?' };
 
-  const rows = s.repos.map(r => {
+  // Cap rows rendered: always show "behind" repos first, then fill up to REPO_SCOUT_VISIBLE cap.
+  // This keeps dashboard node count stable regardless of how many repos are tracked.
+  const REPO_SCOUT_VISIBLE = 5;
+  const showAllRepos = window._repoScoutShowAll;
+  const allRepos = s.repos;
+  // Sort: behind first, then current, then unknown
+  const sortedRepos = [...allRepos].sort((a, b) => {
+    const rank = { behind: 0, unknown: 1, current: 2 };
+    return (rank[a.drift] ?? 1) - (rank[b.drift] ?? 1);
+  });
+  const visibleRepos = showAllRepos ? sortedRepos : sortedRepos.slice(0, REPO_SCOUT_VISIBLE);
+  const hiddenRepoCount = sortedRepos.length - visibleRepos.length;
+
+  const repoRowHtml = (r) => {
     const dc = driftColor[r.drift] || '#94a3b8';
     const dl = driftLabel[r.drift] || '?';
     const isBehind = r.drift === 'behind';
@@ -13532,7 +13545,11 @@ function renderRepoScoutCard() {
         ${r.latest ? `<span title="latest upstream">↑ ${escapeHtml(latestShort)}</span>` : ''}
       </div>
     </div>`;
-  }).join('');
+  };
+  const rows = visibleRepos.map(repoRowHtml).join('');
+  const repoOverflowBtn = hiddenRepoCount > 0
+    ? `<div style="padding:6px 0;font-size:11px;color:var(--accent);cursor:pointer;" onclick="window._repoScoutShowAll=true;renderRepoScoutCard()">+ ${hiddenRepoCount} more repo${hiddenRepoCount !== 1 ? 's' : ''} ▾</div>`
+    : '';
 
   el.style.display = 'block';
   el.innerHTML = `
@@ -13544,6 +13561,7 @@ function renderRepoScoutCard() {
       <span style="font-size:10px;color:var(--text-dim);">checked ${checkedAgo}</span>
     </div>
     ${rows}
+    ${repoOverflowBtn}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);">
       <span style="font-size:10px;color:var(--text-dim);">Post a GitHub URL in #repo-scout for adopt-vs-build verdict</span>
     </div>`;
@@ -13556,8 +13574,8 @@ function renderDailyAdvisor() {
   const el = document.getElementById('dash-daily-advisor');
   if (!el) return;
   const advisor = DATA.dailyAdvisor || { items: [], dismissedQuotes: [], lastRunAt: null };
-  const items = Array.isArray(advisor.items) ? advisor.items : [];
-  if (!advisor.lastRunAt && items.length === 0) {
+  const allItems = Array.isArray(advisor.items) ? advisor.items : [];
+  if (!advisor.lastRunAt && allItems.length === 0) {
     el.style.display = 'none';
     return;
   }
@@ -13569,10 +13587,14 @@ function renderDailyAdvisor() {
       <div style="font-size:13px;font-weight:700;">🧭 Daily Advisor <span style="font-weight:400;color:var(--text-dim);font-size:11px;">— hidden tasks &amp; unresolved questions</span></div>
       <div style="font-size:11px;color:var(--text-dim);">last run: ${escapeHtml(lastRunStr)}</div>
     </div>`;
-  if (items.length === 0) {
+  if (allItems.length === 0) {
     el.innerHTML = header + `<div style="font-size:12px;color:var(--text-dim);font-style:italic;">✨ Nothing hidden in your jots from the last 14 days. Backlog is what it is — go do the work.</div>`;
     return;
   }
+  // Cap to 8 items to keep dashboard node count stable.
+  const ADVISOR_VISIBLE = 8;
+  const items = allItems.slice(0, ADVISOR_VISIBLE);
+  const advisorOverflow = allItems.length - items.length;
   const rows = items.map(it => {
     const idAttr = encodeURIComponent(it.id || '');
     const kind = it.kind === 'unresolved-question' ? '❓ unresolved question' : '🔍 hidden task';
@@ -13593,7 +13615,10 @@ function renderDailyAdvisor() {
         </div>
       </div>`;
   }).join('');
-  el.innerHTML = header + rows;
+  const advisorOverflowHtml = advisorOverflow > 0
+    ? `<div style="padding:8px 0;font-size:12px;color:var(--text-dim);font-style:italic;">+ ${advisorOverflow} more item${advisorOverflow !== 1 ? 's' : ''} — dismiss or promote above to surface them</div>`
+    : '';
+  el.innerHTML = header + rows + advisorOverflowHtml;
 }
 
 async function promoteAdvisorItem(itemId) {
@@ -14396,6 +14421,8 @@ function renderCompleted(filter) {
     document.querySelectorAll('#completed-filter-bar .filter-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.filter === filter);
     });
+    // Reset pagination when switching filters
+    if (filter !== 'all') window._completedAllPage = 0;
   } else {
     filter = 'week';
   }
@@ -14515,10 +14542,22 @@ function renderCompleted(filter) {
     return;
   }
 
+  // For the 'all' filter, paginate at 50 tasks per page to prevent DOM bloat
+  // as the completed task list grows over months.
+  const COMPLETED_ALL_PAGE_SIZE = 50;
+  const completedPage = (filter === 'all') ? (window._completedAllPage || 0) : 0;
+  const completedOffset = completedPage * COMPLETED_ALL_PAGE_SIZE;
+  const filteredForPage = (filter === 'all')
+    ? filtered.slice(completedOffset, completedOffset + COMPLETED_ALL_PAGE_SIZE)
+    : filtered;
+  const completedPageTotal = (filter === 'all') ? filtered.length : filtered.length;
+  const completedHasMore = (filter === 'all') && (completedOffset + COMPLETED_ALL_PAGE_SIZE < filtered.length);
+  const completedHasPrev = (filter === 'all') && completedPage > 0;
+
   // Group by week
   const groups = {};
   const groupOrder = [];
-  filtered.forEach(t => {
+  filteredForPage.forEach(t => {
     const d = taskDate(t) || now;
     const label = getWeekLabel(d);
     const ws = getWeekStart(d).getTime();
@@ -14562,6 +14601,18 @@ function renderCompleted(filter) {
       <div>${taskRows}</div>
     </div>`;
   }).join('');
+
+  // Append pagination controls for the 'all' view
+  if (filter === 'all' && (completedHasPrev || completedHasMore)) {
+    const shown = Math.min(completedOffset + COMPLETED_ALL_PAGE_SIZE, filtered.length);
+    listEl.innerHTML += `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;font-size:12px;color:var(--text-dim);">
+      <span>Showing ${completedOffset + 1}–${shown} of ${filtered.length}</span>
+      <div style="display:flex;gap:8px;">
+        ${completedHasPrev ? `<button onclick="window._completedAllPage=(window._completedAllPage||0)-1;renderCompleted('all')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;">← Newer</button>` : ''}
+        ${completedHasMore ? `<button onclick="window._completedAllPage=(window._completedAllPage||0)+1;renderCompleted('all')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;">Older →</button>` : ''}
+      </div>
+    </div>`;
+  }
 }
 
 async function reopenCompletedTask(taskId) {
