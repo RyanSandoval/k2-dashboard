@@ -1982,6 +1982,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-item" data-page="dashboard">
         <span class="icon">☀️</span> Today
       </div>
+      <div class="nav-item" data-page="requests">
+        <span class="icon">📮</span> Requests
+        <span class="badge" id="requests-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" data-page="action-inbox">
         <span class="icon">🎯</span> Action Inbox
         <span class="badge" id="action-inbox-badge" style="display:none">0</span>
@@ -2128,6 +2132,17 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
       <!-- Session Residue — "where you left off" — pure client-side, no cron -->
       <div class="card" id="dash-session-residue" style="margin-bottom:12px;display:none;border-left:3px solid var(--border);padding:12px 16px;"></div>
+
+      <!-- Requests — real humans waiting on Ryan. Ingested from the M365 Copilot
+           unresolved-requests review by scripts/requests_sync.py. Outranks
+           everything below it: K2 cannot see Outlook/Teams on its own. -->
+      <div class="card" id="dash-requests" style="margin-bottom:20px;display:none;border-left:3px solid var(--red);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:700;">📮 People Waiting On You <span id="dash-requests-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
+          <span onclick="navigateTo('requests')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All requests →</span>
+        </div>
+        <div id="dash-requests-list"></div>
+      </div>
 
       <!-- Action Inbox roll-up — top items pulled in from #k2 nightly scanner -->
       <div class="card" id="dash-action-inbox" style="margin-bottom:20px;display:none;border-left:3px solid var(--accent);">
@@ -2950,6 +2965,21 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
     <!-- Someday/Maybe Page -->
     <!-- Waiting For Page -->
+    <div class="page" id="page-requests" style="max-width:820px;margin:0 auto;">
+      <div class="page-header">
+        <h2>📮 Requests</h2>
+        <p>Asks from real people that have not been closed out — from Outlook, Teams, and meeting notes</p>
+      </div>
+      <div id="requests-meta" style="font-size:12px;color:var(--text-dim);margin-bottom:12px;"></div>
+      <div style="display:flex;gap:8px;margin-bottom:var(--sp-5);flex-wrap:wrap;">
+        <button class="requests-filter-btn active" data-filter="open" onclick="setRequestsFilter('open')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;">Open</button>
+        <button class="requests-filter-btn" data-filter="resolved" onclick="setRequestsFilter('resolved')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;">Resolved</button>
+        <button class="requests-filter-btn" data-filter="dismissed" onclick="setRequestsFilter('dismissed')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;">Dismissed</button>
+        <button class="requests-filter-btn" data-filter="all" onclick="setRequestsFilter('all')" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;">All</button>
+      </div>
+      <div id="requests-list"></div>
+    </div>
+
     <div class="page" id="page-waiting" style="max-width:700px;margin:0 auto;">
       <div class="page-header">
         <h2>⏳ Waiting For</h2>
@@ -3141,6 +3171,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <div class="mobile-more-grid">
       <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
+      <div class="mobile-more-item" data-page="requests" onclick="mobileNavMore('requests')" style="background:color-mix(in srgb,var(--red) 18%,transparent);border-color:var(--red);position:relative;"><span class="icon">📮</span>Requests<span id="mobile-requests-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--red);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="action-inbox" onclick="mobileNavMore('action-inbox')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🎯</span>Action Inbox<span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="commitments" onclick="mobileNavMore('commitments')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🤝</span>Commitments<span id="mobile-commitments-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="activity" onclick="mobileNavMore('activity')" style="position:relative;"><span class="icon">📜</span>Activity<span id="mobile-activity-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
@@ -3610,6 +3641,7 @@ function _rerenderCurrentPage() {
     else if (page === 'inbox')    renderInbox();
     else if (page === 'someday')  renderSomeday();
     else if (page === 'waiting')  renderWaitingFor();
+    else if (page === 'requests') renderRequests();
     else if (page === 'action-inbox') renderActionInbox();
     else if (page === 'commitments')  renderCommitments();
     else if (page === 'ball-back')    renderJiraBallBack();
@@ -3637,7 +3669,7 @@ function renderAll() {
   // are rendered lazily when the user navigates to them (navigateTo wires this).
   // On data refresh (loadData -> renderAll), _rerenderCurrentPage() re-renders
   // whichever page is currently visible so it picks up the latest data.
-  const fns = [migrateJotsToDailyDocs, renderDashboard, renderFloatingDecisions,
+  const fns = [migrateJotsToDailyDocs, renderDashboard, renderRequestsBadge, renderFloatingDecisions,
                renderSessionResidue, renderStaleJotsBadge, renderStaleNotesBadge,
                renderWorkersBadge, renderTaskHeatmap, initNavSectionStates];
   for (const fn of fns) {
@@ -3720,6 +3752,7 @@ function navigateTo(page) {
   if (page === 'inbox') renderInbox();
   if (page === 'someday') renderSomeday();
   if (page === 'waiting') renderWaitingFor();
+  if (page === 'requests') renderRequests();
   if (page === 'review') renderReviewPage();
   if (page === 'completed') renderCompleted();
   if (page === 'planner') renderPlanner(window._plannerDate || getTodayStr());
@@ -3933,6 +3966,207 @@ function renderActionInboxBadge() {
   }
 }
 window.renderActionInboxBadge = renderActionInboxBadge;
+
+// ============================================================
+// REQUESTS — what actual humans asked Ryan for
+// ============================================================
+// DATA.requests comes from scripts/requests_sync.py, which ingests the M365
+// Copilot "unresolved requests review" workbook. K2 has no Outlook/Teams
+// access, so this is the only path by which a real human ask reaches the
+// dashboard. These outrank every self-generated item: a named person is
+// waiting on each one.
+function _requestsOpen() {
+  return (DATA.requests || [])
+    .filter(r => r && !r.resolved && !r.dismissed && !r.goneFromSource)
+    .sort((a, b) => (b.overdueDays || 0) - (a.overdueDays || 0) || (b.ageDays || 0) - (a.ageDays || 0));
+}
+
+function _reqEsc(s) {
+  return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+}
+
+function _reqAgeChip(r) {
+  const od = r.overdueDays || 0;
+  if (od > 30) return `<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:color-mix(in srgb,var(--red) 22%,transparent);color:var(--red);font-weight:800;">🔴 ${od}d overdue</span>`;
+  if (od > 0) return `<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--orange) 20%,transparent);color:var(--orange);font-weight:700;">${od}d overdue</span>`;
+  if (r.dueDate) return `<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--yellow) 18%,transparent);color:var(--yellow);font-weight:700;">due ${_reqEsc(r.dueDate)}</span>`;
+  return `<span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-weight:600;">no due date</span>`;
+}
+
+function _reqChannelIcon(c) {
+  const k = String(c || '').toLowerCase();
+  if (k.includes('teams chat')) return '💬';
+  if (k.includes('teams channel')) return '📢';
+  if (k.includes('transcript')) return '🎙️';
+  if (k.includes('facilitator')) return '📝';
+  return '✉️';
+}
+
+function renderRequestsBadge() {
+  const count = _requestsOpen().length;
+  const text = count > 99 ? '99+' : String(count);
+  for (const id of ['requests-badge', 'mobile-requests-badge']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (count) { el.style.display = ''; el.textContent = text; }
+    else { el.style.display = 'none'; }
+  }
+}
+window.renderRequestsBadge = renderRequestsBadge;
+
+async function requestSetState(id, field) {
+  const r = (DATA.requests || []).find(x => x && x.id === id);
+  if (!r) return;
+  r[field] = !r[field];
+  if (field === 'resolved') r.resolvedAt = r.resolved ? new Date().toISOString() : null;
+  await saveData();
+  renderRequests();
+  renderDashRequests();
+  renderRequestsBadge();
+  if (typeof showToast === 'function') {
+    showToast(r[field] ? (field === 'resolved' ? 'Marked resolved' : 'Dismissed') : 'Reopened');
+  }
+}
+window.requestSetState = requestSetState;
+
+// Compact row used on the dashboard card and at the top of the Action Inbox.
+function _requestRowCompact(r, onclickPage) {
+  const link = r.link
+    ? `<a href="${_reqEsc(r.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent);text-decoration:none;flex-shrink:0;">open ↗</a>`
+    : '';
+  return `<div onclick="navigateTo('${onclickPage}')" style="display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;line-height:1.45;">
+    <span style="flex-shrink:0;font-size:12px;" title="${_reqEsc(r.channel)}">${_reqChannelIcon(r.channel)}</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:600;color:var(--text);">${_reqEsc(r.requester)}</div>
+      <div style="color:var(--text-dim);">${_reqEsc(String(r.ask || '').slice(0, 120))}${String(r.ask || '').length > 120 ? '…' : ''}</div>
+    </div>
+    ${_reqAgeChip(r)}
+    ${link}
+  </div>`;
+}
+
+// Requests block injected at the TOP of the Action Inbox list.
+function _requestsInboxBlock() {
+  const open = _requestsOpen();
+  if (!open.length) return '';
+  const rows = open.slice(0, 6).map(r => _requestRowCompact(r, 'requests')).join('');
+  const more = open.length > 6
+    ? `<div onclick="navigateTo('requests')" style="padding:8px 0 0;font-size:11px;color:var(--accent);cursor:pointer;">${open.length - 6} more open request${open.length - 6 !== 1 ? 's' : ''} →</div>`
+    : '';
+  return `<div style="margin-bottom:18px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--red) 35%,transparent);border-left:3px solid var(--red);border-radius:var(--radius-sm);background:color-mix(in srgb,var(--red) 5%,transparent);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:800;">📮 People waiting on you <span style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;">${open.length} open</span></div>
+      <span onclick="event.stopPropagation();navigateTo('requests')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All requests →</span>
+    </div>
+    ${rows}${more}
+  </div>`;
+}
+
+// Dashboard card — sits above Action Inbox.
+function renderDashRequests() {
+  const card = document.getElementById('dash-requests');
+  if (!card) return;
+  const open = _requestsOpen();
+  const countEl = document.getElementById('dash-requests-count');
+  const listEl = document.getElementById('dash-requests-list');
+  if (!open.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const overdue = open.filter(r => (r.overdueDays || 0) > 0).length;
+  if (countEl) countEl.textContent = `${open.length} open · ${overdue} overdue`;
+  if (listEl) listEl.innerHTML = open.slice(0, 6).map(r => _requestRowCompact(r, 'requests')).join('');
+}
+window.renderDashRequests = renderDashRequests;
+
+function renderRequests() {
+  renderRequestsBadge();
+  const container = document.getElementById('requests-list');
+  const metaEl = document.getElementById('requests-meta');
+  if (!container) return;
+  const all = (DATA.requests || []).filter(Boolean);
+  const filter = window._requestsFilter || 'open';
+  let items;
+  if (filter === 'open') items = _requestsOpen();
+  else if (filter === 'resolved') items = all.filter(r => r.resolved);
+  else if (filter === 'dismissed') items = all.filter(r => r.dismissed);
+  else items = all.slice().sort((a, b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+
+  if (metaEl) {
+    const m = DATA.requestsMeta || {};
+    const src = m.sourceGenerated ? `Copilot review ${m.sourceGenerated}` : 'no source date';
+    metaEl.textContent = `${_requestsOpen().length} open · ${all.length} tracked · ${src}`;
+  }
+
+  if (!items.length) {
+    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${all.length ? 'Nothing in this view.' : 'No requests ingested yet. Drop the Copilot unresolved-requests workbook in #k2-dashboard.'}</div>`;
+    return;
+  }
+
+  // Group by requester — one person's asks belong together.
+  const groups = new Map();
+  for (const r of items) {
+    const k = r.requester || 'Unknown';
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const groupList = [...groups.entries()].map(([name, arr]) => ({
+    name, arr,
+    worst: Math.max(...arr.map(r => r.overdueDays || 0)),
+  })).sort((a, b) => b.worst - a.worst || b.arr.length - a.arr.length);
+
+  container.innerHTML = groupList.map(g => {
+    const rows = g.arr.map(r => {
+      const done = r.resolved || r.dismissed;
+      const jira = (String(r.ask || '') + ' ' + String(r.reference || '')).match(/\b(?:MW|DES|CMS|DO)-\d+\b/g) || [];
+      const jiraChips = [...new Set(jira)].map(k =>
+        `<a href="https://vikingtravel.atlassian.net/browse/${k}" target="_blank" rel="noopener" class="tag tag-blue" style="font-size:10px;text-decoration:none;">${k}</a>`).join(' ');
+      const link = r.link
+        ? `<a href="${_reqEsc(r.link)}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;">open in M365 ↗</a>`
+        : '';
+      const btn = 'background:none;border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;color:var(--text-dim);';
+      return `<div style="padding:11px 0;border-bottom:1px solid var(--border);${done ? 'opacity:0.45;' : ''}">
+        <div style="display:flex;align-items:flex-start;gap:9px;">
+          <span style="flex-shrink:0;" title="${_reqEsc(r.channel)}">${_reqChannelIcon(r.channel)}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;line-height:1.45;${done ? 'text-decoration:line-through;' : ''}">${_reqEsc(r.ask)}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:4px;line-height:1.5;"><strong>Next:</strong> ${_reqEsc(r.nextAction)}</div>
+            ${r.whyUnresolved ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.5;">${_reqEsc(r.whyUnresolved)}</div>` : ''}
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:7px;">
+              ${_reqAgeChip(r)}
+              <span style="font-size:10px;color:var(--text-dim);">asked ${_reqEsc(r.requestedDate || '—')}</span>
+              ${jiraChips}
+              ${link}
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button style="${btn}" onclick="requestSetState('${r.id}','resolved')" title="Mark resolved">${r.resolved ? '↩' : '✓'}</button>
+            <button style="${btn}" onclick="requestSetState('${r.id}','dismissed')" title="Dismiss">${r.dismissed ? '↩' : '✕'}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    const worstChip = g.worst > 0
+      ? `<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red);font-weight:700;">worst ${g.worst}d overdue</span>`
+      : '';
+    return `<div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;">
+        <div style="font-size:14px;font-weight:800;">${_reqEsc(g.name)}</div>
+        <span style="font-size:11px;color:var(--text-dim);">${g.arr.length} request${g.arr.length !== 1 ? 's' : ''}</span>
+        ${worstChip}
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+window.renderRequests = renderRequests;
+
+function setRequestsFilter(f) {
+  window._requestsFilter = f;
+  document.querySelectorAll('.requests-filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  renderRequests();
+}
+window.setRequestsFilter = setRequestsFilter;
 
 // ============================================================
 // COMMITMENTS
@@ -4359,7 +4593,7 @@ function renderActionInbox() {
     const emptyMsg = pruned.length === 0
       ? 'Action Inbox is empty. The nightly scanner cron will populate it from your tasks, jots, and notes.'
       : (search ? 'No items match your search.' : (filter === 'open' ? 'No open action items. Inbox zero! 🎉' : 'Nothing here.'));
-    container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${emptyMsg}</div>`;
+    container.innerHTML = _requestsInboxBlock() + `<div style="text-align:center;color:var(--text-dim);padding:48px 20px;font-size:14px;">${emptyMsg}</div>`;
     return;
   }
 
@@ -4457,7 +4691,7 @@ function renderActionInbox() {
   const overflowFooter = overflow > 0
     ? `<div style="text-align:center;color:var(--text-muted);padding:14px;font-size:12px;">+ ${overflow} more — narrow with search or filter.</div>`
     : '';
-  container.innerHTML = rows + overflowFooter;
+  container.innerHTML = _requestsInboxBlock() + rows + overflowFooter;
 }
 window.renderActionInbox = renderActionInbox;
 
@@ -6717,6 +6951,9 @@ function renderDashboard() {
       ${mission ? `<div style="font-size:11px;padding:5px 12px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:20px;color:var(--accent);max-width:320px;text-align:right;line-height:1.4;cursor:pointer;" onclick="navigateTo('mission')" title="Click to edit mission">🎯 ${mission}</div>` :
       `<div onclick="navigateTo('mission')" style="font-size:12px;color:var(--text-dim);cursor:pointer;border:1px dashed var(--border);border-radius:8px;padding:6px 12px;">Set your mission →</div>`}
     </div>`;
+
+  // Requests roll-up — people waiting on Ryan outrank everything else.
+  renderDashRequests();
 
   // Action Inbox roll-up (top 5 open items)
   renderDashActionInbox();
