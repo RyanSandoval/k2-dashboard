@@ -1893,6 +1893,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       Enter
     </button>
     <p id="login-error" style="color:var(--red);font-size:12px;margin-top:12px;display:none;">Wrong code. Try again.</p>
+    <p id="login-hint" style="color:var(--text-dim);font-size:12px;margin-top:12px;display:none;"></p>
   </div>
 </div>
 <script>
@@ -1916,10 +1917,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       token = tokenInput.value.trim();
     }
     if (!token) {
-      // Show token field
+      // Show token field. This browser has no stored token — an installed iOS PWA
+      // gets its own storage partition, so a Safari login does NOT carry over.
       document.getElementById('token-field').style.display = 'block';
+      document.getElementById('login-error').style.display = 'none';
+      loginHint('Code accepted. Paste your GitHub token to connect this device.');
       document.getElementById('login-token').focus();
-      if (!tokenInput.value) return;
+      return;
     }
     localStorage.setItem('k2auth', 'true');
     localStorage.setItem('gh_token', token);
@@ -1928,17 +1932,29 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     document.getElementById('app-main').style.display = 'flex';
     loadData();
   }
+  function loginHint(msg) {
+    const el = document.getElementById('login-hint');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+  }
   // Clears stored token and access flag, then reloads to the login screen.
-  // Use this if you need to rotate or revoke the GitHub token.
-  function clearToken() {
+  // Use this to rotate/revoke the token, or to recover a device whose token
+  // GitHub has since expired or revoked (401/403 on every read).
+  function clearToken(reason) {
     localStorage.removeItem('gh_token');
     localStorage.removeItem('k2auth');
     GH_TOKEN = '';
+    try { sessionStorage.setItem('k2_login_msg', reason || ''); } catch (e) {}
     location.reload();
   }
   // Auto-login if already authed this session
   if (localStorage.getItem('k2auth') === 'true' && localStorage.getItem('gh_token')) {
     document.getElementById('login-screen').style.display = 'none';
+  } else {
+    let _msg = '';
+    try { _msg = sessionStorage.getItem('k2_login_msg') || ''; sessionStorage.removeItem('k2_login_msg'); } catch (e) {}
+    if (_msg) loginHint(_msg);
   }
 </script>
 
@@ -3177,6 +3193,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" data-page="activity" onclick="mobileNavMore('activity')" style="position:relative;"><span class="icon">📜</span>Activity<span id="mobile-activity-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
       <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
+      <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(openSettings,50)"><span class="icon">⚙️</span>Settings</div>
       <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="stale-notes" onclick="mobileNavMore('stale-notes')" style="position:relative;"><span class="icon">📝</span>Stale Notes<span id="mobile-stale-notes-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="workers" onclick="mobileNavMore('workers')" style="position:relative;"><span class="icon">🤖</span>Workers<span id="mobile-workers-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
@@ -3338,7 +3355,7 @@ async function ghGetJsonFile(path) {
   let raw = (file.content || '').replace(/\n/g, '');
   if (!raw) {
     const blob = await fetch(`https://api.github.com/repos/${DATA_REPO}/git/blobs/${file.sha}`, { headers: ghHeaders() });
-    if (!blob.ok) throw new Error(`GitHub blobs API ${blob.status}`);
+    if (!blob.ok) { const e = new Error(`GitHub blobs API ${blob.status}`); e.status = blob.status; throw e; }
     raw = ((await blob.json()).content || '').replace(/\n/g, '');
   }
   if (!raw) throw new Error('GitHub returned empty file content');
@@ -3464,6 +3481,13 @@ async function loadData() {
   } catch(e) {
     console.warn('[fixer] loadData failed:', e);
     console.error('Failed to load data:', e);
+    // A revoked/expired/wrong-scope token fails every read. Without this the app
+    // sits on an empty shell with no way back to the login screen on mobile,
+    // where the ⌘K palette (the only other sign-out) is unreachable.
+    if (e.status === 401 || e.status === 403) {
+      clearToken('Your GitHub token was rejected (' + e.status + '). Sign in again with a fresh fine-grained token.');
+      return;
+    }
     showToast('⚠️ Failed to load K2 data — ' + (e.message || 'unknown error') + '. Try refreshing.');
     const syncEl = document.getElementById('last-sync');
     if (syncEl) syncEl.innerHTML = '<span style="color:var(--red);">✕ Load failed</span>';
@@ -14047,9 +14071,22 @@ document.addEventListener('click', (e) => {
 });
 
 // ═══ Settings Modal ═══
+function signOutFromSettings() {
+  if (!confirm('Sign out of K-2 on this device?')) return;
+  clearToken('Signed out. Enter your access code and GitHub token to reconnect.');
+}
+
 function openSettings() {
   const modal = document.getElementById('settings-modal');
   if (!modal) return;
+  const conn = document.getElementById('settings-conn-status');
+  if (conn) {
+    const tok = localStorage.getItem('gh_token') || '';
+    conn.innerHTML = tok
+      ? 'Connected to <b>' + DATA_REPO + '</b> · token ••••' + tok.slice(-4)
+        + (window._dataLoaded ? ' · data loaded ✓' : ' · <span style="color:var(--red);">data not loaded</span>')
+      : '<span style="color:var(--red);">No GitHub token stored on this device.</span>';
+  }
   const stored = localStorage.getItem('k2_gcal_ics') || '';
   const ta = document.getElementById('settings-gcal-ics');
   if (ta) ta.value = stored;
@@ -17469,6 +17506,14 @@ setTimeout(() => {
       <div style="font-size:16px;font-weight:700;">⚙️ Settings</div>
       <button onclick="closeSettings()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:0;" aria-label="Close">✕</button>
     </div>
+    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--text);">Account</div>
+    <div id="settings-conn-status" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5;"></div>
+    <button onclick="signOutFromSettings()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">🚪 Sign out / reconnect</button>
+    <div style="font-size:11px;color:var(--text-dim);margin:8px 0 20px;line-height:1.5;">
+      Clears the GitHub token stored in <b>this</b> browser. An installed PWA has its own
+      storage — signing in inside Safari does not sign in the home-screen app.
+    </div>
+    <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
     <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--text);">Google Calendar (ICS)</div>
     <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.5;">
       In Google Calendar: Settings → [Your Calendar] → "Secret address in iCal format"
