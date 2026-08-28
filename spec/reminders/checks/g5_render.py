@@ -137,6 +137,22 @@ def main():
             fails.append(f"badge shows {badge!r}; expected the imminent one-shot count")
 
         page.screenshot(path="/tmp/g5_reminders.png", full_page=False)
+
+        # Mobile: the More drawer is a SEPARATE hardcoded list from the desktop sidebar.
+        # Adding a sidebar nav-item does not put the page on the phone — this caught that.
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.evaluate("() => navigateTo('jots')")
+        page.evaluate("() => openMobileMore()")
+        page.wait_for_timeout(200)
+        drawer = page.locator('.mobile-more-item[data-page="reminders"]')
+        if drawer.count() == 0:
+            fails.append("mobile More drawer has no Reminders entry")
+        else:
+            drawer.first.click()
+            page.wait_for_timeout(400)
+            if page.locator("#page-reminders.active").count() == 0:
+                fails.append("mobile drawer entry did not navigate to the Reminders page")
+            page.screenshot(path="/tmp/g5_reminders_mobile.png", full_page=False)
         if errors:
             fails.append("page errors: " + "; ".join(errors[:3]))
         browser.close()
@@ -145,7 +161,8 @@ def main():
         print("G5 FAIL:\n  " + "\n  ".join(fails))
         return 1
     print("G5 PASS: reminders render + group + humanize, non-reminders excluded, "
-          "create queues a valid action (screenshot: /tmp/g5_reminders.png)")
+          "create queues a valid action; mobile drawer entry navigates "
+          "(screenshots: /tmp/g5_reminders.png, /tmp/g5_reminders_mobile.png)")
     return 0
 
 

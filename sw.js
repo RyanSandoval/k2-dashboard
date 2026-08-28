@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v46-mobile-signout';
+const CACHE_NAME = 'k2-hq-v47-reminders';
 const ASSETS = [
   './',
   './index.html',
