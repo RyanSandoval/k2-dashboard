@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v48-reminder-detail';
+const CACHE_NAME = 'k2-hq-v49-push';
 const ASSETS = [
   './',
   './index.html',
@@ -35,4 +35,40 @@ self.addEventListener('fetch', (e) => {
       return res;
     }).catch(() => caches.match(e.request))
   );
+});
+
+// ---------------------------------------------------------------------------
+// WEB PUSH — reminders on the phone. iOS only delivers these to a PWA that was
+// added to the Home Screen, and only if we show a notification for every push
+// (no silent pushes), so there is no early return here.
+// ---------------------------------------------------------------------------
+self.addEventListener('push', (e) => {
+  let d = { title: '⏰ Reminder', body: '', url: './#reminders' };
+  try {
+    if (e.data) d = Object.assign(d, e.data.json());
+  } catch (err) {
+    if (e.data) d.body = e.data.text();   // non-JSON payload — still worth showing
+  }
+  e.waitUntil(self.registration.showNotification(d.title, {
+    body: d.body,
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    data: { url: d.url },
+    tag: d.tag || undefined
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) {
+      // reuse an already-open dashboard rather than stacking windows
+      if (c.url.includes('/k2-dashboard') && 'focus' in c) {
+        if ('navigate' in c) { try { c.navigate(url); } catch (err) {} }
+        return c.focus();
+      }
+    }
+    return self.clients.openWindow(url);
+  }));
 });

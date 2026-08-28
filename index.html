@@ -3079,6 +3079,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
       </div>
 
+      <div id="rem-push-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--sp-4);padding:10px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);font-size:12px;"></div>
+
       <div id="rem-queue-banner" style="display:none;margin-bottom:var(--sp-4);"></div>
 
       <div style="display:flex;gap:6px;margin-bottom:var(--sp-4);flex-wrap:wrap;" id="rem-filters">
@@ -3539,6 +3541,12 @@ async function loadData() {
     // reminderActionsMeta is written only by scripts/reminder_queue_drain.py. Once the
     // drainer reports an action id as applied we drop it from our queue — that handshake
     // is what keeps a stale browser tab from re-queuing work the Gateway already did.
+    // Push subscriptions are browser-owned; webpush.py owns the dead-endpoint list and
+    // we drop anything it has buried. Same one-writer-per-key rule as the action queue.
+    DATA.pushSubscriptions = Array.isArray(d.pushSubscriptions) ? d.pushSubscriptions : [];
+    DATA.pushSubscriptionsMeta = d.pushSubscriptionsMeta || {};
+    const _pushDead = new Set(DATA.pushSubscriptionsMeta.deadEndpoints || []);
+    if (_pushDead.size) DATA.pushSubscriptions = DATA.pushSubscriptions.filter(x => !_pushDead.has(x.endpoint));
     DATA.reminderActions = Array.isArray(d.reminderActions) ? d.reminderActions : [];
     DATA.reminderActionsMeta = d.reminderActionsMeta || {};
     const _remApplied = new Set(DATA.reminderActionsMeta.appliedIds || []);
@@ -3599,7 +3607,7 @@ const SERVER_OWNED_KEYS = new Set([
   'commitmentsMeta', 'jotPromoterMeta',
   'vikingInsights', 'dailyAdvisor', 'k2Inbox', 'staleJotState',
   'twoOfUsRitual', 'twoOfUsRitualMeta', 'repoScout',
-  'reminderActionsMeta',
+  'reminderActionsMeta', 'pushSubscriptionsMeta',
 ]);
 
 async function saveData() {
@@ -15634,6 +15642,100 @@ function queueReminderAction(action) {
   return action.id;
 }
 
+// ---- phone push -----------------------------------------------------------
+// Reminders keep posting to Discord regardless; this is an additional channel,
+// not a replacement. Sender is scripts/webpush.py on the Gateway host.
+var VAPID_PUBLIC_KEY = 'BFP_suxcN_x2ogTBwsJGVJSDxv1fVn5WcW8_AR46wqO3Q2JWUsIwa0THlXPnTEKclLDXWnSzKFUyu41bJUWjzVw';
+
+function _urlB64ToUint8(b64) {
+  var padded = (b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = atob(padded);
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+// iOS only allows push from a Home Screen install, never a Safari tab. Saying so
+// beats a permission prompt that silently cannot be granted.
+function _pushEnvironment() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    return 'unsupported';
+  }
+  var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (iOS && !installed) return 'needs-install';
+  return 'ok';
+}
+
+function renderPushStatus() {
+  var row = document.getElementById('rem-push-row');
+  if (!row) return;
+  var env = _pushEnvironment();
+  var subs = DATA.pushSubscriptions || [];
+  var granted = ('Notification' in window) && Notification.permission === 'granted';
+  var btn = 'padding:6px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);border:none;color:var(--bg);';
+
+  if (env === 'unsupported') {
+    row.innerHTML = '<span style="color:var(--text-muted);">📱 This browser cannot do push notifications. Reminders still post to Discord.</span>';
+    return;
+  }
+  if (env === 'needs-install') {
+    row.innerHTML = '<span style="color:var(--yellow);">📱 Add K2 to your Home Screen first — iOS only allows notifications from an installed app.</span>';
+    return;
+  }
+  if (granted && subs.length) {
+    row.innerHTML = '<span style="color:var(--green);">📱 Phone notifications on</span>' +
+      '<span style="color:var(--text-muted);">' + subs.length + ' device' + (subs.length === 1 ? '' : 's') + ' · Discord keeps posting too</span>' +
+      '<button onclick="testPushNotification()" style="' + btn + 'background:var(--surface2);color:var(--text-dim);font-weight:600;border:1px solid var(--border);margin-left:auto;">Send a test</button>';
+    return;
+  }
+  row.innerHTML = '<span style="color:var(--text-dim);">📱 Get reminders as phone notifications, on top of Discord</span>' +
+    '<button onclick="enablePushNotifications()" style="' + btn + 'margin-left:auto;">Enable</button>';
+}
+
+async function enablePushNotifications() {
+  try {
+    if (_pushEnvironment() !== 'ok') { renderPushStatus(); return; }
+    var perm = await Notification.requestPermission();
+    if (perm !== 'granted') { showToast('📱 Notifications blocked — enable them in system settings'); return; }
+    var reg = await navigator.serviceWorker.ready;
+    var sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,                       // iOS requires this
+        applicationServerKey: _urlB64ToUint8(VAPID_PUBLIC_KEY)
+      });
+    }
+    var j = sub.toJSON();
+    if (!j.endpoint || !j.keys || !j.keys.p256dh) { showToast('📱 Subscription came back incomplete'); return; }
+    DATA.pushSubscriptions = (DATA.pushSubscriptions || []).filter(function (x) { return x.endpoint !== j.endpoint; });
+    DATA.pushSubscriptions.push({
+      endpoint: j.endpoint, keys: j.keys,
+      device: (navigator.userAgent || '').slice(0, 120),
+      added: new Date().toISOString()
+    });
+    await saveData();
+    renderPushStatus();
+    showToast('📱 Phone notifications on');
+  } catch (e) {
+    console.error('[K2] push subscribe failed:', e);
+    showToast('📱 Could not turn on notifications: ' + (e && e.message ? e.message : e));
+  }
+}
+
+// Local notification through the same service worker path a real push renders on.
+// Proves permission + SW display; it does not prove the server leg.
+async function testPushNotification() {
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('⏰ Reminder', {
+      body: 'This is a test. Real reminders arrive here and in Discord.',
+      icon: './icon-192.png', badge: './icon-192.png',
+      data: { url: './#reminders' }
+    });
+  } catch (e) { showToast('📱 Test failed: ' + e.message); }
+}
+
 function toggleReminderNote() {
   var box = document.getElementById('rem-note');
   var btn = document.getElementById('rem-note-toggle');
@@ -15780,6 +15882,7 @@ function _remQueueByCronId() {
 
 function renderReminders() {
   renderRemindersBadge();
+  try { renderPushStatus(); } catch (e) { console.warn('[K2] push status:', e); }
   var list = document.getElementById('reminders-list');
   if (!list) return;
 

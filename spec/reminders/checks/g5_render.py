@@ -170,6 +170,17 @@ def main():
             if left != 0:
                 fails.append("undo did not remove the queued cancel")
 
+        # The push opt-in row must always say something, and must always make clear that
+        # Discord keeps posting — push is additive, never a swap.
+        row = page.inner_text("#rem-push-row")
+        if not row.strip():
+            fails.append("push status row is empty")
+        if "Discord" not in row:
+            fails.append("push row does not say Discord still posts")
+        env = page.evaluate("() => _pushEnvironment()")
+        if env not in ("ok", "needs-install", "unsupported"):
+            fails.append(f"_pushEnvironment returned an unexpected value: {env!r}")
+
         # the badge must count what is imminent
         badge = page.inner_text("#reminders-badge")
         if badge.strip() not in ("1", "2"):
