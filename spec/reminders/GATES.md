@@ -26,7 +26,7 @@ additive, so push can never stand in for the Discord post.
 - [x] G4: every inline script block in index.html still parses
   CHECK: node --experimental-vm-modules /Users/ryansandoval/k2-dashboard/spec/reminders/checks/g4_syntax.mjs
   EXPECT: G4 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/reminders; path=d758cd53979e/13 entries; output=(node:7386) ExperimentalWarning: VM Modules is an experimental feature and might change at any time | (Use `node --trace-warnings ...` to show where the warning was created)
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/reminders; path=d758cd53979e/13 entries; output=(node:8340) ExperimentalWarning: VM Modules is an experimental feature and might change at any time | (Use `node --trace-warnings ...` to show where the warning was created)
 
 - [x] G5: headless browser renders the Reminders page from a stubbed snapshot — rows, groups, and the create form are present
   CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/reminders/checks/g5_render.py

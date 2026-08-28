@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v50-banner-window';
+const CACHE_NAME = 'k2-hq-v51-default-time';
 const ASSETS = [
   './',
   './index.html',

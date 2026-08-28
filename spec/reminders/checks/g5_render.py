@@ -111,14 +111,13 @@ def main():
                 fails.append(f"create form is missing {sel}")
 
         # queueing a reminder must produce a validly-shaped action
+        # The form must be submittable with nothing but text — a default time is prefilled.
+        prefilled = page.input_value("#rem-at")
+        if not prefilled:
+            fails.append("date field ships empty, so typing text and tapping Add does nothing")
         page.fill("#rem-text", "ship the reminders page")
         page.click("#rem-note-toggle")
         page.fill("#rem-note", "include the note field")
-        page.evaluate(
-            "() => { const d=new Date(Date.now()+7200000);"
-            "document.getElementById('rem-at').value = d.getFullYear()+'-'+"
-            "String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'T'+"
-            "String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }")
         page.click("button:has-text('Add reminder')")
         page.wait_for_timeout(300)
         queued = page.evaluate("() => window.DATA.reminderActions || []")
