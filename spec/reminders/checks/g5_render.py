@@ -42,7 +42,12 @@ CRON_SNAPSHOT = {
 
 DATA_JSON = {k: [] for k in ("projects", "tasks", "notes", "discussions", "decisions",
                              "timeline", "jots", "docs", "reminderActions")}
-DATA_JSON.update({"dailyDocs": {}, "reminderActionsMeta": {}, "mission": ""})
+DATA_JSON.update({"dailyDocs": {}, "mission": "", "reminderActionsMeta": {
+    "appliedIds": ["ra-old"],
+    # a failure from days ago must not sit on the banner forever
+    "results": {"ra-old": {"status": "failed", "error": "invalid cron.remove params: id not found",
+                           "at": "2026-08-01T00:00:00+00:00"}},
+}})
 
 
 def gh_file(payload):
@@ -169,6 +174,22 @@ def main():
             left = page.evaluate("() => (window.DATA.reminderActions||[]).filter(a=>a.op==='cancel').length")
             if left != 0:
                 fails.append("undo did not remove the queued cancel")
+
+        # A failure older than 2h must not still be shouting on the banner.
+        banner = page.inner_html("#rem-queue-banner")
+        if "id not found" in banner:
+            fails.append("a stale failure is still displayed on the banner")
+
+        # ...but a fresh one must be, and must be dismissible.
+        page.evaluate("() => { DATA.reminderActionsMeta = {appliedIds:['ra-new'], results:{'ra-new':"
+                      "{status:'failed', error:'boom', at:new Date().toISOString()}}}; renderReminders(); }")
+        page.wait_for_timeout(150)
+        if "boom" not in page.inner_html("#rem-queue-banner"):
+            fails.append("a recent failure is not shown")
+        page.evaluate("() => dismissReminderFailures()")
+        page.wait_for_timeout(150)
+        if "boom" in page.inner_html("#rem-queue-banner"):
+            fails.append("dismiss did not clear the failure")
 
         # The push opt-in row must always say something, and must always make clear that
         # Discord keeps posting — push is additive, never a swap.

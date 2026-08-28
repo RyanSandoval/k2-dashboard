@@ -3550,7 +3550,21 @@ async function loadData() {
     DATA.reminderActions = Array.isArray(d.reminderActions) ? d.reminderActions : [];
     DATA.reminderActionsMeta = d.reminderActionsMeta || {};
     const _remApplied = new Set(DATA.reminderActionsMeta.appliedIds || []);
-    if (_remApplied.size) DATA.reminderActions = DATA.reminderActions.filter(x => !_remApplied.has(x.id));
+    if (_remApplied.size) {
+      // A `create` is applied the moment the drainer runs, but the reminder does not
+      // appear in the list until cron-snapshot.json is rewritten. Pruning on applied
+      // alone left a window where the reminder existed and was invisible — which reads
+      // as "my reminder is missing". Keep the pending row until the real one shows up,
+      // with a 45-minute backstop so a failed create cannot linger forever.
+      const _remCutoff = Date.now() - 45 * 60 * 1000;
+      DATA.reminderActions = DATA.reminderActions.filter(x => {
+        if (!_remApplied.has(x.id)) return true;
+        if (x.op !== 'create') return false;
+        const landed = (d.cronJobs || []).some(j => j && j.isReminder &&
+          (j.reminderText || '').replace(/^\s*⏰\s*Reminder:\s*/, '').trim() === (x.text || '').trim());
+        return !landed && new Date(x.queuedAt || 0).getTime() > _remCutoff;
+      });
+    }
     // Cron-written snapshot keys — must be hydrated here or their dashboard cards stay hidden
     // AND a client save would drop them from the repo (full-object PUT overwrite).
     DATA.cronJobsMeta = d.cronJobsMeta || {};
@@ -15797,7 +15811,8 @@ function reminderRows() {
     // its date out into chips and show the user only what they actually wrote.
     var raw = j.reminderText || j.name || '(no text)';
     var pre = raw.match(/^\s*⏰?\s*Reminder from (\w+) \((\d{4}-\d{2}-\d{2})\):\s*/);
-    var text = pre ? raw.slice(pre[0].length) : raw.replace(/^\s*⏰\s*Reminder:\s*/, '');
+    // "⏰ Reminder: x", "⏰ Reminder (set Friday 8/28): x" — same prefix, two shapes.
+    var text = pre ? raw.slice(pre[0].length) : raw.replace(/^\s*⏰\s*Reminder\s*(\([^)]*\))?\s*:\s*/, '');
     return {
       id: j.id,
       text: text,
@@ -15874,6 +15889,13 @@ function renderRemindersBadge() {
   }
 }
 
+function dismissReminderFailures() {
+  var results = (DATA.reminderActionsMeta || {}).results || {};
+  var ids = Object.keys(results).filter(function (k) { return results[k].status === 'failed'; });
+  try { localStorage.setItem('k2remDismissed', JSON.stringify(ids.slice(-100))); } catch (e) {}
+  renderReminders();
+}
+
 function _remQueueByCronId() {
   var map = {};
   (DATA.reminderActions || []).forEach(function (a) { if (a.cronId) map[a.cronId] = a; });
@@ -15898,7 +15920,15 @@ function renderReminders() {
   // queued-change banner
   var queued = DATA.reminderActions || [];
   var results = (DATA.reminderActionsMeta || {}).results || {};
-  var failed = Object.keys(results).filter(function (k) { return results[k].status === 'failed'; });
+  // Only recent failures. A stale one sat on this banner for an hour saying a reminder
+  // had failed, long after the action it referred to stopped mattering.
+  var dismissed = (function () { try { return JSON.parse(localStorage.getItem('k2remDismissed') || '[]'); } catch (e) { return []; } })();
+  var failed = Object.keys(results).filter(function (k) {
+    if (results[k].status !== 'failed') return false;
+    if (dismissed.indexOf(k) !== -1) return false;
+    var at = new Date(results[k].at || 0).getTime();
+    return at > Date.now() - 2 * 60 * 60 * 1000;
+  });
   var banner = document.getElementById('rem-queue-banner');
   if (banner) {
     var bits = [];
@@ -15910,7 +15940,8 @@ function renderReminders() {
       }).join(' '));
     }
     if (failed.length) bits.push('<span style="color:var(--red);">✕ ' + failed.length +
-      ' failed: ' + escapeHtml(String(results[failed[0]].error || '').slice(0, 120)) + '</span>');
+      ' failed: ' + escapeHtml(String(results[failed[0]].error || '').slice(0, 120)) + '</span>' +
+      '<button onclick="dismissReminderFailures()" style="padding:3px 10px;margin-left:8px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">dismiss</button>');
     banner.innerHTML = bits.length ? '<div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);font-size:12px;display:flex;gap:14px;flex-wrap:wrap;">' + bits.join('') + '</div>' : '';
     banner.style.display = bits.length ? '' : 'none';
   }
