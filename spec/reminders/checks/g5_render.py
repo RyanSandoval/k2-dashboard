@@ -42,6 +42,10 @@ CRON_SNAPSHOT = {
 
 DATA_JSON = {k: [] for k in ("projects", "tasks", "notes", "discussions", "decisions",
                              "timeline", "jots", "docs", "reminderActions")}
+# data.json really does still hold an 83-job pre-split cronJobs array with no reminder
+# fields. If a save rebases that over the snapshot, every reminder vanishes from the page.
+DATA_JSON["cronJobs"] = [{"id": "stale-%d" % i, "name": "old cron %d" % i, "scheduleKind": "cron"}
+                         for i in range(83)]
 DATA_JSON.update({"dailyDocs": {}, "mission": "", "reminderActionsMeta": {
     "appliedIds": ["ra-old"],
     # a failure from days ago must not sit on the banner forever
@@ -135,6 +139,16 @@ def main():
                 fails.append(f"queued action has a bad target: {a.get('target')!r}")
         if "queued" not in page.inner_html("#reminders-list"):
             fails.append("queued create did not render as a pending row")
+
+        # ...and adding one must NOT wipe the reminders that were already there. saveData()
+        # rebases server-owned keys, and data.json's stale cronJobs used to land on top of
+        # the snapshot, collapsing the page to just the row you had created.
+        after = page.inner_html("#reminders-list")
+        for want in ("call the dentist", "Ai skunkworks", "standup"):
+            if want not in after:
+                fails.append(f"'{want}' disappeared from the list after adding a reminder")
+        if page.evaluate("() => (window.DATA.cronJobs||[]).filter(j=>j&&j.isReminder).length") < 3:
+            fails.append("saving overwrote the snapshot-loaded cronJobs with data.json's stale copy")
 
         # A collapsed row must carry NO destructive control — this is the regression that
         # made "edit" look like "delete". Actions live in the expanded panel, labelled.
