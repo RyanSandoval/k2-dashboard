@@ -15559,7 +15559,7 @@ function formatWaitingText(text) {
 // 10 min by scripts/k2-cron-snapshot.sh). This page cannot reach the Gateway, so every
 // mutation is queued into DATA.reminderActions and applied by the reminder-queue drain
 // cron. Queued changes render as an overlay so the row reflects intent immediately.
-var _remState = { mode: 'once', filter: 'all', editing: null };
+var _remState = { mode: 'once', filter: 'all', editing: null, expanded: null };
 var REM_TZ = 'America/Los_Angeles';
 
 function _remPad(n) { return String(n).padStart(2, '0'); }
@@ -15642,6 +15642,17 @@ function toggleReminderNote() {
   box.style.display = showing ? 'none' : '';
   if (btn) btn.textContent = showing ? '+ note' : '− note';
   if (!showing) box.focus();
+}
+
+function undoReminderAction(actionId) {
+  // The drainer only ever reads actions it has not already applied, so removing one
+  // from the queue before its next pass genuinely un-does it. After that it is gone.
+  var before = (DATA.reminderActions || []).length;
+  DATA.reminderActions = (DATA.reminderActions || []).filter(function (a) { return a.id !== actionId; });
+  if (DATA.reminderActions.length === before) { showToast('⏰ Too late — that one already ran'); return; }
+  saveData();
+  renderReminders();
+  showToast('↩️ Undone');
 }
 
 function submitNewReminder() {
@@ -15788,8 +15799,13 @@ function renderReminders() {
   var banner = document.getElementById('rem-queue-banner');
   if (banner) {
     var bits = [];
-    if (queued.length) bits.push('<span style="color:var(--yellow);">⏳ ' + queued.length + ' change' +
-      (queued.length === 1 ? '' : 's') + ' queued — applies within ~5 min</span>');
+    if (queued.length) {
+      bits.push('<span style="color:var(--yellow);">⏳ ' + queued.length + ' change' +
+        (queued.length === 1 ? '' : 's') + ' queued — applies within ~5 min</span>');
+      bits.push(queued.map(function (a) {
+        return '<button onclick="undoReminderAction(\'' + a.id + '\')" style="padding:3px 10px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">↩️ undo ' + escapeHtml(a.op) + '</button>';
+      }).join(' '));
+    }
     if (failed.length) bits.push('<span style="color:var(--red);">✕ ' + failed.length +
       ' failed: ' + escapeHtml(String(results[failed[0]].error || '').slice(0, 120)) + '</span>');
     banner.innerHTML = bits.length ? '<div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);font-size:12px;display:flex;gap:14px;flex-wrap:wrap;">' + bits.join('') + '</div>' : '';
@@ -15847,6 +15863,7 @@ function _remRenderFreshness() {
 function _remRow(r, qmap) {
   if (_remState.editing && _remState.editing === r.id) return _remEditRow(r);
   var pending = r.id ? qmap[r.id] : null;
+  var open = r.id && _remState.expanded === r.id;
   var badge = function (txt, color, bg) {
     return '<span style="font-size:10px;padding:2px 7px;border-radius:var(--radius-sm);background:' + bg +
            ';color:' + color + ';font-weight:600;">' + txt + '</span>';
@@ -15861,23 +15878,66 @@ function _remRow(r, qmap) {
   if (r.source) chips.push(badge(escapeHtml(r.source), 'var(--text-dim)', 'var(--surface3)'));
   if (r.ghost) chips.push(badge('queued', 'var(--yellow)', 'oklch(25% 0.05 85)'));
   if (pending) chips.push(badge(pending.op + ' queued', 'var(--yellow)', 'oklch(25% 0.05 85)'));
+  if (r.note && !open) chips.push(badge('📝 note', 'var(--text-muted)', 'var(--surface3)'));
 
-  var actions = (r.ghost || pending) ? '' :
-    '<button onclick="startEditReminder(\'' + r.id + '\')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;">✏️ Edit</button>' +
-    (r.recurring ? '' : '<button onclick="snoozeReminder(\'' + r.id + '\')" title="Push out one day" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;">+1d</button>') +
-    '<button onclick="cancelReminder(\'' + r.id + '\')" title="Cancel this reminder" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;" aria-label="Cancel">✕</button>';
-
-  return '<div style="padding:14px 16px;background:var(--surface);border:1px solid ' +
-    (overdue ? 'var(--red)' : 'var(--border-subtle)') + ';border-radius:var(--radius-md);margin-bottom:8px;' +
-    ((r.ghost || pending) ? 'opacity:0.65;' : '') + '">' +
+  // Collapsed rows carry NO destructive control. Delete used to sit one cramped tap
+  // away from Edit behind a bare ✕, which reads as "dismiss" — and got mistaken for it.
+  // Everything actionable now lives inside the expanded panel, labelled.
+  var body =
     '<div style="display:flex;align-items:flex-start;gap:10px;">' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-size:14px;color:var(--text);margin-bottom:6px;word-break:break-word;overflow-wrap:anywhere;">' + escapeHtml(r.text) + '</div>' +
-        (r.note ? '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;border-left:2px solid var(--border);padding-left:10px;">' + escapeHtml(r.note) + '</div>' : '') +
+        (r.note && open ? '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;border-left:2px solid var(--border);padding-left:10px;">' + escapeHtml(r.note) + '</div>' : '') +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + chips.join('') + '</div>' +
       '</div>' +
-      '<div style="display:flex;gap:6px;flex-shrink:0;">' + actions + '</div>' +
-    '</div></div>';
+      (r.id && !r.ghost ? '<div style="flex-shrink:0;color:var(--text-muted);font-size:12px;padding-top:2px;">' + (open ? '▾' : '▸') + '</div>' : '') +
+    '</div>';
+
+  var panel = '';
+  if (open && !pending) {
+    var meta = [];
+    if (!r.recurring && r.fire) meta.push('Fires ' + r.fire.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }));
+    if (r.recurring) meta.push('Repeats ' + humanCron(r.expr) + ' · ' + (r.tz || REM_TZ));
+    if (r.target) meta.push('Posts to ' + _remChannelName(r.target));
+    meta.push(r.origin === 'auto-scan' ? 'Scanned out of your notes' : 'You asked for this one');
+    var btn = 'padding:7px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;';
+    panel =
+      '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-subtle);">' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.7;">' +
+          meta.map(escapeHtml).join('<br>') + '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button onclick="event.stopPropagation();startEditReminder(\'' + r.id + '\')" style="' + btn + 'background:var(--surface2);border:1px solid var(--border);color:var(--text);">✏️ Edit</button>' +
+          (r.recurring ? '' : '<button onclick="event.stopPropagation();snoozeReminder(\'' + r.id + '\')" style="' + btn + 'background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);">😴 Push out a day</button>') +
+          '<button onclick="event.stopPropagation();cancelReminder(\'' + r.id + '\')" style="' + btn + 'background:var(--red-dim);border:1px solid var(--red);color:var(--red);margin-left:auto;">🗑 Delete</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  var clickable = r.id && !r.ghost && !pending;
+  return '<div ' + (clickable ? 'onclick="toggleReminderDetail(\'' + r.id + '\')" ' : '') +
+    'style="padding:14px 16px;background:var(--surface);border:1px solid ' +
+    (open ? 'var(--accent)' : overdue ? 'var(--red)' : 'var(--border-subtle)') +
+    ';border-radius:var(--radius-md);margin-bottom:8px;' +
+    (clickable ? 'cursor:pointer;' : '') +
+    ((r.ghost || pending) ? 'opacity:0.65;' : '') + '">' + body + panel + '</div>';
+}
+
+// Resolve channel:<id> to #name off the create form's own select, so the list of
+// channels lives in exactly one place.
+function _remChannelName(target) {
+  var sel = document.getElementById('rem-channel');
+  if (sel) {
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === target) return sel.options[i].text;
+    }
+  }
+  return target;
+}
+
+function toggleReminderDetail(id) {
+  _remState.expanded = _remState.expanded === id ? null : id;
+  _remState.editing = null;
+  renderReminders();
 }
 
 function _remEditRow(r) {
@@ -15895,7 +15955,7 @@ function _remEditRow(r) {
     '</div></div>';
 }
 
-function startEditReminder(id) { _remState.editing = id; renderReminders(); }
+function startEditReminder(id) { _remState.editing = id; _remState.expanded = null; renderReminders(); }
 function cancelEditReminder() { _remState.editing = null; renderReminders(); }
 
 function saveEditReminder(id) {
@@ -15934,9 +15994,10 @@ function snoozeReminder(id) {
 function cancelReminder(id) {
   var row = reminderRows().find(function (r) { return r.id === id; });
   if (!row) return;
-  if (!confirm('Cancel this reminder?\n\n' + row.text)) return;
+  if (!confirm('Delete this reminder?\n\n' + row.text + '\n\nYou can undo this for the next few minutes.')) return;
+  _remState.expanded = null;
   queueReminderAction({ op: 'cancel', cronId: id });
-  showToast('⏰ Cancellation queued');
+  showToast('🗑 Deleted — undo in the banner above');
 }
 
 function renderWaitingFor() {
