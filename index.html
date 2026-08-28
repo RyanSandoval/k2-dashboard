@@ -3266,6 +3266,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
       <div class="mobile-more-item" data-page="requests" onclick="mobileNavMore('requests')" style="background:color-mix(in srgb,var(--red) 18%,transparent);border-color:var(--red);position:relative;"><span class="icon">📮</span>Requests<span id="mobile-requests-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--red);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="action-inbox" onclick="mobileNavMore('action-inbox')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🎯</span>Action Inbox<span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
+      <div class="mobile-more-item" data-page="reminders" onclick="mobileNavMore('reminders')" style="position:relative;"><span class="icon">⏰</span>Reminders<span id="mobile-reminders-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="commitments" onclick="mobileNavMore('commitments')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🤝</span>Commitments<span id="mobile-commitments-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="activity" onclick="mobileNavMore('activity')" style="position:relative;"><span class="icon">📜</span>Activity<span id="mobile-activity-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
       <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
@@ -15747,13 +15748,17 @@ function _remBucket(row) {
 function setReminderFilter(f) { _remState.filter = f; renderReminders(); }
 
 function renderRemindersBadge() {
-  var badge = document.getElementById('reminders-badge');
-  if (!badge) return;
   var n = reminderRows().filter(function (r) {
     return !r.recurring && r.fire && _remBucket(r) !== 'Later' && _remBucket(r) !== 'This week';
   }).length;
-  if (n > 0) { badge.textContent = n; badge.style.display = ''; }
-  else { badge.style.display = 'none'; }
+  // sidebar and the mobile More drawer are separate elements — update both or the
+  // phone silently disagrees with the desktop
+  for (var i = 0, ids = ['reminders-badge', 'mobile-reminders-badge']; i < ids.length; i++) {
+    var badge = document.getElementById(ids[i]);
+    if (!badge) continue;
+    if (n > 0) { badge.textContent = n; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
 }
 
 function _remQueueByCronId() {
