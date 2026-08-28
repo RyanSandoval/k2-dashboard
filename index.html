@@ -15779,11 +15779,18 @@ function submitNewReminder() {
   var note = ((document.getElementById('rem-note') || {}).value || '').trim();
   var action = { op: 'create', text: text, note: note, target: target, source: 'dashboard' };
   if (_remState.mode === 'once') {
-    var raw = (document.getElementById('rem-at') || {}).value || '';
-    if (!raw) { showToast('⏰ Pick a date and time first'); return; }
+    var atEl2 = document.getElementById('rem-at');
+    var raw = (atEl2 || {}).value || '';
     var when = new Date(raw);
-    if (isNaN(when.getTime())) { showToast('⏰ That date did not parse'); return; }
-    if (when.getTime() < Date.now()) { showToast('⏰ That time already passed'); return; }
+    var problem = !raw ? 'Pick a date and time first'
+      : isNaN(when.getTime()) ? 'That date did not parse'
+      : when.getTime() < Date.now() ? 'That time already passed' : '';
+    if (problem) {
+      // mark the field too — a toast alone is easy to miss on a phone
+      if (atEl2) { atEl2.style.borderColor = 'var(--red)'; setTimeout(function () { atEl2.style.borderColor = 'var(--border-subtle)'; }, 2500); atEl2.focus(); }
+      showToast('⏰ ' + problem);
+      return;
+    }
     action.kind = 'at';
     action.at = when.toISOString();
   } else {
@@ -15905,6 +15912,15 @@ function _remQueueByCronId() {
 function renderReminders() {
   renderRemindersBadge();
   try { renderPushStatus(); } catch (e) { console.warn('[K2] push status:', e); }
+  // Ship the form with a usable time already in it. Empty meant "type a reminder, tap
+  // Add, get a toast you may not even see on a phone, and nothing happens" — which is
+  // indistinguishable from the reminder going missing.
+  var atEl = document.getElementById('rem-at');
+  if (atEl && !atEl.value) {
+    var d = new Date();
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    atEl.value = _remLocalValue(d);
+  }
   var list = document.getElementById('reminders-list');
   if (!list) return;
 
