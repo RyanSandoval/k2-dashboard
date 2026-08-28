@@ -3609,6 +3609,14 @@ async function loadData() {
 // so a just-added note/jot/edit always wins. This replaces the old behavior where
 // a sha conflict (constant, given cron write frequency) made saveData() reload the
 // server copy and SILENTLY DROP the user's edit — the "my notes vanish on refresh" bug.
+// Keys whose real home is cron-snapshot.json, NOT data.json. data.json still carries an
+// 83-job cronJobs array from before the 2026-08-15 telemetry split, and none of those
+// entries have the reminder fields. Rebasing them over the snapshot on save wiped every
+// reminder from the page the instant you added one — the list went down to the single
+// pending row. Preserve the server's copy in the payload so data.json is untouched, but
+// never let it overwrite what loadCronSnapshot() put in memory.
+const SIDECAR_KEYS = new Set(['cronJobs', 'cronJobsMeta']);
+
 const SERVER_OWNED_KEYS = new Set([
   'cronJobs', 'cronJobsMeta', 'cronSpend',
   'actionInbox', 'actionInboxMeta', 'actionLedger',
@@ -3640,9 +3648,16 @@ async function saveData() {
       // Pull fresh cron-owned keys (and any key we don't have locally) into our
       // in-memory DATA; leave every user-edited key untouched so it persists.
       for (const k of Object.keys(server)) {
+        if (SIDECAR_KEYS.has(k)) continue;   // cron-snapshot.json owns these, not data.json
         if (SERVER_OWNED_KEYS.has(k) || !(k in DATA)) DATA[k] = server[k];
       }
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
+      // Write back whatever the server already had for the sidecar keys, so this save is
+      // a no-op for them rather than pushing the snapshot into data.json.
+      const payload = Object.assign({}, DATA);
+      for (const k of SIDECAR_KEYS) {
+        if (k in server) payload[k] = server[k]; else delete payload[k];
+      }
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
       const res = await fetch(url, {
         method: 'PUT',
         headers: ghHeaders(),
