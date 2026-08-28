@@ -2022,6 +2022,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <span class="icon">📜</span> Activity
         <span class="badge" id="activity-badge" style="display:none">0</span>
       </div>
+      <div class="nav-item" data-page="reminders">
+        <span class="icon">⏰</span> Reminders
+        <span class="badge" id="reminders-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item active" data-page="jots">
         <span class="icon">✏️</span> Jots
       </div>
@@ -3009,6 +3013,84 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="waiting-list"></div>
     </div>
 
+    <div class="page" id="page-reminders" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <h2>⏰ Reminders</h2>
+        <p>Every live reminder — the ones you asked for in Discord and the ones K-2 scanned out of your notes</p>
+      </div>
+
+      <!-- Create -->
+      <div style="background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px;margin-bottom:var(--sp-5);">
+        <input id="rem-text" type="text" placeholder="Remind me to…" maxlength="500"
+          style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;margin-bottom:10px;"
+          onkeydown="if(event.key==='Enter')submitNewReminder();">
+        <textarea id="rem-note" placeholder="Notes (optional) — anything you want to see when it fires" maxlength="2000" rows="2"
+          style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;margin-bottom:10px;resize:vertical;display:none;"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);overflow:hidden;">
+            <button id="rem-mode-once" onclick="setReminderMode('once')" style="padding:9px 16px;background:var(--accent);border:none;color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Once</button>
+            <button id="rem-mode-repeat" onclick="setReminderMode('repeat')" style="padding:9px 16px;background:none;border:none;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Repeat</button>
+          </div>
+          <span id="rem-once-fields" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input id="rem-at" type="datetime-local" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+          </span>
+          <span id="rem-repeat-fields" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select id="rem-repeat" onchange="onRepeatPresetChange()" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+              <option value="daily">Every day</option>
+              <option value="weekdays">Every weekday</option>
+              <option value="w1">Every Monday</option>
+              <option value="w2">Every Tuesday</option>
+              <option value="w3">Every Wednesday</option>
+              <option value="w4">Every Thursday</option>
+              <option value="w5">Every Friday</option>
+              <option value="w6">Every Saturday</option>
+              <option value="w0">Every Sunday</option>
+              <option value="monthly">Monthly on the 1st</option>
+              <option value="custom">Custom cron…</option>
+            </select>
+            <input id="rem-time" type="time" value="09:00" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+            <input id="rem-expr" type="text" placeholder="0 9 * * 1-5" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;display:none;width:150px;">
+          </span>
+          <select id="rem-channel" title="Where the reminder gets posted" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+            <option value="channel:1476441453394919587">#k2-dashboard</option>
+            <option value="channel:1476441496088477788">#k2-health</option>
+            <option value="channel:1476663716559720579">#trader</option>
+            <option value="channel:1476444171198791895">#consulting</option>
+            <option value="channel:1481105090742980751">#resale</option>
+            <option value="channel:1518324835254665296">#repo-scout</option>
+            <option value="channel:1496982777873174629">#viking-jira</option>
+            <option value="channel:1515185608262418522">#two-of-us</option>
+            <option value="channel:1535727479661138011">#pixel-parity</option>
+            <option value="channel:1542373919196192889">#swl-accountant</option>
+            <option value="channel:1477803429538828308">#tennis</option>
+            <option value="channel:1477807504980316190">#basketball</option>
+            <option value="channel:1478231165931622420">#baseball</option>
+          </select>
+          <button onclick="submitNewReminder()" style="padding:10px 20px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Add reminder</button>
+        </div>
+        <div style="margin-top:10px;">
+          <button id="rem-note-toggle" onclick="toggleReminderNote()" style="padding:4px 10px;background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;font-family:inherit;">+ note</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="rem-quick-chips">
+          <button onclick="setReminderQuick(3)" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">in 3h</button>
+          <button onclick="setReminderQuick('tonight')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">tonight 6pm</button>
+          <button onclick="setReminderQuick('tomorrow')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">tomorrow 9am</button>
+          <button onclick="setReminderQuick('monday')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">next Monday 9am</button>
+        </div>
+      </div>
+
+      <div id="rem-queue-banner" style="display:none;margin-bottom:var(--sp-4);"></div>
+
+      <div style="display:flex;gap:6px;margin-bottom:var(--sp-4);flex-wrap:wrap;" id="rem-filters">
+        <button data-remfilter="all" onclick="setReminderFilter('all')" style="padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit;">All</button>
+        <button data-remfilter="asked" onclick="setReminderFilter('asked')" style="padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit;">Asked</button>
+        <button data-remfilter="auto-scan" onclick="setReminderFilter('auto-scan')" style="padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit;">Auto-scanned</button>
+      </div>
+
+      <div id="reminders-list"></div>
+      <div id="reminders-freshness" style="margin-top:var(--sp-4);font-size:11px;color:var(--text-muted);text-align:center;"></div>
+    </div>
+
     <div class="page" id="page-accomplishments" style="max-width:860px;margin:0 auto;">
       <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
@@ -3452,6 +3534,14 @@ async function loadData() {
     DATA.combinedMm = (d.combinedMm && typeof d.combinedMm === 'object') ? d.combinedMm : null;
     DATA.k2Inline = Array.isArray(d.k2Inline) ? d.k2Inline : [];
     DATA.recurrenceQueue = Array.isArray(d.recurrenceQueue) ? d.recurrenceQueue : [];
+    // Reminders. reminderActions is browser-owned (we append; nobody else edits it);
+    // reminderActionsMeta is written only by scripts/reminder_queue_drain.py. Once the
+    // drainer reports an action id as applied we drop it from our queue — that handshake
+    // is what keeps a stale browser tab from re-queuing work the Gateway already did.
+    DATA.reminderActions = Array.isArray(d.reminderActions) ? d.reminderActions : [];
+    DATA.reminderActionsMeta = d.reminderActionsMeta || {};
+    const _remApplied = new Set(DATA.reminderActionsMeta.appliedIds || []);
+    if (_remApplied.size) DATA.reminderActions = DATA.reminderActions.filter(x => !_remApplied.has(x.id));
     // Cron-written snapshot keys — must be hydrated here or their dashboard cards stay hidden
     // AND a client save would drop them from the repo (full-object PUT overwrite).
     DATA.cronJobsMeta = d.cronJobsMeta || {};
@@ -3508,6 +3598,7 @@ const SERVER_OWNED_KEYS = new Set([
   'commitmentsMeta', 'jotPromoterMeta',
   'vikingInsights', 'dailyAdvisor', 'k2Inbox', 'staleJotState',
   'twoOfUsRitual', 'twoOfUsRitualMeta', 'repoScout',
+  'reminderActionsMeta',
 ]);
 
 async function saveData() {
@@ -3666,6 +3757,7 @@ function _rerenderCurrentPage() {
     else if (page === 'ball-back')    renderJiraBallBack();
     else if (page === 'goldfish-scan') renderGoldfishScan();
     else if (page === 'activity') renderActivity();
+    else if (page === 'reminders') renderReminders();
     else if (page === 'stale-jots')   renderStaleJots();
     else if (page === 'stale-notes')  renderStaleNotes();
     else if (page === 'workers')  renderWorkers();
@@ -3690,7 +3782,8 @@ function renderAll() {
   // whichever page is currently visible so it picks up the latest data.
   const fns = [migrateJotsToDailyDocs, renderDashboard, renderRequestsBadge, renderFloatingDecisions,
                renderSessionResidue, renderStaleJotsBadge, renderStaleNotesBadge,
-               renderWorkersBadge, renderTaskHeatmap, initNavSectionStates];
+               renderWorkersBadge, renderTaskHeatmap, initNavSectionStates,
+               renderRemindersBadge];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error('[K2] renderAll: ' + fn.name + ' failed:', e); }
   }
@@ -3782,6 +3875,7 @@ function navigateTo(page) {
   if (page === 'ball-back') renderJiraBallBack();
   if (page === 'goldfish-scan') renderGoldfishScan();
   if (page === 'activity') renderActivity();
+  if (page === 'reminders') renderReminders();
   if (page === 'stale-jots') renderStaleJots();
   if (page === 'stale-notes') renderStaleNotes();
   if (page === 'workers') renderWorkers();
@@ -15457,6 +15551,387 @@ function formatWaitingText(text) {
     try { label = new URL(url).hostname.replace(/^www\./, ''); } catch(e) { label = 'link'; }
     return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;text-decoration:underline;word-break:break-all;">${escapeHtml(label)} ↗</a>`;
   });
+}
+
+// ============================== REMINDERS ==============================
+// The list is read-only truth from cron-snapshot.json (DATA.cronJobs, refreshed every
+// 10 min by scripts/k2-cron-snapshot.sh). This page cannot reach the Gateway, so every
+// mutation is queued into DATA.reminderActions and applied by the reminder-queue drain
+// cron. Queued changes render as an overlay so the row reflects intent immediately.
+var _remState = { mode: 'once', filter: 'all', editing: null };
+var REM_TZ = 'America/Los_Angeles';
+
+function _remPad(n) { return String(n).padStart(2, '0'); }
+
+// datetime-local wants local wall-clock, not an ISO instant
+function _remLocalValue(d) {
+  return d.getFullYear() + '-' + _remPad(d.getMonth() + 1) + '-' + _remPad(d.getDate()) +
+         'T' + _remPad(d.getHours()) + ':' + _remPad(d.getMinutes());
+}
+
+function setReminderMode(mode) {
+  _remState.mode = mode;
+  var once = document.getElementById('rem-once-fields');
+  var rep = document.getElementById('rem-repeat-fields');
+  var bOnce = document.getElementById('rem-mode-once');
+  var bRep = document.getElementById('rem-mode-repeat');
+  var chips = document.getElementById('rem-quick-chips');
+  if (once) once.style.display = mode === 'once' ? 'flex' : 'none';
+  if (rep) rep.style.display = mode === 'repeat' ? 'flex' : 'none';
+  if (chips) chips.style.display = mode === 'once' ? 'flex' : 'none';
+  [[bOnce, mode === 'once'], [bRep, mode === 'repeat']].forEach(function (pair) {
+    if (!pair[0]) return;
+    pair[0].style.background = pair[1] ? 'var(--accent)' : 'none';
+    pair[0].style.color = pair[1] ? 'var(--bg)' : 'var(--text-dim)';
+    pair[0].style.fontWeight = pair[1] ? '700' : '600';
+  });
+}
+
+function onRepeatPresetChange() {
+  var sel = document.getElementById('rem-repeat');
+  var expr = document.getElementById('rem-expr');
+  var time = document.getElementById('rem-time');
+  if (!sel || !expr || !time) return;
+  var custom = sel.value === 'custom';
+  expr.style.display = custom ? '' : 'none';
+  time.style.display = custom ? 'none' : '';
+}
+
+function setReminderQuick(kind) {
+  var d = new Date();
+  if (kind === 'tonight') { d.setHours(18, 0, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); }
+  else if (kind === 'tomorrow') { d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); }
+  else if (kind === 'monday') { d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); d.setHours(9, 0, 0, 0); }
+  else { d.setHours(d.getHours() + Number(kind), 0, 0, 0); }
+  var el = document.getElementById('rem-at');
+  if (el) el.value = _remLocalValue(d);
+  setReminderMode('once');
+}
+
+// preset + time -> 5-field cron. The drainer re-validates this; it does not trust us.
+function buildCronExpr() {
+  var preset = (document.getElementById('rem-repeat') || {}).value || 'daily';
+  if (preset === 'custom') return ((document.getElementById('rem-expr') || {}).value || '').trim();
+  var t = ((document.getElementById('rem-time') || {}).value || '09:00').split(':');
+  var h = parseInt(t[0], 10), m = parseInt(t[1], 10);
+  if (isNaN(h) || isNaN(m)) return '';
+  if (preset === 'daily') return m + ' ' + h + ' * * *';
+  if (preset === 'weekdays') return m + ' ' + h + ' * * 1-5';
+  if (preset === 'monthly') return m + ' ' + h + ' 1 * *';
+  if (preset.charAt(0) === 'w') return m + ' ' + h + ' * * ' + preset.slice(1);
+  return '';
+}
+
+function queueReminderAction(action) {
+  if (!Array.isArray(DATA.reminderActions)) DATA.reminderActions = [];
+  action.id = 'ra-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  action.queuedAt = new Date().toISOString();
+  DATA.reminderActions.push(action);
+  saveData();
+  renderReminders();
+  renderRemindersBadge();
+  return action.id;
+}
+
+function toggleReminderNote() {
+  var box = document.getElementById('rem-note');
+  var btn = document.getElementById('rem-note-toggle');
+  if (!box) return;
+  var showing = box.style.display !== 'none';
+  box.style.display = showing ? 'none' : '';
+  if (btn) btn.textContent = showing ? '+ note' : '− note';
+  if (!showing) box.focus();
+}
+
+function submitNewReminder() {
+  var textEl = document.getElementById('rem-text');
+  var text = (textEl.value || '').trim();
+  if (!text) { showToast('⏰ What should I remind you about?'); return; }
+  var target = (document.getElementById('rem-channel') || {}).value || '';
+  var note = ((document.getElementById('rem-note') || {}).value || '').trim();
+  var action = { op: 'create', text: text, note: note, target: target, source: 'dashboard' };
+  if (_remState.mode === 'once') {
+    var raw = (document.getElementById('rem-at') || {}).value || '';
+    if (!raw) { showToast('⏰ Pick a date and time first'); return; }
+    var when = new Date(raw);
+    if (isNaN(when.getTime())) { showToast('⏰ That date did not parse'); return; }
+    if (when.getTime() < Date.now()) { showToast('⏰ That time already passed'); return; }
+    action.kind = 'at';
+    action.at = when.toISOString();
+  } else {
+    var expr = buildCronExpr();
+    if (!expr) { showToast('⏰ Pick a repeat schedule first'); return; }
+    action.kind = 'cron';
+    action.expr = expr;
+    action.tz = REM_TZ;
+  }
+  queueReminderAction(action);
+  textEl.value = '';
+  var noteEl = document.getElementById('rem-note');
+  if (noteEl) { noteEl.value = ''; noteEl.style.display = 'none'; }
+  var noteBtn = document.getElementById('rem-note-toggle');
+  if (noteBtn) noteBtn.textContent = '+ note';
+  showToast('⏰ Queued — live within ~5 min');
+}
+
+// Normalize snapshot jobs into rows the page can render.
+function reminderRows() {
+  return (DATA.cronJobs || []).filter(function (j) { return j && j.isReminder; }).map(function (j) {
+    var fire = j.scheduleAt ? new Date(j.scheduleAt) : (j.nextRunAtMs ? new Date(j.nextRunAtMs) : null);
+    // scan_dated_reminders.py prefixes its text with "⏰ Reminder from note (2026-06-18):".
+    // On a page that is nothing but reminders that prefix is noise — lift the origin and
+    // its date out into chips and show the user only what they actually wrote.
+    var raw = j.reminderText || j.name || '(no text)';
+    var pre = raw.match(/^\s*⏰?\s*Reminder from (\w+) \((\d{4}-\d{2}-\d{2})\):\s*/);
+    var text = pre ? raw.slice(pre[0].length) : raw.replace(/^\s*⏰\s*Reminder:\s*/, '');
+    return {
+      id: j.id,
+      text: text,
+      note: j.reminderNote || '',
+      from: pre ? pre[1] : null,
+      fromDate: pre ? pre[2] : null,
+      origin: j.reminderOrigin || 'asked',
+      source: j.reminderSource || null,
+      recurring: j.scheduleKind !== 'at',
+      expr: j.scheduleExpr || null,
+      tz: j.scheduleTz || REM_TZ,
+      fire: (fire && !isNaN(fire.getTime())) ? fire : null,
+      target: j.deliveryTo || null,
+    };
+  });
+}
+
+function humanCron(expr) {
+  if (!expr) return 'recurring';
+  var f = expr.split(/\s+/);
+  if (f.length !== 5) return expr;
+  var mm = f[0], hh = f[1], dom = f[2], dow = f[4];
+  if (!/^\d+$/.test(mm) || !/^\d+$/.test(hh)) return expr;
+  var t = ((+hh % 12) || 12) + ':' + _remPad(+mm) + (+hh < 12 ? 'am' : 'pm');
+  var names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  if (dow === '1-5') return 'weekdays at ' + t;
+  if (/^\d$/.test(dow)) return 'every ' + names[+dow] + ' at ' + t;
+  if (/^\d+$/.test(dom)) return 'monthly on the ' + dom + ' at ' + t;
+  if (dow === '*' && dom === '*') return 'daily at ' + t;
+  return expr;
+}
+
+function humanWhen(d) {
+  if (!d) return 'no time set';
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var days = Math.round((day - today) / 86400000);
+  var t = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (days === 0) return 'today ' + t;
+  if (days === 1) return 'tomorrow ' + t;
+  if (days === -1) return 'yesterday ' + t;
+  if (days < 0) return Math.abs(days) + ' days ago';
+  if (days < 7) return d.toLocaleDateString('en-US', { weekday: 'long' }) + ' ' + t;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + t;
+}
+
+function _remBucket(row) {
+  if (row.recurring) return 'Recurring';
+  if (!row.fire) return 'No time set';
+  var now = new Date();
+  if (row.fire < now) return 'Overdue';
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var days = Math.round((new Date(row.fire.getFullYear(), row.fire.getMonth(), row.fire.getDate()) - today) / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  if (days <= 7) return 'This week';
+  return 'Later';
+}
+
+function setReminderFilter(f) { _remState.filter = f; renderReminders(); }
+
+function renderRemindersBadge() {
+  var badge = document.getElementById('reminders-badge');
+  if (!badge) return;
+  var n = reminderRows().filter(function (r) {
+    return !r.recurring && r.fire && _remBucket(r) !== 'Later' && _remBucket(r) !== 'This week';
+  }).length;
+  if (n > 0) { badge.textContent = n; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+}
+
+function _remQueueByCronId() {
+  var map = {};
+  (DATA.reminderActions || []).forEach(function (a) { if (a.cronId) map[a.cronId] = a; });
+  return map;
+}
+
+function renderReminders() {
+  renderRemindersBadge();
+  var list = document.getElementById('reminders-list');
+  if (!list) return;
+
+  // filter chips
+  document.querySelectorAll('#rem-filters button').forEach(function (b) {
+    var on = b.dataset.remfilter === _remState.filter;
+    b.style.background = on ? 'var(--accent-surface)' : 'var(--surface2)';
+    b.style.color = on ? 'var(--accent)' : 'var(--text-dim)';
+    b.style.border = '1px solid ' + (on ? 'var(--accent)' : 'var(--border-subtle)');
+    b.style.fontWeight = on ? '700' : '500';
+  });
+
+  // queued-change banner
+  var queued = DATA.reminderActions || [];
+  var results = (DATA.reminderActionsMeta || {}).results || {};
+  var failed = Object.keys(results).filter(function (k) { return results[k].status === 'failed'; });
+  var banner = document.getElementById('rem-queue-banner');
+  if (banner) {
+    var bits = [];
+    if (queued.length) bits.push('<span style="color:var(--yellow);">⏳ ' + queued.length + ' change' +
+      (queued.length === 1 ? '' : 's') + ' queued — applies within ~5 min</span>');
+    if (failed.length) bits.push('<span style="color:var(--red);">✕ ' + failed.length +
+      ' failed: ' + escapeHtml(String(results[failed[0]].error || '').slice(0, 120)) + '</span>');
+    banner.innerHTML = bits.length ? '<div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);font-size:12px;display:flex;gap:14px;flex-wrap:wrap;">' + bits.join('') + '</div>' : '';
+    banner.style.display = bits.length ? '' : 'none';
+  }
+
+  var qmap = _remQueueByCronId();
+  var rows = reminderRows().filter(function (r) {
+    return _remState.filter === 'all' || r.origin === _remState.filter;
+  });
+
+  // Ghost rows for queued creates — the cron does not exist yet, but the intent should be visible.
+  var ghosts = queued.filter(function (a) { return a.op === 'create'; }).map(function (a) {
+    return {
+      id: null, ghost: true, text: a.text, origin: 'asked', source: 'dashboard',
+      note: a.note || '',
+      recurring: a.kind === 'cron', expr: a.expr || null, tz: a.tz || REM_TZ,
+      fire: a.at ? new Date(a.at) : null, target: a.target,
+    };
+  });
+  rows = ghosts.concat(rows);
+
+  if (!rows.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">' +
+      (_remState.filter === 'all' ? '⏰ No reminders set' : 'No reminders in this filter') + '</div>';
+    _remRenderFreshness();
+    return;
+  }
+
+  var ORDER = ['Overdue', 'Today', 'Tomorrow', 'This week', 'Later', 'Recurring', 'No time set'];
+  var groups = {};
+  rows.forEach(function (r) { (groups[_remBucket(r)] = groups[_remBucket(r)] || []).push(r); });
+
+  list.innerHTML = ORDER.filter(function (g) { return groups[g]; }).map(function (g) {
+    var items = groups[g].sort(function (a, b) {
+      if (!a.fire) return 1;
+      if (!b.fire) return -1;
+      return a.fire - b.fire;
+    });
+    var head = '<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' +
+      (g === 'Overdue' ? 'var(--red)' : 'var(--text-muted)') + ';margin:18px 0 8px;">' + g +
+      ' <span style="color:var(--text-muted);font-weight:500;">' + items.length + '</span></div>';
+    return head + items.map(function (r) { return _remRow(r, qmap); }).join('');
+  }).join('');
+  _remRenderFreshness();
+}
+
+function _remRenderFreshness() {
+  var el = document.getElementById('reminders-freshness');
+  if (!el) return;
+  var ms = (DATA.cronJobsMeta || {}).snapshotAtMs;
+  el.textContent = ms ? 'Snapshot ' + new Date(ms).toLocaleTimeString() + ' · refreshes every 10 min' : '';
+}
+
+function _remRow(r, qmap) {
+  if (_remState.editing && _remState.editing === r.id) return _remEditRow(r);
+  var pending = r.id ? qmap[r.id] : null;
+  var badge = function (txt, color, bg) {
+    return '<span style="font-size:10px;padding:2px 7px;border-radius:var(--radius-sm);background:' + bg +
+           ';color:' + color + ';font-weight:600;">' + txt + '</span>';
+  };
+  var when = r.recurring ? humanCron(r.expr) : humanWhen(r.fire);
+  var overdue = !r.recurring && r.fire && r.fire < new Date();
+  var chips = [badge(when, overdue ? 'var(--red)' : 'var(--accent)', overdue ? 'var(--red-dim)' : 'var(--accent-surface)')];
+  if (r.origin === 'auto-scan') {
+    chips.push(badge(r.from ? 'from ' + r.from + (r.fromDate ? ' · ' + new Date(r.fromDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '') : 'auto-scanned',
+                     'var(--text-muted)', 'var(--surface3)'));
+  }
+  if (r.source) chips.push(badge(escapeHtml(r.source), 'var(--text-dim)', 'var(--surface3)'));
+  if (r.ghost) chips.push(badge('queued', 'var(--yellow)', 'oklch(25% 0.05 85)'));
+  if (pending) chips.push(badge(pending.op + ' queued', 'var(--yellow)', 'oklch(25% 0.05 85)'));
+
+  var actions = (r.ghost || pending) ? '' :
+    '<button onclick="startEditReminder(\'' + r.id + '\')" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;">✏️ Edit</button>' +
+    (r.recurring ? '' : '<button onclick="snoozeReminder(\'' + r.id + '\')" title="Push out one day" style="padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:11px;cursor:pointer;">+1d</button>') +
+    '<button onclick="cancelReminder(\'' + r.id + '\')" title="Cancel this reminder" style="padding:5px 8px;background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;" aria-label="Cancel">✕</button>';
+
+  return '<div style="padding:14px 16px;background:var(--surface);border:1px solid ' +
+    (overdue ? 'var(--red)' : 'var(--border-subtle)') + ';border-radius:var(--radius-md);margin-bottom:8px;' +
+    ((r.ghost || pending) ? 'opacity:0.65;' : '') + '">' +
+    '<div style="display:flex;align-items:flex-start;gap:10px;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:14px;color:var(--text);margin-bottom:6px;word-break:break-word;overflow-wrap:anywhere;">' + escapeHtml(r.text) + '</div>' +
+        (r.note ? '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;border-left:2px solid var(--border);padding-left:10px;">' + escapeHtml(r.note) + '</div>' : '') +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + chips.join('') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;">' + actions + '</div>' +
+    '</div></div>';
+}
+
+function _remEditRow(r) {
+  var inp = 'padding:8px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;';
+  var sched = r.recurring
+    ? '<input id="rem-edit-expr" type="text" value="' + escapeHtml(r.expr || '') + '" placeholder="0 9 * * 1-5" style="' + inp + 'width:160px;">'
+    : '<input id="rem-edit-at" type="datetime-local" value="' + (r.fire ? _remLocalValue(r.fire) : '') + '" style="' + inp + '">';
+  return '<div style="padding:14px 16px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius-md);margin-bottom:8px;">' +
+    '<input id="rem-edit-text" type="text" maxlength="500" value="' + escapeHtml(r.text) + '" style="' + inp + 'width:100%;box-sizing:border-box;margin-bottom:8px;">' +
+    '<textarea id="rem-edit-note" rows="3" maxlength="2000" placeholder="Notes (optional)" style="' + inp + 'width:100%;box-sizing:border-box;margin-bottom:8px;resize:vertical;">' + escapeHtml(r.note || '') + '</textarea>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' + sched +
+      '<input id="rem-edit-target" type="text" value="' + escapeHtml(r.target || 'channel:1476441453394919587') + '" title="Delivery target" style="' + inp + 'width:200px;">' +
+      '<button onclick="saveEditReminder(\'' + r.id + '\')" style="padding:8px 16px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>' +
+      '<button onclick="cancelEditReminder()" style="padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button>' +
+    '</div></div>';
+}
+
+function startEditReminder(id) { _remState.editing = id; renderReminders(); }
+function cancelEditReminder() { _remState.editing = null; renderReminders(); }
+
+function saveEditReminder(id) {
+  var row = reminderRows().find(function (r) { return r.id === id; });
+  if (!row) { cancelEditReminder(); return; }
+  var text = ((document.getElementById('rem-edit-text') || {}).value || '').trim();
+  if (!text) { showToast('⏰ Reminder text cannot be empty'); return; }
+  var target = ((document.getElementById('rem-edit-target') || {}).value || '').trim();
+  var note = ((document.getElementById('rem-edit-note') || {}).value || '').trim();
+  var action = { op: 'update', cronId: id, text: text, note: note, target: target, source: row.source || 'dashboard' };
+  if (row.recurring) {
+    var expr = ((document.getElementById('rem-edit-expr') || {}).value || '').trim();
+    if (!expr) { showToast('⏰ Needs a cron expression'); return; }
+    action.kind = 'cron'; action.expr = expr; action.tz = row.tz || REM_TZ;
+  } else {
+    var raw = ((document.getElementById('rem-edit-at') || {}).value || '');
+    var when = new Date(raw);
+    if (!raw || isNaN(when.getTime())) { showToast('⏰ Pick a valid date and time'); return; }
+    if (when.getTime() < Date.now()) { showToast('⏰ That time already passed'); return; }
+    action.kind = 'at'; action.at = when.toISOString();
+  }
+  _remState.editing = null;
+  queueReminderAction(action);
+  showToast('⏰ Edit queued');
+}
+
+function snoozeReminder(id) {
+  var row = reminderRows().find(function (r) { return r.id === id; });
+  if (!row) return;
+  var base = (row.fire && row.fire > new Date()) ? new Date(row.fire) : new Date();
+  base.setDate(base.getDate() + 1);
+  queueReminderAction({ op: 'snooze', cronId: id, at: base.toISOString() });
+  showToast('⏰ Snoozed to ' + humanWhen(base));
+}
+
+function cancelReminder(id) {
+  var row = reminderRows().find(function (r) { return r.id === id; });
+  if (!row) return;
+  if (!confirm('Cancel this reminder?\n\n' + row.text)) return;
+  queueReminderAction({ op: 'cancel', cronId: id });
+  showToast('⏰ Cancellation queued');
 }
 
 function renderWaitingFor() {
