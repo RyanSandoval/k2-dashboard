@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v47-reminders';
+const CACHE_NAME = 'k2-hq-v48-reminder-detail';
 const ASSETS = [
   './',
   './index.html',

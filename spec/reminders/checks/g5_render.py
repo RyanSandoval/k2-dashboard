@@ -89,8 +89,9 @@ def main():
             fails.append("scanner boilerplate prefix was not stripped from the reminder text")
         if "from note" not in html:
             fails.append("auto-scan origin chip is missing")
-        if "book the 6-month cleaning" not in html:
-            fails.append("reminder note is not rendered on the row")
+        # Collapsed rows flag a note rather than dumping it; the body shows on expand.
+        if "📝 note" not in html:
+            fails.append("collapsed row does not flag that a note exists")
         if "weekdays at 9:00am" not in html:
             fails.append("recurring cron was not humanized ('weekdays at 9:00am')")
         if "Cron Snapshot Writer" in html:
@@ -130,6 +131,44 @@ def main():
                 fails.append(f"queued action has a bad target: {a.get('target')!r}")
         if "queued" not in page.inner_html("#reminders-list"):
             fails.append("queued create did not render as a pending row")
+
+        # A collapsed row must carry NO destructive control — this is the regression that
+        # made "edit" look like "delete". Actions live in the expanded panel, labelled.
+        page.set_viewport_size({"width": 1280, "height": 1000})
+        page.evaluate("() => { _remState.expanded = null; renderReminders(); }")
+        collapsed = page.inner_html("#reminders-list")
+        if "cancelReminder(" in collapsed:
+            fails.append("collapsed row still exposes a delete control")
+        if "Delete" in collapsed:
+            fails.append("collapsed row still shows a Delete button")
+
+        # Clicking a reminder opens the detail: full note + labelled actions.
+        page.evaluate("() => toggleReminderDetail('aaaaaaaa-1111-2222-3333-444444444444')")
+        page.wait_for_timeout(200)
+        opened = page.inner_html("#reminders-list")
+        for want, label in (("book the 6-month cleaning", "full note"),
+                            ("🗑 Delete", "delete button"),
+                            ("✏️ Edit", "edit button"),
+                            ("Posts to #k2-dashboard", "delivery target resolved to a channel name")):
+            if want not in opened:
+                fails.append(f"expanded detail is missing the {label}")
+        page.screenshot(path="/tmp/g5_reminders_detail.png", full_page=False)
+
+        # Undo must actually pull a queued action back out of the queue.
+        page.evaluate("() => queueReminderAction({op:'cancel', cronId:'aaaaaaaa-1111-2222-3333-444444444444'})")
+        page.wait_for_timeout(200)
+        acts = page.evaluate("() => window.DATA.reminderActions || []")
+        cancels = [a for a in acts if a.get("op") == "cancel"]
+        if len(cancels) != 1:
+            fails.append(f"expected 1 queued cancel, got {len(cancels)}")
+        else:
+            if "undo cancel" not in page.inner_html("#rem-queue-banner"):
+                fails.append("queued cancel has no undo control")
+            page.evaluate(f"() => undoReminderAction('{cancels[0]['id']}')")
+            page.wait_for_timeout(200)
+            left = page.evaluate("() => (window.DATA.reminderActions||[]).filter(a=>a.op==='cancel').length")
+            if left != 0:
+                fails.append("undo did not remove the queued cancel")
 
         # the badge must count what is imminent
         badge = page.inner_text("#reminders-badge")
