@@ -162,6 +162,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     padding: 6px var(--sp-2) 2px;
     font-weight: 600;
   }
+  /* Agent result — the answer under the line that asked for it. */
+  .agent-result {
+    display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+    margin: 2px 0 6px 0; padding-left: 2px;
+    font-size: 13px; line-height: 1.5; color: var(--accent-dim);
+    user-select: none;
+  }
+  .agent-result-arrow { opacity: 0.65; }
+  .agent-result-label { color: var(--accent); font-weight: 600; text-decoration: none; }
+  a.agent-result-label:hover { text-decoration: underline; }
+  .agent-result-meta { color: var(--text-muted); }
+  .agent-result-pending .agent-result-label { color: var(--yellow); }
+  .agent-result-failed .agent-result-label { color: var(--red); }
+
   .nav-item {
     display: flex;
     align-items: center;
@@ -17109,6 +17123,49 @@ const AgentMention = Node.create({
   },
 });
 
+// The answer to a 🤖 mention, rendered under the line that asked for it. Registered as a
+// real node — not spliced-in HTML — because TipTap silently drops anything not in the
+// schema, and a result that vanishes the next time Ryan edits the note is worse than no
+// result at all. Block-level and atom: it sits inside the taskItem after the paragraph,
+// and the editor treats it as one uneditable unit.
+const AgentResult = Node.create({
+  name: 'agentResult',
+  group: 'block',
+  atom: true,
+  selectable: false,
+  draggable: false,
+  addAttributes() {
+    return {
+      reqId:  { default: null, parseHTML: el => el.getAttribute('data-req-id') || null },
+      status: { default: 'done', parseHTML: el => el.getAttribute('data-status') || 'done' },
+      label:  { default: null, parseHTML: el => el.getAttribute('data-label') || null },
+      href:   { default: null, parseHTML: el => el.getAttribute('data-href') || null },
+      meta:   { default: null, parseHTML: el => el.getAttribute('data-meta') || null },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-type="agentResult"]' }];
+  },
+  renderHTML({ node }) {
+    const a = node.attrs;
+    const head = a.href
+      ? ['a', { class: 'agent-result-label', href: a.href, target: '_blank', rel: 'noopener' }, a.label || 'done']
+      : ['span', { class: 'agent-result-label' }, a.label || 'done'];
+    const kids = [['span', { class: 'agent-result-arrow' }, '↳'], head];
+    if (a.meta) kids.push(['span', { class: 'agent-result-meta' }, a.meta]);
+    return ['div', {
+      class: 'agent-result' + (a.status && a.status !== 'done' ? ' agent-result-' + a.status : ''),
+      'data-type': 'agentResult',
+      'data-req-id': a.reqId || '',
+      'data-status': a.status || 'done',
+      'data-label': a.label || '',
+      'data-href': a.href || '',
+      'data-meta': a.meta || '',
+      contenteditable: 'false',
+    }, ...kids];
+  },
+});
+
 window.K2_AGENTS = [
   { id: 'viking-jira', label: 'viking-jira', icon: '🎫', route: 'jira', viking: true, desc: 'File a Viking Jira ticket (#viking-jira → Copilot)' },
   { id: 'k2',          label: 'k2',          icon: '🧠', route: 'classify', viking: false, desc: 'Let K2 pick the right lane' },
@@ -17878,6 +17935,7 @@ function createEditor(element, content, options = {}) {
     ProjectMention,
     NoteMention,
     AgentMention,
+    AgentResult,
   ];
 
   // Async upload-then-insert. Called when an image is pasted or dropped.
