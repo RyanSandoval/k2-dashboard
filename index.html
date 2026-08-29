@@ -3311,6 +3311,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     <button class="mobile-more-close" onclick="closeMobileMore()" aria-label="Close menu">✕</button>
     <div class="mobile-more-handle" onclick="closeMobileMore()" title="Tap to close"></div>
     <div class="mobile-more-grid">
+      <div class="mobile-more-item" data-page="dashboard" onclick="mobileNavMore('dashboard')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">☀️</span>Today</div>
       <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
       <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
       <div class="mobile-more-item" data-page="requests" onclick="mobileNavMore('requests')" style="background:color-mix(in srgb,var(--red) 18%,transparent);border-color:var(--red);position:relative;"><span class="icon">📮</span>Requests<span id="mobile-requests-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--red);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
