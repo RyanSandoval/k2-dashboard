@@ -105,7 +105,16 @@ def main():
             fails.append("recurring cron was not humanized ('weekdays at 9:00am')")
         if "Cron Snapshot Writer" in html:
             fails.append("a non-reminder cron leaked into the Reminders list")
-        for group in ("Today", "Recurring"):
+        # Buckets are derived from the fixture with the same rule the page uses, rather
+        # than hardcoded: "+3h" silently becomes Tomorrow when this runs near midnight,
+        # which failed the gate for a reason that had nothing to do with the code.
+        def expected_bucket(delta):
+            fires = NOW + delta
+            days = (fires.astimezone().date() - NOW.astimezone().date()).days
+            if fires < NOW: return "Overdue"
+            return {0: "Today", 1: "Tomorrow"}.get(days, "This week" if days <= 7 else "Later")
+
+        for group in (expected_bucket(timedelta(hours=3)), expected_bucket(timedelta(days=4)), "Recurring"):
             if f">{group} <" not in html:
                 fails.append(f"missing group header: {group}")
 
