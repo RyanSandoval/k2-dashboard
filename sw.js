@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v53-compact-json';
+const CACHE_NAME = 'k2-hq-v54-agent-results';
 const ASSETS = [
   './',
   './index.html',
