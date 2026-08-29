@@ -5394,14 +5394,17 @@ function _workersCollect() {
       kind: 'jira-request',
       lane: 'jira:#viking-jira',
       title: r.title || (r.description || '').slice(0, 100) || 'Jira request',
-      meta: r.jiraKey ? `Filed as ${r.jiraKey}` : (r.status === 'pending' ? 'Awaiting Copilot…' : r.status),
+      meta: r.jiraKey ? `Filed as ${r.jiraKey}`
+        : r.status === 'pending' ? 'Queued — not posted yet'
+        : r.status === 'posted' ? `Posted to #viking-jira ${_workersAgeStr(r.postedAt)} — still no ticket`
+        : r.status,
       status: r.status,
       ts: r.resolvedAt || r.filedAt || r.createdAt,
       icon: '🎫',
       jiraKey: r.jiraKey,
       raw: r,
     };
-    if (r.status === 'pending' || r.status === 'filing' || r.status === 'queued') pending.push(card);
+    if (r.status === 'pending' || r.status === 'filing' || r.status === 'queued' || r.status === 'posted') pending.push(card);
     else if ((r.filedAt || r.resolvedAt) && new Date(r.filedAt || r.resolvedAt).getTime() > horizon) recent.push(card);
   }
 
