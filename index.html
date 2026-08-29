@@ -3657,7 +3657,10 @@ async function saveData() {
       for (const k of SIDECAR_KEYS) {
         if (k in server) payload[k] = server[k]; else delete payload[k];
       }
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+      // Compact, not pretty-printed: the indentation was ~183KB and pushed data.json
+      // past GitHub's 1MB contents-API limit, where the API quietly returns empty
+      // content and every server-side reader sees {} while still reporting success.
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
       const res = await fetch(url, {
         method: 'PUT',
         headers: ghHeaders(),
