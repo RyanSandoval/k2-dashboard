@@ -1917,6 +1917,18 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       transform: translate(-50%, -50%);
     }
   }
+
+  /* ui-005 — mobile touch targets: .home-pick-do "→ note" buttons */
+  @media (max-width: 768px) {
+    .home-pick-do {
+      min-height: 44px;
+      min-width: 44px;
+      padding: 10px 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
 </head>
