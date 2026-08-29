@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_base.css"><style>
+body{padding-bottom:88px}
+.top{padding:14px 18px 10px;border-bottom:1px solid var(--rule);display:flex;align-items:baseline;gap:8px}
+.top b{font-size:16px;font-weight:800;letter-spacing:-.02em}.top span{font-size:11.5px;color:var(--ink3)}
+.thread{padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+.day{text-align:center;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:4px 0}
+.me{align-self:flex-end;max-width:82%;background:var(--accsurf);border:1px solid oklch(32% .05 250);
+padding:9px 13px;border-radius:16px 16px 4px 16px;font-size:14.5px}
+.k2{align-self:flex-start;max-width:88%;font-size:14.5px;color:var(--ink2)}
+.k2 .who{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:5px;font-weight:700}
+.card{background:var(--raise);border-radius:13px;padding:12px 14px;margin-top:8px}
+.card .t{font-size:14px;font-weight:600;color:var(--ink)}
+.card .m{font-size:12.5px;color:var(--ink3);margin-top:3px}
+.card a{color:var(--acc);text-decoration:none;font-weight:700}
+.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.row button{padding:6px 12px;border-radius:99px;border:1px solid var(--rule);background:var(--r2);color:var(--ink2);
+font:600 12px 'Plus Jakarta Sans';cursor:pointer}
+.row button.p{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.pick{padding:9px 0;border-bottom:1px solid var(--rule)}.pick:last-child{border-bottom:0}
+.pick .t{font-size:13.5px;font-weight:600;color:var(--ink)}.pick .w{font-size:12px;color:var(--ink3)}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px 26px;background:oklch(17% .010 255);border-top:1px solid var(--rule);display:flex;gap:9px;align-items:center}
+.bar input{flex:1;background:var(--r2);border:1px solid var(--rule);border-radius:99px;padding:11px 16px;color:var(--ink);font:400 14.5px 'Plus Jakarta Sans';outline:none}
+.bar .mic{width:40px;height:40px;border-radius:50%;background:var(--acc);color:var(--bg);display:grid;place-items:center;font-size:17px;flex-shrink:0}
+</style></head><body>
+<div class="top"><b>K2</b><span>always here · 3 today</span></div>
+<div class="thread">
+  <div class="day">Today</div>
+  <div class="me">create a ticket for changing promo cards in itineraries to 2×3 vs 9×16</div>
+  <div class="k2"><div class="who">K2</div>Filed it with the MDF group.
+    <div class="card"><div class="t"><a href="#">MW-12363</a> · Standardize promo card ratios</div>
+      <div class="m">Ready for Release · Max Akbar · epic MW-11640</div></div></div>
+  <div class="me">remind me to call the dentist at 6</div>
+  <div class="k2"><div class="who">K2</div>Set for 6:00 PM today. It'll hit your phone and Discord.
+    <div class="row"><button>change time</button><button>add a note</button><button>cancel</button></div></div>
+  <div class="k2"><div class="who">K2</div>Three things worth your attention before the weekend:
+    <div class="card">
+      <div class="pick"><div class="t">Discuss MW-12363 with MDF</div><div class="w">MDF sync is Monday</div></div>
+      <div class="pick"><div class="t">Send Lo the payout numbers</div><div class="w">you said "this week" on Monday</div></div>
+      <div class="pick"><div class="t">Re-authenticate Credit Karma</div><div class="w">blocking the money board 27 days</div></div>
+      <div class="row"><button class="p">do the first one</button><button>not now</button></div></div></div>
+</div>
+<div class="bar"><input placeholder="Tell K2 anything…"><div class="mic">🎙</div></div>
+</body></html>

@@ -1,0 +1,29 @@
+<!-- Shared head fragment, kept here for reading. Each bc-*.html inlines a copy so it
+     stays openable standalone — see bc-theme.md for why. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.css">
+<script src="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/js/all.min.js" defer></script>
+<style>
+  /* Graphite / blue. Locked 2026-08-28. Overwrites Basecoat's neutral dark theme. */
+  .dark {
+    --background: oklch(16% 0.010 255);
+    --foreground: oklch(95% 0.006 255);
+    --card: oklch(20% 0.012 255);
+    --card-foreground: oklch(95% 0.006 255);
+    --popover: oklch(20% 0.012 255);
+    --popover-foreground: oklch(95% 0.006 255);
+    --primary: oklch(72% 0.135 250);
+    --primary-foreground: oklch(16% 0.010 255);
+    --secondary: oklch(24% 0.014 255);
+    --secondary-foreground: oklch(95% 0.006 255);
+    --muted: oklch(24% 0.014 255);
+    --muted-foreground: oklch(64% 0.014 255);
+    --accent: oklch(26% 0.020 250);
+    --accent-foreground: oklch(95% 0.006 255);
+    --border: oklch(28% 0.012 255);
+    --input: oklch(30% 0.012 255);
+    --ring: oklch(72% 0.135 250);
+    --radius: 0.625rem;
+  }
+</style>
