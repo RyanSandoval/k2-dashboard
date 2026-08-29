@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" class="dark"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>K2 — Direction A · Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.css">
+<style>
+  :root { --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+  .dark {
+    --background: oklch(16% 0.010 255); --foreground: oklch(95% 0.006 255);
+    --card: oklch(21% 0.013 255); --card-foreground: oklch(95% 0.006 255);
+    --popover: oklch(21% 0.013 255); --popover-foreground: oklch(95% 0.006 255);
+    --primary: oklch(72% 0.135 250); --primary-foreground: oklch(16% 0.010 255);
+    --secondary: oklch(25% 0.014 255); --secondary-foreground: oklch(95% 0.006 255);
+    --muted: oklch(25% 0.014 255); --muted-foreground: oklch(64% 0.014 255);
+    --accent: oklch(27% 0.020 250); --accent-foreground: oklch(95% 0.006 255);
+    --border: oklch(29% 0.012 255); --input: oklch(30% 0.012 255);
+    --ring: oklch(72% 0.135 250); --radius: 0.875rem;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--background);color:var(--foreground);font-size:16px;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .phone{max-width:390px;margin:0 auto;min-height:100vh;position:relative}
+  .lab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground);
+    padding:14px 20px 0;font-weight:700}
+
+  /* The launcher is the answer to 34: one full screen that holds all of them at once,
+     grouped, with live counts. Nothing is hidden three taps deep. */
+  .lhead{padding:20px 20px 12px}
+  .lhead h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.025em}
+  .lhead p{margin:2px 0 14px;font-size:13px;color:var(--muted-foreground)}
+
+  .group{padding:0 20px}
+  .ghd{display:flex;align-items:baseline;gap:8px;margin:22px 0 10px}
+  .ghd span{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted-foreground)}
+  .ghd hr{flex:1;border:0;border-top:1px solid var(--border);margin:0}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .tile{position:relative;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:6px;aspect-ratio:1;border-radius:var(--radius);
+    background:var(--card);border:1px solid var(--border);text-decoration:none;
+    color:var(--foreground);padding:6px}
+  .tile .ic{font-size:21px;line-height:1}
+  .tile .nm{font-size:10px;font-weight:600;text-align:center;line-height:1.2;
+    color:var(--muted-foreground)}
+  /* Live tiles carry the accent. Empty ones stay quiet instead of being deleted — the
+     point of the grid is that nothing has to be cut to fit. */
+  .tile[data-live] .nm{color:var(--foreground)}
+  .tile[data-live]{border-color:color-mix(in oklab,var(--primary) 40%,var(--border))}
+  .tile .ct{position:absolute;top:6px;right:7px;min-width:17px;height:17px;padding:0 4px;
+    border-radius:99px;background:var(--primary);color:var(--primary-foreground);
+    font-size:10px;font-weight:800;display:grid;place-items:center}
+  .tile[data-empty]{opacity:.42}
+
+  .fade{height:96px}
+  .dock{position:sticky;bottom:0;background:color-mix(in oklab,var(--card) 92%,transparent);
+    border-top:1px solid var(--border);backdrop-filter:blur(14px);
+    display:flex;align-items:center;gap:10px;padding:10px 16px calc(12px + env(safe-area-inset-bottom))}
+  .dock .grow{flex:1}
+</style></head>
+<body>
+<div class="phone">
+
+  <div class="lhead">
+    <h1>Everything</h1>
+    <p>34 tools · 7 have something in them right now</p>
+    <input class="input" type="search" placeholder="Jump to anything" aria-label="Search tools">
+  </div>
+
+  <div class="group">
+    <div class="ghd"><span>Live now</span><hr></div>
+    <div class="grid">
+      <a class="tile" data-live href="#"><span class="ct">8</span><span class="ic">⏰</span><span class="nm">Reminders</span></a>
+      <a class="tile" data-live href="#"><span class="ct">3</span><span class="ic">📥</span><span class="nm">Inbox</span></a>
+      <a class="tile" data-live href="#"><span class="ct">12</span><span class="ic">✅</span><span class="nm">Work</span></a>
+      <a class="tile" data-live href="#"><span class="ic">📄</span><span class="nm">Notes</span></a>
+      <a class="tile" data-live href="#"><span class="ct">1</span><span class="ic">🤖</span><span class="nm">System</span></a>
+      <a class="tile" data-live href="#"><span class="ic">🗓️</span><span class="nm">Planner</span></a>
+      <a class="tile" data-live href="#"><span class="ic">📊</span><span class="nm">Trading</span></a>
+    </div>
+
+    <div class="ghd"><span>Work</span><hr></div>
+    <div class="grid">
+      <a class="tile" href="#"><span class="ic">📁</span><span class="nm">Projects</span></a>
+      <a class="tile" href="#"><span class="ic">🎫</span><span class="nm">Jira Ledger</span></a>
+      <a class="tile" href="#"><span class="ic">🤝</span><span class="nm">Commitments</span></a>
+      <a class="tile" href="#"><span class="ic">↩️</span><span class="nm">Ball Back</span></a>
+      <a class="tile" href="#"><span class="ic">⏳</span><span class="nm">Waiting For</span></a>
+      <a class="tile" href="#"><span class="ic">📨</span><span class="nm">Requests</span></a>
+      <a class="tile" href="#"><span class="ic">⚖️</span><span class="nm">Decisions</span></a>
+      <a class="tile" href="#"><span class="ic">💬</span><span class="nm">Discussions</span></a>
+    </div>
+
+    <div class="ghd"><span>Review</span><hr></div>
+    <div class="grid">
+      <a class="tile" href="#"><span class="ic">📅</span><span class="nm">Weekly Review</span></a>
+      <a class="tile" href="#"><span class="ic">🏆</span><span class="nm">Wins</span></a>
+      <a class="tile" href="#"><span class="ic">🌱</span><span class="nm">Growth</span></a>
+      <a class="tile" href="#"><span class="ic">🎯</span><span class="nm">Mission</span></a>
+      <a class="tile" href="#"><span class="ic">📈</span><span class="nm">Activity</span></a>
+      <a class="tile" href="#"><span class="ic">✔️</span><span class="nm">Completed</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">💤</span><span class="nm">Someday</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">👁️</span><span class="nm">Saw / Didn't</span></a>
+    </div>
+
+    <div class="ghd"><span>Machine room</span><hr></div>
+    <div class="grid">
+      <a class="tile" href="#"><span class="ic">🧠</span><span class="nm">Memory</span></a>
+      <a class="tile" href="#"><span class="ic">🧩</span><span class="nm">Skills</span></a>
+      <a class="tile" href="#"><span class="ic">✨</span><span class="nm">AI Insights</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">📚</span><span class="nm">Docs</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">📎</span><span class="nm">Clips</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">🥶</span><span class="nm">Stale Jots</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">🧊</span><span class="nm">Stale Notes</span></a>
+      <a class="tile" data-empty href="#"><span class="ic">🗑️</span><span class="nm">Trash</span></a>
+    </div>
+  </div>
+
+  <div class="fade"></div>
+
+  <div class="dock">
+    <button class="btn" data-variant="secondary" data-size="sm">✍️ Today</button>
+    <span class="grow"></span>
+    <button class="btn" data-size="sm">＋ Capture</button>
+  </div>
+</div>
+</body></html>
