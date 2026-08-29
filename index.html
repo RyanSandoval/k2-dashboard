@@ -1193,6 +1193,55 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     z-index: 161;
   }
   .mobile-more-close:active { background: var(--border); }
+/* ── Launcher ──────────────────────────────────────────────────────────────
+     Replaces the 33-item hand-styled More drawer. Every tool on one screen,
+     grouped, live ones first. Nothing had to be deleted to make it fit, which
+     was the objection to the three-tab bar. */
+  .launcher { padding: 4px 2px 8px; }
+  .launcher-hd { padding: 0 2px 4px; }
+  .launcher-search {
+    width: 100%; padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    color: var(--text); font-size: 15px; font-family: inherit; outline: none;
+  }
+  .launcher-search:focus { border-color: var(--accent); }
+  .launcher-sub { margin: 8px 2px 0; font-size: 12px; color: var(--text-muted); }
+  .launcher-group.is-hidden, .tile.is-hidden { display: none; }
+  .launcher-ghd { display: flex; align-items: center; gap: 8px; margin: 18px 2px 9px; }
+  .launcher-ghd span {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .launcher-ghd hr { flex: 1; border: 0; border-top: 1px solid var(--border-subtle); margin: 0; }
+  .launcher-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (min-width: 560px) { .launcher-grid { grid-template-columns: repeat(6, 1fr); } }
+
+  .tile {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 6px; aspect-ratio: 1; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); color: var(--text); cursor: pointer;
+    font-family: inherit; transition: border-color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+  .tile:active { background: var(--surface2); }
+  .tile-ic { font-size: 20px; line-height: 1; }
+  .tile-nm {
+    font-size: 9.5px; font-weight: 600; line-height: 1.2; text-align: center;
+    color: var(--text-muted);
+  }
+  /* A tool with something in it earns the accent. Everything else stays present
+     but quiet — the ranking does the work that deleting pages used to do. */
+  .tile.is-live { border-color: var(--accent-dim); }
+  .tile.is-live .tile-nm { color: var(--text); }
+  .tile-count {
+    position: absolute; top: 5px; right: 6px; min-width: 17px; height: 17px;
+    padding: 0 4px; border-radius: 99px; background: var(--accent);
+    color: var(--bg); font-size: 10px; font-weight: 800;
+    display: grid; place-items: center;
+  }
+  .nav-everything .badge { margin-left: auto; }
+
   .mobile-more-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -2074,106 +2123,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="nav-section-title" onclick="toggleNavSection('everything')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-everything-title">
         <span id="nav-section-everything-arrow">▸</span> Everything else
       </div>
-      <div id="nav-section-everything-body" style="display:none;">
-        <div class="nav-item" data-page="accomplishments">
-          <span class="icon">🏆</span> Accomplishments
-        </div>
-        <div class="nav-item" data-page="activity">
-          <span class="icon">📜</span> Activity
-        <span class="badge" id="activity-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="ai-insights">
-          <span class="icon">🚀</span> AI Insights
-          <span class="badge" id="ai-insights-badge">0</span>
-        </div>
-        <div class="nav-item" data-page="ball-back">
-          <span class="icon">🏓</span> Ball Back
-        <span class="badge" id="ball-back-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="clips">
-          <span class="icon">🔗</span> Clips
-          <span class="badge" id="clips-unread-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="commitments">
-          <span class="icon">🤝</span> Commitments
-        <span class="badge" id="commitments-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="completed">
-          <span class="icon">🏁</span> Completed
-        </div>
-        <div class="nav-item" data-page="dashboard">
-          <span class="icon">☀️</span> Today
-        </div>
-        <div class="nav-item" data-page="decisions">
-          <span class="icon">⚖️</span> Decisions
-        </div>
-        <div class="nav-item" data-page="discussions">
-          <span class="icon">💬</span> Discussions
-        </div>
-        <div class="nav-item" data-page="docs">
-          <span class="icon">📁</span> Docs
-        </div>
-        <div class="nav-item" data-page="goldfish-scan">
-          <span class="icon">🐟</span> Saw / Didn't Act
-        <span class="badge" id="goldfish-scan-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="growth">
-          <span class="icon">🎯</span> Growth
-        </div>
-        <div class="nav-item" data-page="inbox">
-          <span class="icon">📥</span> Inbox <span class="badge" id="inbox-badge" style="display:none"></span>
-        </div>
-        <div class="nav-item" data-page="jira-ledger">
-          <span class="icon">🎫</span> Jira Ledger
-          <span class="badge" id="jira-ledger-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="memory">
-          <span class="icon">🧠</span> Memory
-        </div>
-        <div class="nav-item" data-page="mission">
-          <span class="icon">🎯</span> Mission
-        </div>
-        <div class="nav-item" data-page="planner">
-          <span class="icon">🗓️</span> Planner
-        </div>
-        <div class="nav-item" data-page="projects">
-          <span class="icon">🚀</span> Projects
-        <span class="badge" id="project-count">0</span>
-        </div>
-        <div class="nav-item" data-page="requests">
-          <span class="icon">📮</span> Requests
-        <span class="badge" id="requests-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="review">
-          <span class="icon">🔄</span> Weekly Review <span id="review-overdue-badge" style="display:none;margin-left:4px;font-size:11px;" title="Review overdue">⚠️</span>
-        </div>
-        <div class="nav-item" data-page="skills">
-          <span class="icon">🧩</span> Skills
-        <span class="badge" id="skills-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="someday">
-          <span class="icon">💤</span> Someday
-        </div>
-        <div class="nav-item" data-page="stale-jots">
-          <span class="icon">📋</span> Stale Jots
-          <span class="badge" id="stale-jots-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="stale-notes">
-          <span class="icon">📝</span> Stale Notes
-          <span class="badge" id="stale-notes-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="trading">
-          <span class="icon">📈</span> Trading
-        </div>
-        <div class="nav-item" data-page="trash">
-          <span class="icon">🗑️</span> Trash
-        <span class="badge" id="trash-badge" style="display:none">0</span>
-        </div>
-        <div class="nav-item" data-page="waiting">
-          <span class="icon">⏳</span> Waiting For
-          <span class="badge" id="waiting-badge" style="display:none"></span>
-        </div>
-      </div>
+      <div id="nav-section-everything-body" class="nav-everything"><!-- built by renderSidebarRest() --></div>
     </div>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
@@ -3310,41 +3260,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   <div class="mobile-more-drawer" id="mobile-more-drawer">
     <button class="mobile-more-close" onclick="closeMobileMore()" aria-label="Close menu">✕</button>
     <div class="mobile-more-handle" onclick="closeMobileMore()" title="Tap to close"></div>
-    <div class="mobile-more-grid">
-      <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(()=>window.K2Palette&&K2Palette.open(),50)" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">🔍</span>Search</div>
-      <div class="mobile-more-item" onclick="closeMobileMore();openCapturePopover()" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">⚡</span>Capture</div>
-      <div class="mobile-more-item" data-page="requests" onclick="mobileNavMore('requests')" style="background:color-mix(in srgb,var(--red) 18%,transparent);border-color:var(--red);position:relative;"><span class="icon">📮</span>Requests<span id="mobile-requests-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--red);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="action-inbox" onclick="mobileNavMore('action-inbox')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🎯</span>Action Inbox<span id="mobile-action-inbox-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="reminders" onclick="mobileNavMore('reminders')" style="position:relative;"><span class="icon">⏰</span>Reminders<span id="mobile-reminders-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="commitments" onclick="mobileNavMore('commitments')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);position:relative;"><span class="icon">🤝</span>Commitments<span id="mobile-commitments-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="activity" onclick="mobileNavMore('activity')" style="position:relative;"><span class="icon">📜</span>Activity<span id="mobile-activity-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="jots" onclick="mobileNavMore('jots')" style="background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent);"><span class="icon">✏️</span>Jots</div>
-      <div class="mobile-more-item" onclick="closeMobileMore();forceAppRefresh()"><span class="icon">🔄</span>Refresh</div>
-      <div class="mobile-more-item" onclick="closeMobileMore();setTimeout(openSettings,50)"><span class="icon">⚙️</span>Settings</div>
-      <div class="mobile-more-item" data-page="stale-jots" onclick="mobileNavMore('stale-jots')" style="position:relative;"><span class="icon">📋</span>Stale Jots<span id="mobile-stale-jots-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="stale-notes" onclick="mobileNavMore('stale-notes')" style="position:relative;"><span class="icon">📝</span>Stale Notes<span id="mobile-stale-notes-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="workers" onclick="mobileNavMore('workers')" style="position:relative;"><span class="icon">🤖</span>Workers<span id="mobile-workers-badge" style="display:none;position:absolute;top:6px;right:6px;min-width:16px;height:16px;padding:0 4px;background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:8px;line-height:16px;text-align:center;">0</span></div>
-      <div class="mobile-more-item" data-page="skills" onclick="mobileNavMore('skills')"><span class="icon">🧩</span>Skills</div>
-      <div class="mobile-more-item" data-page="tasks" onclick="mobileNavMore('tasks')"><span class="icon">✅</span>Tasks</div>
-      <div class="mobile-more-item" data-page="completed" onclick="mobileNavMore('completed')"><span class="icon">🏁</span>Completed</div>
-      <div class="mobile-more-item" data-page="inbox" onclick="mobileNavMore('inbox')"><span class="icon">📥</span>Inbox</div>
-      <div class="mobile-more-item" data-page="someday" onclick="mobileNavMore('someday')"><span class="icon">💤</span>Someday</div>
-      <div class="mobile-more-item" data-page="waiting" onclick="mobileNavMore('waiting')"><span class="icon">⏳</span>Waiting</div>
-      <div class="mobile-more-item" data-page="notes" onclick="mobileNavMore('notes')"><span class="icon">📝</span>Notes</div>
-      <div class="mobile-more-item" data-page="projects" onclick="mobileNavMore('projects')"><span class="icon">🚀</span>Projects</div>
-      <div class="mobile-more-item" data-page="trading" onclick="mobileNavMore('trading')"><span class="icon">📈</span>Trading</div>
-      <div class="mobile-more-item" data-page="decisions" onclick="mobileNavMore('decisions')"><span class="icon">⚖️</span>Decisions</div>
-      <div class="mobile-more-item" data-page="discussions" onclick="mobileNavMore('discussions')"><span class="icon">💬</span>Chats</div>
-      <div class="mobile-more-item" data-page="accomplishments" onclick="mobileNavMore('accomplishments')"><span class="icon">🏆</span>Brag Doc</div>
-      <div class="mobile-more-item" data-page="memory" onclick="mobileNavMore('memory')"><span class="icon">🧠</span>Memory</div>
-      <div class="mobile-more-item" data-page="review" onclick="mobileNavMore('review')"><span class="icon">🔄</span>Review</div>
-      <div class="mobile-more-item" data-page="mission" onclick="mobileNavMore('mission')"><span class="icon">🎯</span>Mission</div>
-      <div class="mobile-more-item" data-page="clips" onclick="mobileNavMore('clips')"><span class="icon">🔗</span>Clips</div>
-      <div class="mobile-more-item" data-page="docs" onclick="mobileNavMore('docs')"><span class="icon">📁</span>Docs</div>
-      <div class="mobile-more-item" data-page="growth" onclick="mobileNavMore('growth')"><span class="icon">🌱</span>Growth</div>
-      <div class="mobile-more-item" data-page="ai-insights" onclick="mobileNavMore('ai-insights')"><span class="icon">💡</span>AI Ideas</div>
-      <div class="mobile-more-item" data-page="planner" onclick="mobileNavMore('planner')"><span class="icon">🗓️</span>Planner</div>
-    </div>
+    <div class="launcher" id="launcher-grid"><!-- built by renderLauncher() --></div>
   </div>
 </div>
 
@@ -3382,7 +3298,149 @@ async function forceAppRefresh() {
 }
 window.forceAppRefresh = forceAppRefresh;
 
+// ── The tool catalogue ────────────────────────────────────────────────────────
+// One table replaces 135 lines of hand-written nav markup that carried 34 inline
+// style attributes between them. Adding a tool is now a row, not a copy-paste of a
+// <div> with its colours typed in by hand. `live` is read at render time so the
+// launcher can rank what has something in it above what does not — the answer to
+// "34 tools on a phone" is not fewer tools, it is honest ordering.
+const K2_TOOLS = [
+  // group: daily | work | review | machine
+  { page:'jots',            icon:'✍️', label:'Today',        group:'daily' },
+  { page:'reminders',       icon:'⏰', label:'Reminders',    group:'daily' },
+  { page:'action-inbox',    icon:'🎯', label:'Action Inbox', group:'daily' },
+  { page:'inbox',           icon:'📥', label:'Inbox',        group:'daily' },
+  { page:'notes',           icon:'📝', label:'Notes',        group:'daily' },
+  { page:'planner',         icon:'🗓️', label:'Planner',      group:'daily' },
+
+  { page:'tasks',           icon:'✅', label:'Tasks',        group:'work' },
+  { page:'projects',        icon:'🚀', label:'Projects',     group:'work' },
+  { page:'requests',        icon:'📮', label:'Requests',     group:'work' },
+  { page:'commitments',     icon:'🤝', label:'Commitments',  group:'work' },
+  { page:'ball-back',       icon:'↩️', label:'Ball Back',    group:'work' },
+  { page:'waiting',         icon:'⏳', label:'Waiting',      group:'work' },
+  { page:'decisions',       icon:'⚖️', label:'Decisions',    group:'work' },
+  { page:'discussions',     icon:'💬', label:'Chats',        group:'work' },
+  { page:'jira-ledger',     icon:'🎫', label:'Jira Ledger',  group:'work' },
+  { page:'trading',         icon:'📈', label:'Trading',      group:'work' },
+
+  { page:'review',          icon:'🔄', label:'Review',       group:'review' },
+  { page:'completed',       icon:'🏁', label:'Completed',    group:'review' },
+  { page:'accomplishments', icon:'🏆', label:'Brag Doc',     group:'review' },
+  { page:'growth',          icon:'🌱', label:'Growth',       group:'review' },
+  { page:'mission',         icon:'🎯', label:'Mission',      group:'review' },
+  { page:'activity',        icon:'📜', label:'Activity',     group:'review' },
+  { page:'someday',         icon:'💤', label:'Someday',      group:'review' },
+  { page:'goldfish-scan',   icon:'👁️', label:"Saw / Didn't", group:'review' },
+  { page:'dashboard',       icon:'☀️', label:'Overview',     group:'review' },
+
+  { page:'workers',         icon:'🤖', label:'Workers',      group:'machine' },
+  { page:'memory',          icon:'🧠', label:'Memory',       group:'machine' },
+  { page:'skills',          icon:'🧩', label:'Skills',       group:'machine' },
+  { page:'ai-insights',     icon:'💡', label:'AI Ideas',     group:'machine' },
+  { page:'docs',            icon:'📁', label:'Docs',         group:'machine' },
+  { page:'clips',           icon:'🔗', label:'Clips',        group:'machine' },
+  { page:'stale-jots',      icon:'📋', label:'Stale Jots',   group:'machine' },
+  { page:'stale-notes',     icon:'🧊', label:'Stale Notes',  group:'machine' },
+  { page:'trash',           icon:'🗑️', label:'Trash',        group:'machine' },
+];
+
+const K2_GROUPS = [
+  ['daily',   'Daily'],
+  ['work',    'Work'],
+  ['review',  'Review'],
+  ['machine', 'Machine room'],
+];
+
+// How many live items each tool is sitting on. Anything not listed reports nothing,
+// which is the truthful default — a tool with no counter has nothing to announce.
+function k2ToolCount(page) {
+  const D = window.DATA || {};
+  const open = (arr) => (Array.isArray(arr) ? arr : []).filter(x => x && !x.done && x.status !== 'done').length;
+  switch (page) {
+    case 'tasks':        return (D.tasks || []).filter(t => t && !t.done && !t.parentId && (t.status||'') !== 'done').length;
+    case 'reminders':    return (D.cronJobs || []).filter(j => j && j.isReminder).length;
+    case 'action-inbox': return open(D.actionInbox);
+    case 'inbox':        return (D.inbox || []).filter(i => i && i.read !== true).length;
+    case 'notes':        return (D.notes || []).length;
+    case 'projects':     return (D.projects || []).length;
+    case 'requests':     return open(D.k2Requests || D.requests);
+    case 'commitments':  return open(D.commitments);
+    case 'waiting':      return open(D.waitingFor);
+    case 'someday':      return (D.somedayMaybe || []).length;
+    case 'decisions':    return open(D.decisionsNeeded);
+    case 'workers':      return (D.jiraRequests || []).filter(r => r && (r.status === 'pending' || r.status === 'posted')).length;
+    case 'trash':        return (D.trash || []).length;
+    default:             return 0;
+  }
+}
+
+function k2ToolTile(t) {
+  const n = k2ToolCount(t.page);
+  const badge = n > 0 ? `<span class="tile-count">${n > 99 ? '99+' : n}</span>` : '';
+  return `<button class="tile${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
+     onclick="k2Launch('${t.page}')" title="${escapeHtml(t.label)}">
+     ${badge}<span class="tile-ic">${t.icon}</span><span class="tile-nm">${escapeHtml(t.label)}</span></button>`;
+}
+
+// The launcher: every tool on one screen, grouped, live ones first inside each group.
+function renderLauncher() {
+  const el = document.getElementById('launcher-grid');
+  if (!el) return;
+  const live = K2_TOOLS.filter(t => k2ToolCount(t.page) > 0);
+  const head = `
+    <div class="launcher-hd">
+      <input class="launcher-search" type="search" placeholder="Jump to anything"
+        oninput="k2FilterLauncher(this.value)" aria-label="Filter tools">
+      <p class="launcher-sub">${K2_TOOLS.length} tools · ${live.length} have something in them</p>
+    </div>`;
+  const groups = K2_GROUPS.map(([key, name]) => {
+    const rows = K2_TOOLS.filter(t => t.group === key)
+      .sort((a, b) => k2ToolCount(b.page) - k2ToolCount(a.page));
+    if (!rows.length) return '';
+    return `<div class="launcher-group"><div class="launcher-ghd"><span>${name}</span><hr></div>
+      <div class="launcher-grid">${rows.map(k2ToolTile).join('')}</div></div>`;
+  }).join('');
+  el.innerHTML = head + groups;
+}
+
+function k2FilterLauncher(q) {
+  const needle = (q || '').trim().toLowerCase();
+  document.querySelectorAll('#launcher-grid .tile').forEach(tile => {
+    const nm = (tile.querySelector('.tile-nm')?.textContent || '').toLowerCase();
+    tile.classList.toggle('is-hidden', !!needle && !nm.includes(needle));
+  });
+  document.querySelectorAll('#launcher-grid .launcher-group').forEach(g => {
+    const any = [...g.querySelectorAll('.tile')].some(t => !t.classList.contains('is-hidden'));
+    g.classList.toggle('is-hidden', !any);
+  });
+}
+
+function k2Launch(page) {
+  if (typeof closeMobileMore === 'function') closeMobileMore();
+  navigateTo(page);
+}
+
+// The sidebar's long tail, from the same table, so desktop and mobile can never drift.
+function renderSidebarRest() {
+  const el = document.getElementById('nav-section-everything-body');
+  if (!el) return;
+  const primary = new Set(['jots','reminders','action-inbox','tasks','notes','workers']);
+  el.innerHTML = K2_TOOLS.filter(t => !primary.has(t.page)).map(t => {
+    const n = k2ToolCount(t.page);
+    return `<div class="nav-item" data-page="${t.page}" onclick="navigateTo('${t.page}')">
+      <span class="icon">${t.icon}</span> ${escapeHtml(t.label)}
+      ${n > 0 ? `<span class="badge">${n}</span>` : ''}</div>`;
+  }).join('');
+}
+
+function renderNav() {
+  try { renderLauncher(); } catch (e) { console.warn('[K2] renderLauncher:', e); }
+  try { renderSidebarRest(); } catch (e) { console.warn('[K2] renderSidebarRest:', e); }
+}
+
 function openMobileMore() {
+  renderNav();
   document.getElementById('mobile-more-overlay').classList.add('open');
   document.getElementById('mobile-more-drawer').classList.add('open');
 }
