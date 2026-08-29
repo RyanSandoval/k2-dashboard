@@ -7286,7 +7286,7 @@ function renderMorningBrief(today) {
   if (overdue.length > 0) {
     sections.push(`<div style="margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🚨 Overdue (${overdue.length})</div>
-      ${overdue.slice(0,3).map(t=>`<div onclick="openTaskModal(${JSON.stringify(t.id)})" style="font-size:12px;padding:6px 4px;margin:0 -4px;color:var(--text-dim);cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">· ${escapeHtml((t.text||'').slice(0,60))} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
+      ${overdue.slice(0,3).map(t=>`<div onclick="openTaskModal(${escapeHtml(JSON.stringify(t.id))})" style="font-size:12px;padding:6px 4px;margin:0 -4px;color:var(--text-dim);cursor:pointer;border-radius:4px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">· ${escapeHtml((t.text||'').slice(0,60))} <span style="color:var(--red);">${formatDueDate(t.dueDate)?.text||''}</span></div>`).join('')}
       ${overdue.length>3?`<div onclick="navigateTo('tasks')" style="font-size:11px;color:var(--red);cursor:pointer;padding:4px;">+ ${overdue.length-3} more →</div>`:''}
     </div>`);
   }
@@ -12474,7 +12474,7 @@ function renderHome() {
       `<div class="home-pick"><div class="home-pick-body">
          <div class="home-pick-t">${escapeHtml(p.text)}</div>
          <div class="home-pick-why">${p.why}</div>
-       </div><button class="home-pick-do" onclick="homePickToNote(${JSON.stringify(String(p.id))})">→ note</button></div>`
+       </div><button class="home-pick-do" onclick="homePickToNote(${escapeHtml(JSON.stringify(String(p.id)))})">→ note</button></div>`
     ).join('') : '';
   }
 
