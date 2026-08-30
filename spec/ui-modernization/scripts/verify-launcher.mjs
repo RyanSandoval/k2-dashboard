@@ -14,7 +14,7 @@ await withChrome(PORT, async () => {
     // Inject real data and build the nav the same way the drawer does.
     const r = await tab.send('Runtime.evaluate', { returnByValue: true, awaitPromise: true,
       expression: `(() => {
-        window.DATA = ${JSON.stringify(data)};
+        DATA = ${JSON.stringify(data)}; window.DATA = DATA;
         renderNav();
         const tiles = [...document.querySelectorAll('#launcher-grid .tile')];
         const live  = tiles.filter(t => t.classList.contains('is-live'));

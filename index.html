@@ -1249,7 +1249,62 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     z-index: 161;
   }
   .mobile-more-close:active { background: var(--border); }
-/* ── Launcher ──────────────────────────────────────────────────────────────
+/* ── Task modal ──────────────────────────────────────────────────────────────
+     The modal was 100 inline style attributes, 65 of them distinct, which is why
+     tapping a task looked like a different app from the page behind it. These are
+     the shapes it actually uses: a panel, a section label, a chip, a meta line. */
+  .tm-panel {
+    margin-bottom: 12px; padding: 10px 12px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+  }
+  .tm-panel.is-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px;
+  }
+  .tm-label {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .tm-meta { font-size: 11px; color: var(--text-muted); }
+  .tm-meta.is-tight { margin-bottom: 2px; }
+  .tm-meta.is-loose { margin-bottom: 5px; }
+  .tm-key { font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .tm-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; min-width: 0; }
+  .tm-head-body { flex: 1; min-width: 0; overflow: hidden; }
+  .tm-chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .tm-chip {
+    font-size: 11px; padding: 2px 8px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer; font-family: inherit;
+  }
+  .tm-chip.is-static { cursor: default; }
+  .tm-chip.is-accent {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--accent); font-weight: 600;
+  }
+  .tm-chip.is-green {
+    background: color-mix(in srgb, var(--green) 15%, transparent);
+    border-color: color-mix(in srgb, var(--green) 40%, transparent);
+    color: var(--green); font-weight: 600;
+  }
+  .tm-select {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 4px 8px; font-size: 12px;
+    flex: 1; max-width: 160px; cursor: pointer; font-family: inherit;
+  }
+  .tm-btn {
+    flex: 1; padding: 8px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-dim); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .tm-btn:hover { color: var(--text); border-color: var(--accent); }
+  .tm-cols { display: flex; gap: 16px; flex-wrap: wrap; }
+  .tm-body { font-size: 13px; line-height: 1.5; }
+  .tm-dim { color: var(--text-dim); }
+  .tm-over { color: var(--red); font-weight: 600; }
+
+  /* ── Launcher ──────────────────────────────────────────────────────────────
      Replaces the 33-item hand-styled More drawer. Every tool on one screen,
      grouped, live ones first. Nothing had to be deleted to make it fit, which
      was the objection to the three-tab bar. */
@@ -8600,16 +8655,16 @@ function openTaskModal(taskId) {
   const modalDueInfo = formatDueDate(task.dueDate);
   const dueDateDisplay = task.dueDate
     ? (modalDueInfo.overdue
-        ? `<span style="color:var(--red);font-weight:600;">${modalDueInfo.text}</span>`
-        : `<span style="color:var(--text-dim);">${modalDueInfo.text}</span>`)
-    : '<span style="color:var(--text-dim);">No due date</span>';
+        ? `<span class="tm-over">${modalDueInfo.text}</span>`
+        : `<span class="tm-dim">${modalDueInfo.text}</span>`)
+    : '<span class="tm-dim">No due date</span>';
 
   document.getElementById('task-modal-content').innerHTML = `
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;min-width:0;">
+    <div class="tm-head">
       ${leftElModal}
-      <div style="flex:1;min-width:0;overflow:hidden;">
+      <div class="tm-head-body">
         <h3 style="font-size:16px;font-weight:700;cursor:pointer;word-break:break-word;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0 0 4px 0;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${safeId(task.id)},'text',this)" title="${(task.text || task.title || 'Untitled').replace(/"/g,'&quot;')}">${task.text || task.title || 'Untitled'}</h3>
-        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+        <div class="tm-chips">
           <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${safeId(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
           ${isK2 ? `<span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.icon} ${statusInfo.label}</span>` : ''}
           <span class="tag tag-blue">${projectName}</span>
@@ -8619,43 +8674,43 @@ function openTaskModal(taskId) {
             const jotDate = task.sourceDate || (task.source === 'jot' ? task.created : null);
             if (task.source === 'jot' && jotDate) {
               const label = jotDate === getTodayStr() ? "Today's Jot" : 'Jot · ' + jotDate;
-              return `<span onclick="navigateToJotSource('${jotDate}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);font-weight:600;" title="Go to source jot">📝 ${label} ↗</span>`;
+              return `<span onclick="navigateToJotSource('${jotDate}')" class="tm-chip is-accent" title="Go to source jot">📝 ${label} ↗</span>`;
             } else if (task.source === 'note' && task.linkedNoteId) {
               const srcNote = DATA.notes.find(n => n.id == task.linkedNoteId);
               const noteLabel = srcNote ? (srcNote.title || 'Note') : 'Note';
-              return `<span onclick="navigateToNoteSource('${task.linkedNoteId}')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--green) 15%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent);color:var(--green);font-weight:600;" title="Go to source note">📄 ${noteLabel} ↗</span>`;
+              return `<span onclick="navigateToNoteSource('${task.linkedNoteId}')" class="tm-chip is-green" title="Go to source note">📄 ${noteLabel} ↗</span>`;
             } else {
-              return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);">✏️ Added manually</span>`;
+              return `<span class="tm-chip is-static">✏️ Added manually</span>`;
             }
           })()}
         </div>
       </div>
     </div>
 
-    <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Priority Score — ${scoreLabel(task)} = ${(task.urgency||2)*(task.importance||2)}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+    <div class="tm-panel">
+      <div class="tm-label">Priority Score — ${scoreLabel(task)} = ${(task.urgency||2)*(task.importance||2)}</div>
+      <div class="tm-cols">
         <div>
-          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">⚡ Urgency <span style="font-size:10px;opacity:0.6;">(4 = most urgent)</span></div>
+          <div class="tm-meta is-loose">⚡ Urgency <span style="font-size:10px;opacity:0.6;">(4 = most urgent)</span></div>
           <div class="ui-step">${[1,2,3,4].map(n=>`<button onclick="setTaskUrgency(${safeId(task.id)},${n})" class="${(task.urgency||2)==n?'active':''}">${n}</button>`).join('')}</div>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px;">⭐ Importance <span style="font-size:10px;opacity:0.6;">(4 = most important)</span></div>
+          <div class="tm-meta is-loose">⭐ Importance <span style="font-size:10px;opacity:0.6;">(4 = most important)</span></div>
           <div class="ui-step">${[1,2,3,4].map(n=>`<button onclick="setTaskImportance(${safeId(task.id)},${n})" class="${(task.importance||2)==n?'active':''}">${n}</button>`).join('')}</div>
         </div>
       </div>
     </div>
 
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${modalDueInfo && modalDueInfo.overdue ? 'border-left:3px solid var(--red);' : ''}">
-      <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Due Date</span>
-      <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
+      <span class="tm-key">Due Date</span>
+      <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" class="tm-select">
       ${dueDateDisplay}
       ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date" aria-label="Clear due date" role="button" tabindex="0">✕</span>` : ''}
     </div>
 
-    <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:var(--surface2);border-radius:8px;">
+    <div class="tm-panel is-row">
       <span style="font-size:14px;flex-shrink:0;">🔁</span>
-      <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Repeat:</span>
+      <span class="tm-key">Repeat:</span>
       ${['none','daily','weekdays','weekly','biweekly','monthly'].map(type => {
         const active = type === 'none' ? !task.recurrence : (task.recurrence && task.recurrence.type === type);
         const label = type === 'none' ? 'None' : type.charAt(0).toUpperCase() + type.slice(1);
@@ -8666,22 +8721,22 @@ function openTaskModal(taskId) {
 
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;${task.hideUntil && task.hideUntil > getTodayStr() ? 'border-left:3px solid var(--yellow);' : ''}">
       <span style="font-size:16px;flex-shrink:0;">⏰</span>
-      <span style="font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;">Show me this on:</span>
-      <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;flex:1;max-width:160px;cursor:pointer;">
-      ${task.hideUntil && task.hideUntil > getTodayStr() ? `<span style="font-size:11px;color:var(--yellow);font-weight:600;">Hidden until ${task.hideUntil}</span>` : (task.hideUntil ? `<span style="font-size:11px;color:var(--text-dim);">Visible now</span>` : `<span style="font-size:11px;color:var(--text-dim);">Always visible</span>`)}
+      <span class="tm-key">Show me this on:</span>
+      <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" class="tm-select">
+      ${task.hideUntil && task.hideUntil > getTodayStr() ? `<span style="font-size:11px;color:var(--yellow);font-weight:600;">Hidden until ${task.hideUntil}</span>` : (task.hideUntil ? `<span class="tm-meta">Visible now</span>` : `<span class="tm-meta">Always visible</span>`)}
       ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule" aria-label="Clear schedule" role="button" tabindex="0">✕</span>` : ''}
     </div>
 
-    <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📍 Context</div>
+    <div class="tm-panel">
+      <div class="tm-label">📍 Context</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         <button onclick="setTaskContext(${safeId(task.id)}, null)" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${!task.context ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">None</button>
         ${(DATA.contexts || []).map(ctx => `<button onclick="setTaskContext(${safeId(task.id)}, '${ctx.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${task.context === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${ctx}</button>`).join('')}
       </div>
     </div>
 
-    <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🎯 Kairos Triggers <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">— surface this task when you're in one of these moments</span></div>
+    <div class="tm-panel">
+      <div class="tm-label">🎯 Kairos Triggers <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">— surface this task when you're in one of these moments</span></div>
       ${KAIROS_TAXONOMY.map(cat => `
         <div style="margin-bottom:6px;">
           <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">${cat.category}</div>
@@ -8714,8 +8769,8 @@ function openTaskModal(taskId) {
           <span onclick="openTaskModal(${sid})" style="flex:1;font-size:13px;cursor:pointer;color:${s.done ? 'var(--text-dim)' : 'var(--text)'};text-decoration:${s.done ? 'line-through' : 'none'};">${s.text || 'Untitled'}</span>
         </div>`;
       }).join('');
-      return `<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📋 Subtasks${progressText}</div>
+      return `<div class="tm-panel">
+        <div class="tm-label">📋 Subtasks${progressText}</div>
         ${subtaskRows}
         <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
           <input id="subtask-input-${String(safeId(task.id)).replace(/'/g,'')}" type="text" placeholder="+ Add subtask…" style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;"
@@ -8733,8 +8788,8 @@ function openTaskModal(taskId) {
           <span onclick="removeDependency(${safeId(task.id)},${safeId(b.id)})" style="cursor:pointer;font-size:12px;color:var(--text-dim);padding:2px 6px;border-radius:4px;" title="Remove dependency" aria-label="Remove dependency" role="button" tabindex="0">✕</span>
         </div>`;
       }).join('');
-      return `<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface2);border-radius:8px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🔗 Blocked By</div>
+      return `<div class="tm-panel">
+        <div class="tm-label">🔗 Blocked By</div>
         ${blockerRows || '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">No blockers</div>'}
         <div style="position:relative;margin-top:8px;">
           <input id="dep-search-${String(task.id).replace(/[^a-z0-9]/gi,'_')}" type="text" placeholder="+ Search task to block on…" autocomplete="off"
@@ -8785,8 +8840,8 @@ function openTaskModal(taskId) {
           <div style="display:flex;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;${m.from === 'k2' ? 'border-left:3px solid var(--accent)' : 'border-left:3px solid var(--green)'};">
             <div style="flex-shrink:0;font-size:14px;">${m.from === 'k2' ? '🤖' : '👤'}</div>
             <div style="flex:1;">
-              <div style="font-size:11px;color:var(--text-dim);margin-bottom:2px;">${m.from === 'k2' ? 'K-2' : 'Ryan'} · ${m.time}</div>
-              <div style="font-size:13px;line-height:1.5;">${m.text}</div>
+              <div class="tm-meta is-tight">${m.from === 'k2' ? 'K-2' : 'Ryan'} · ${m.time}</div>
+              <div class="tm-body">${m.text}</div>
             </div>
           </div>
         `).join('')
@@ -8794,8 +8849,8 @@ function openTaskModal(taskId) {
     </div>
 
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
-      <button onclick="taskToSomeday(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">💤 Someday</button>
-      <button onclick="taskToWaiting(${safeId(task.id)})" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">⏳ Waiting</button>
+      <button onclick="taskToSomeday(${safeId(task.id)})" class="tm-btn">💤 Someday</button>
+      <button onclick="taskToWaiting(${safeId(task.id)})" class="tm-btn">⏳ Waiting</button>
       <button onclick="deleteTask(${safeId(task.id)}, event)" style="flex:1;padding:8px 12px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;font-weight:600;cursor:pointer;" title="Delete (⇧+click to delete immediately)">🗑 Delete</button>
     </div>
   `;
@@ -8835,8 +8890,8 @@ function openTaskModal(taskId) {
             <div style="display:flex;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;${m.from === 'k2' ? 'border-left:3px solid var(--accent)' : 'border-left:3px solid var(--green)'};">
               <div style="flex-shrink:0;font-size:14px;">${m.from === 'k2' ? '🤖' : '👤'}</div>
               <div style="flex:1;">
-                <div style="font-size:11px;color:var(--text-dim);margin-bottom:2px;">${m.from === 'k2' ? 'K-2' : 'Ryan'} · ${m.time}</div>
-                <div style="font-size:13px;line-height:1.5;">${m.text}</div>
+                <div class="tm-meta is-tight">${m.from === 'k2' ? 'K-2' : 'Ryan'} · ${m.time}</div>
+                <div class="tm-body">${m.text}</div>
               </div>
             </div>
           `).join('');

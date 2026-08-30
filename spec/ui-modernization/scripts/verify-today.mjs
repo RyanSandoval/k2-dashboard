@@ -11,7 +11,7 @@ const data = JSON.parse(readFileSync('/Users/ryansandoval/k2-data/data.json', 'u
 const R = await withChrome(PORT, () => withTab(PORT, url, async (tab) => {
   await load(tab, url, 390);
   const r = await tab.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
-    window.DATA = ${JSON.stringify(data)};
+    DATA = ${JSON.stringify(data)}; window.DATA = DATA;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app-main').style.display='flex';
     const vis = id => getComputedStyle(document.getElementById(id)).display !== 'none';
