@@ -190,6 +190,14 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .shortcuts-hd.is-later {
     margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
   }
+  .tab-count {
+    position: absolute; top: 3px; left: 50%; margin-left: 6px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: var(--accent); color: var(--bg);
+    font-size: 9px; font-weight: 800; line-height: 16px; text-align: center;
+  }
+  .tab-count:empty { display: none; }
+
   .ui-kbd {
     background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
     padding: 2px 6px; text-align: center; font-family: ui-monospace, monospace; font-size: 12px;
@@ -1176,6 +1184,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     align-items: flex-start;
   }
   .mobile-nav-item {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3471,13 +3480,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <span class="icon">⚡</span>Capture
     </div>
     <div class="mobile-nav-item" data-page="reminders" onclick="navigateTo('reminders');setMobileActive(this)">
-      <span class="icon">⏰</span>Reminders
+      <span class="icon">⏰</span>Reminders<span class="tab-count" data-count="reminders"></span>
     </div>
     <div class="mobile-nav-item" data-page="action-inbox" onclick="navigateTo('action-inbox');setMobileActive(this)">
-      <span class="icon">📥</span>Inbox
+      <span class="icon">📥</span>Inbox<span class="tab-count" data-count="action-inbox"></span>
     </div>
     <div class="mobile-nav-item" onclick="openMobileMore()">
-      <span class="icon">☰</span>More
+      <span class="icon">☰</span>More<span class="tab-count" data-count="__live"></span>
     </div>
   </div>
 
@@ -3660,9 +3669,24 @@ function renderSidebarRest() {
   }).join('');
 }
 
+// The tab bar's counts come from k2ToolCount, the same function the launcher tiles
+// use. The five mobile-*-badge ids this replaces were a parallel set that the phone
+// and the drawer could disagree about — and did, silently, once the hand-written
+// drawer they lived in was deleted.
+function renderTabCounts() {
+  document.querySelectorAll('.mobile-nav .tab-count').forEach(el => {
+    const key = el.dataset.count;
+    const n = key === '__live'
+      ? K2_TOOLS.filter(t => k2ToolCount(t.page) > 0).length
+      : k2ToolCount(key);
+    el.textContent = n > 0 ? (n > 99 ? '99+' : String(n)) : '';
+  });
+}
+
 function renderNav() {
   try { renderLauncher(); } catch (e) { console.warn('[K2] renderLauncher:', e); }
   try { renderSidebarRest(); } catch (e) { console.warn('[K2] renderSidebarRest:', e); }
+  try { renderTabCounts(); } catch (e) { console.warn('[K2] renderTabCounts:', e); }
 }
 
 function openMobileMore() {
@@ -4155,7 +4179,7 @@ function renderAll() {
   const fns = [migrateJotsToDailyDocs, renderDashboard, renderRequestsBadge, renderFloatingDecisions,
                renderSessionResidue, renderStaleJotsBadge, renderStaleNotesBadge,
                renderWorkersBadge, renderTaskHeatmap, initNavSectionStates,
-               renderRemindersBadge];
+               renderRemindersBadge, renderNav];
   for (const fn of fns) {
     try { fn(); } catch(e) { console.error('[K2] renderAll: ' + fn.name + ' failed:', e); }
   }
@@ -4442,7 +4466,7 @@ function renderActionInboxBadge() {
   const items = _actionInboxAutoPrune().filter(i => !i.handled && !i.dismissed);
   const count = items.length;
   const text = count > 99 ? '99+' : String(count);
-  const targets = ['action-inbox-badge', 'mobile-action-inbox-badge'];
+  const targets = ['action-inbox-badge'];
   for (const id of targets) {
     const el = document.getElementById(id);
     if (!el) continue;
@@ -4490,7 +4514,7 @@ function _reqChannelIcon(c) {
 function renderRequestsBadge() {
   const count = _requestsOpen().length;
   const text = count > 99 ? '99+' : String(count);
-  for (const id of ['requests-badge', 'mobile-requests-badge']) {
+  for (const id of ['requests-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (count) { el.style.display = ''; el.textContent = text; }
@@ -4668,7 +4692,7 @@ function _commitmentOpenList() {
 function renderCommitmentsBadge() {
   const count = _commitmentOpenList().filter(t => !t.done).length;
   const text = count > 99 ? '99+' : String(count);
-  const targets = ['commitments-badge', 'mobile-commitments-badge'];
+  const targets = ['commitments-badge'];
   for (const id of targets) {
     const el = document.getElementById(id);
     if (!el) continue;
@@ -4770,7 +4794,7 @@ function _ballBackItems() {
 function renderJiraBallBackBadge() {
   const count = _ballBackItems().filter(i => i.mentionsMe).length;
   const text = count > 99 ? '99+' : String(count);
-  for (const id of ['ball-back-badge', 'mobile-ball-back-badge']) {
+  for (const id of ['ball-back-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (count) { el.style.display = ''; el.textContent = text; }
@@ -4849,7 +4873,7 @@ function _goldfishItems() {
 function renderGoldfishScanBadge() {
   const count = _goldfishItems().length;
   const text = count > 99 ? '99+' : String(count);
-  for (const id of ['goldfish-scan-badge', 'mobile-goldfish-scan-badge']) {
+  for (const id of ['goldfish-scan-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (count) { el.style.display = ''; el.textContent = text; }
@@ -4929,7 +4953,7 @@ function renderActivity() {
   // Badge: count awaiting items
   const awaitingCount = ledger.filter(r => r.status === 'awaiting').length;
   const badgeText = awaitingCount > 99 ? '99+' : String(awaitingCount);
-  for (const id of ['activity-badge', 'mobile-activity-badge']) {
+  for (const id of ['activity-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (awaitingCount) { el.style.display = ''; el.textContent = badgeText; }
@@ -5737,7 +5761,7 @@ function renderWorkersBadge() {
   const { pending } = _workersCollect();
   const n = pending.length;
   const text = n > 99 ? '99+' : String(n);
-  for (const id of ['workers-badge', 'mobile-workers-badge']) {
+  for (const id of ['workers-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (n) { el.style.display = ''; el.textContent = text; }
@@ -6273,7 +6297,7 @@ function renderStaleJotsBadge() {
   const items = _staleJotsCollectCandidates();
   const count = items.length;
   const text = count > 99 ? '99+' : String(count);
-  for (const id of ['stale-jots-badge', 'mobile-stale-jots-badge']) {
+  for (const id of ['stale-jots-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (count) { el.style.display = ''; el.textContent = text; }
@@ -6667,7 +6691,7 @@ function _staleNotes() {
 function renderStaleNotesBadge() {
   const count = _staleNotes().length;
   const text = count > 99 ? '99+' : String(count);
-  for (const id of ['stale-notes-badge', 'mobile-stale-notes-badge']) {
+  for (const id of ['stale-notes-badge']) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (count) { el.style.display = ''; el.textContent = text; }
@@ -16339,7 +16363,7 @@ function renderRemindersBadge() {
   }).length;
   // sidebar and the mobile More drawer are separate elements — update both or the
   // phone silently disagrees with the desktop
-  for (var i = 0, ids = ['reminders-badge', 'mobile-reminders-badge']; i < ids.length; i++) {
+  for (var i = 0, ids = ['reminders-badge']; i < ids.length; i++) {
     var badge = document.getElementById(ids[i]);
     if (!badge) continue;
     if (n > 0) { badge.textContent = n; badge.style.display = ''; }
