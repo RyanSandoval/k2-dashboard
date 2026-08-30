@@ -130,3 +130,26 @@ that caused it.
 Risk to weigh before building it: this writes into `dailyDocs`, the one surface Ryan
 actually loves. Corrupting a daily note is the worst available outcome, so it needs the
 snapshot-and-verify treatment — never a blind HTML splice.
+
+---
+
+## 2026-08-29 — the deletion section is void
+
+Ryan, asked directly whether to delete the surfaces whose data is empty: **"I'd
+rather keep them and eventually wire them up correctly."** Said twice, the first
+time as "only having 3 nav items on mobile is not good UX as there is 34 tools."
+
+So everything above about cutting Requests, Action Inbox, Ball Back, Saw/Didn't Act,
+Stale Jots, Waiting For, Trading, Growth, AI Insights, Jira Ledger, Discussions,
+Accomplishments, Weekly Review, Docs, Clips and Decisions no longer applies. The
+structure section stands; the subtraction does not.
+
+They are **unbuilt, not dead.** Fourteen of the fifty-nine DATA keys the code reads
+are empty, which is an argument about wiring, not about existence. Their markup is
+worth converting to the `ui-*` vocabulary because it stays.
+
+A full rewrite was weighed the same day and rejected: `createEditor` is 1,533 lines
+of Tiptap with four custom nodes, and the GitHub sync layer encodes fixes for the
+1MB contents-API ceiling, sha conflicts and private-image auth. A rewrite re-earns
+solved bugs to fix a volume problem that deletion — now off the table — was the
+cheap answer to.
