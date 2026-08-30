@@ -1472,6 +1472,8 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
   /* A tool with something in it earns the accent. Everything else stays present
      but quiet — the ranking does the work that deleting pages used to do. */
+  .tile.is-action { border-color: var(--accent-dim); background: var(--accent-surface); }
+  .tile.is-action .tile-nm { color: var(--text); }
   .tile.is-live { border-color: var(--accent-dim); }
   .tile.is-live .tile-nm { color: var(--text); }
   .tile-count {
@@ -3587,6 +3589,23 @@ const K2_TOOLS = [
   { page:'trash',           icon:'🗑️', label:'Trash',        group:'machine' },
 ];
 
+// Not every entry in that drawer was a page. These four are verbs, and two of them
+// had no other home on a phone at all once the sidebar is hidden.
+const K2_ACTIONS = [
+  { icon: '🔍', label: 'Search',   run: () => window.K2Palette && K2Palette.open() },
+  { icon: '⚡', label: 'Capture',  run: () => openCapturePopover() },
+  { icon: '🔄', label: 'Refresh',  run: () => forceAppRefresh() },
+  { icon: '⚙️', label: 'Settings', run: () => openSettings() },
+];
+
+function k2RunAction(i) {
+  const a = K2_ACTIONS[i];
+  if (!a) return;
+  closeMobileMore();
+  // The drawer animates out; opening a modal in the same frame fights it.
+  setTimeout(() => { try { a.run(); } catch (e) { console.warn('[K2] action:', e); } }, 50);
+}
+
 const K2_GROUPS = [
   ['daily',   'Daily'],
   ['work',    'Work'],
@@ -3636,6 +3655,11 @@ function renderLauncher() {
         oninput="k2FilterLauncher(this.value)" aria-label="Filter tools">
       <p class="launcher-sub">${K2_TOOLS.length} tools · ${live.length} have something in them</p>
     </div>`;
+  const actions = `<div class="launcher-group"><div class="launcher-ghd"><span>Do</span><hr></div>
+    <div class="launcher-grid">${K2_ACTIONS.map((a, i) =>
+      `<button class="tile is-action" onclick="k2RunAction(${i})" title="${escapeHtml(a.label)}">
+         <span class="tile-ic">${a.icon}</span><span class="tile-nm">${escapeHtml(a.label)}</span></button>`
+    ).join('')}</div></div>`;
   const groups = K2_GROUPS.map(([key, name]) => {
     const rows = K2_TOOLS.filter(t => t.group === key)
       .sort((a, b) => k2ToolCount(b.page) - k2ToolCount(a.page));
@@ -3643,7 +3667,7 @@ function renderLauncher() {
     return `<div class="launcher-group"><div class="launcher-ghd"><span>${name}</span><hr></div>
       <div class="launcher-grid">${rows.map(k2ToolTile).join('')}</div></div>`;
   }).join('');
-  el.innerHTML = head + groups;
+  el.innerHTML = head + actions + groups;
 }
 
 function k2FilterLauncher(q) {

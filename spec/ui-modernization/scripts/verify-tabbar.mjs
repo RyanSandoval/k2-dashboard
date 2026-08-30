@@ -38,13 +38,30 @@ const out = await withApp(page => page.evaluate(() => {
   more.click();
   const drawer = document.getElementById('mobile-more-drawer');
   o.drawerOpens = drawer.classList.contains('open') && getComputedStyle(drawer).display !== 'none';
-  o.allToolsReachable = document.querySelectorAll('#launcher-grid .tile').length === K2_TOOLS.length;
+  o.allToolsReachable = document.querySelectorAll(
+    '#launcher-grid .tile:not(.is-action)').length === K2_TOOLS.length;
 
   // A badge showing zero is noise; empty must collapse.
   const empty = document.createElement('span');
   empty.className = 'tab-count'; bar.appendChild(empty);
   o.zeroCollapses = getComputedStyle(empty).display === 'none';
   empty.remove();
+
+  // Reachability, not existence. Refresh and Settings survived in the sidebar,
+  // which is display:none on a phone, so they were gone from mobile for a day and
+  // every check still passed. This asks whether a thumb can actually get to them.
+  const reachable = (fnName) => {
+    const hit = [...document.querySelectorAll('[onclick]')].filter(el =>
+      el.getAttribute('onclick').includes(fnName));
+    return hit.some(el => {
+      // visible now, or inside the drawer the More tab opens
+      if (el.offsetParent !== null) return true;
+      return !!el.closest('#mobile-more-drawer');
+    });
+  };
+  o.refreshReachable = reachable('forceAppRefresh') || reachable('k2RunAction');
+  o.settingsReachable = reachable('openSettings') || reachable('k2RunAction');
+  o.actionsInDrawer = document.querySelectorAll('#launcher-grid .tile.is-action').length === 4;
 
   // Nothing may still write to a badge id that no longer exists.
   o.noOrphanBadgeWrites = !/mobile-[a-z-]+-badge/.test(document.documentElement.innerHTML);
