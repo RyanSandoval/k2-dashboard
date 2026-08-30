@@ -27,29 +27,34 @@ phone actually renders.
 - [x] G1: every one of the 35 tools is still reachable, and the sidebar is generated from the taxonomy rather than duplicating it
   CHECK: node /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g1_reachable.mjs
   EXPECT: G1 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=c0e5690acf31/13 entries; output=G1 PASS: all 34 tools reachable — 6 primary + daily 6 + work 10 + review 8 + machine 10; rail generated from K2_TOOLS/K2_GROUPS with 0 hard-coded pages, and a newly added tool renders without touching it
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G1 PASS: all 34 tools reachable — 6 primary + daily 6 + work 10 + review 8 + machine 10; rail generated from K2_TOOLS/K2_GROUPS with 0 hard-coded pages, and a newly added tool renders without touching it
 
 - [x] G2: every text style in the new UI clears WCAG AA, measured from rendered pixels in both colour schemes
   CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g2_contrast.py
   EXPECT: G2 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=c0e5690acf31/13 entries; output=G2 PASS: 19 text styles across the sidebar and Today, dark-only as declared, all clear WCAG AA
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G2 PASS: 19 text styles across the sidebar and Today, dark-only as declared, all clear WCAG AA
 
 - [x] G3: the new CSS is on-scale — no ad-hoc font sizes, spacing, weights or radii
   CHECK: node /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g3_scale.mjs
   EXPECT: G3 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=c0e5690acf31/13 entries; output=G3 PASS: 0 off-scale font sizes, spacing values or radii in the ui2 rules; weights limited to 600/400; 55 scale references, every radius via --u-r
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G3 PASS: 0 off-scale font sizes, spacing values or radii in the ui2 rules; weights limited to 600/400; 82 scale references, every radius via --u-r
 
 - [x] G4: the flag round-trips — the previous UI is one setting away and restores the full rail
   CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g4_flag.py
   EXPECT: G4 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=c0e5690acf31/13 entries; output=G4 PASS: opt-in by default; flag on groups the same 29 tools under 4 headers with no change in count; off restores the flat rail live and persists; on again re-groups
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G4 PASS: opt-in by default; flag on groups the same 29 tools under 4 headers with no change in count; off restores the flat rail live and persists; on again re-groups
 
 - [x] G5: the editor is untouched — carry-forward, agent results and task retirement all still pass
   CHECK: bash /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g5_no_regression.sh
   EXPECT: G5 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=c0e5690acf31/13 entries; output=G4 PASS: page, nav entry, both dispatch sites, section expansion and the dashboard alert all point at task-retirement; no id-only lookups left; 7 script blocks parse | G5 PASS: carry-forward 4/4, agent-result node registered, task-retiremen
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G4 PASS: page, nav entry, both dispatch sites, section expansion and the dashboard alert all point at task-retirement; no id-only lookups left; 7 script blocks parse | G5 PASS: carry-forward 4/4, agent-result node registered, task-retiremen
 
 - [x] G6: the flag visibly changes a phone — the chrome a 390px viewport actually renders, not the sidebar it never shows
   CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g6_mobile.py
   EXPECT: G6 PASS
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=c0e5690acf31/13 entries; output=G6 PASS: at 390px the flag changes the chrome a phone actually shows — 5/5 tab icons drawn (0 emoji, restored to 4 when off), tab bar repainted, editor uncapped with a 337.6px canvas, placeholder in-flow and no focus ring round the note
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G6 PASS: at 390px the flag changes the chrome a phone actually shows — 5/5 tab icons drawn (0 emoji, restored to 4 when off), tab bar repainted, editor uncapped with a 472.64px canvas, placeholder in-flow and no focus ring round the note
+
+- [x] G7: on a phone the note is the page — the canvas dominates, suggestions defer, and the search button clears the tab bar
+  CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g7_mobile_composition.py
+  EXPECT: G7 PASS
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=d7f2536ab6e7/13 entries; output=G7 PASS: canvas 222 -> 473px and starts 132px in; suggestions 319 -> 258px (3 rows, tallest 77px); search button clears the tab bar by 7px; smallest touch target 44px; no sideways scroll

@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v68-ui2-mobile';
+const CACHE_NAME = 'k2-hq-v69-mobile-canvas';
 const ASSETS = [
   './',
   './index.html',

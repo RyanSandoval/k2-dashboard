@@ -2393,6 +2393,58 @@ body.ui2 .ProseMirror p.is-editor-empty:first-child::before{
   body.ui2 .daily-doc-editor{padding:var(--u-space-4) 0;min-height:40vh}
   body.ui2 #page-jots{padding-left:var(--u-space-4);padding-right:var(--u-space-4)}
   body.ui2 #page-jots h2,body.ui2 #page-jots .page-header h2{font-size:var(--u-text-2xl)}
+
+  /* ── composition ──────────────────────────────────────────────────────────
+     The phone was a form above a list: 91px of header and search, a 407px
+     canvas, then 319px of suggestion cards. The canvas is the product, so it
+     gets the screen and everything else gets out of its way. */
+
+  /* header: date and count on one line, not stacked into 51px */
+  body.ui2 #page-jots .home-head{margin-bottom:var(--u-space-2)}
+  body.ui2 #page-jots .home-date{font-size:var(--u-text-xl);font-weight:600;letter-spacing:-.02em}
+  body.ui2 #page-jots .home-sub{font-size:var(--u-text-xs);color:var(--u-text-3);margin-top:0}
+  /* min-height, not just padding: compacting this to 37px put it under the 44px touch
+     minimum, which G7 caught. Density is not worth a control you cannot reliably hit. */
+  body.ui2 #page-jots .jot-search{font-size:var(--u-text-sm);padding:var(--u-space-2) var(--u-space-3);
+    min-height:44px;background:var(--u-sunken);border:0;border-radius:var(--u-r);color:var(--u-text-2);
+    box-shadow:inset 0 0 0 1px var(--u-border)}
+
+  /* the canvas takes the screen it is worth */
+  body.ui2 .daily-doc-editor{min-height:56vh;border-left:0;padding:var(--u-space-3) 0}
+
+  /* Suggestions are K2's opinion, not Ryan's writing, and they were louder than the note.
+     Titles clamp to two lines; the accent rule and the reason stay so the rows are still
+     scannable. Not hidden — demoted. */
+  body.ui2 #page-jots .home-start{margin:var(--u-space-5) 0;padding-left:var(--u-space-3);
+    border-left-color:var(--u-border)}
+  body.ui2 #page-jots .home-start-hd{font-size:var(--u-text-xs);color:var(--u-text-3);
+    letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  body.ui2 #page-jots .home-pick{padding:var(--u-space-2) 0;gap:var(--u-space-3);align-items:center;
+    border-bottom-color:var(--u-border)}
+  body.ui2 #page-jots .home-pick-t{font-size:var(--u-text-sm);font-weight:400;color:var(--u-text-2);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  body.ui2 #page-jots .home-pick-why{font-size:var(--u-text-xs);color:var(--u-text-3);margin-top:0}
+  body.ui2 #page-jots .home-pick-do{font-size:var(--u-text-xs);color:var(--u-text-2);
+    background:none;border:1px solid var(--u-border-fn);border-radius:var(--u-r);
+    min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+
+  /* Attach sat in its own ~90px band above the writing surface. On a touch device it can
+     never "fade in on hover", so it was permanently parked in the most valuable space on
+     the screen for an action taken a few times a day. Float it into the corner of the
+     canvas instead — same affordance, no band. */
+  body.ui2 #page-jots .note-attach-bar{position:absolute;top:0;right:0;margin:0;z-index:2}
+  body.ui2 #page-jots .note-attach-btn{min-height:44px;min-width:44px;font-size:var(--u-text-xs);
+    color:var(--u-text-3);display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--u-r)}
+
+  /* previous days: a quiet archive under the day, not a competing list */
+  body.ui2 #daily-doc-previous .jot-day-section{font-size:var(--u-text-sm);color:var(--u-text-3)}
+
+  /* The search button sat 78px up while the tab bar is 89px tall, so it covered it.
+     64 + 32 clears the bar with a real gap, and both are on the scale. */
+  body.ui2 .k2pal-mobile-fab{
+    bottom:calc(var(--u-space-8) + var(--u-space-6) + env(safe-area-inset-bottom, 0));
+    box-shadow:0 3px 6px hsla(0,0%,0%,.15), 0 1px 2px hsla(0,0%,0%,.24)}
 }
 </style>
 </head>
