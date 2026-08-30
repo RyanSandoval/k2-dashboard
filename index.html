@@ -361,7 +361,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     top: 12px;
     right: 12px;
     background: var(--accent);
-    color: #fff;
+    color: var(--bg);
     font-size: 11px;
     font-weight: 600;
     padding: 3px 8px;
@@ -511,7 +511,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     background: var(--accent);
     border: none;
     border-radius: 6px;
-    color: #fff;
+    color: var(--bg);
     padding: 8px 16px;
     font-size: 12px;
     font-weight: 600;
@@ -671,7 +671,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   /* Urgency/importance stepper buttons */
   .ui-step { display:inline-flex;gap:3px; }
   .ui-step button { width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:12px;font-weight:700;cursor:pointer;transition:background 0.1s,color 0.1s; }
-  .ui-step button.active { background:var(--accent);color:#fff;border-color:var(--accent); }
+  .ui-step button.active { background:var(--accent);color:var(--bg);border-color:var(--accent); }
   /* Eisenhower matrix */
   .matrix-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px; }
   .matrix-quad { border-radius:10px;padding:10px;min-height:140px;display:flex;flex-direction:column;gap:4px; }
@@ -1624,7 +1624,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .search-result-item .sr-body { flex: 1; min-width: 0; }
   .search-result-item .sr-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .search-result-item .sr-snippet { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-  .search-result-item mark { background: var(--accent); color: #fff; border-radius: 2px; padding: 0 2px; }
+  .search-result-item mark { background: var(--accent); color: var(--bg); border-radius: 2px; padding: 0 2px; }
   .search-modal-footer {
     padding: 8px 16px;
     border-top: 1px solid var(--border);
@@ -2278,7 +2278,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
 
       <!-- Floating Decision Tray — nightly scan of jots for decision-language; cron writes DATA.floatingDecisions -->
-      <div class="card" id="dash-floating-decisions" style="margin-bottom:20px;display:none;border-left:3px solid #a78bfa;">
+      <div class="card" id="dash-floating-decisions" style="margin-bottom:20px;display:none;border-left:3px solid var(--accent);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="font-size:13px;font-weight:700;">🤔 Floating Decisions <span id="dash-floating-decisions-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
           <span style="font-size:11px;color:var(--text-dim);">decisions hiding in jots</span>
@@ -2308,7 +2308,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="card" id="dashboard-family-finance-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
 
       <!-- Two-of-Us Ritual — streak + 30d completion; cron writes DATA.twoOfUsRitual daily from two-of-us/ritual_streak_snapshot.py -->
-      <div class="card" id="dashboard-two-of-us-card" style="margin-bottom:20px;border-left:3px solid #ec4899;display:none;"></div>
+      <div class="card" id="dashboard-two-of-us-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
 
       <!-- Repo Scout — freshness cron writes DATA.repoScout daily 9:30 AM PT; spec: k2-dashboard/spec/repo-scout/ -->
       <div class="card" id="dashboard-repo-scout-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
@@ -2361,7 +2361,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="stat-row" id="stats-row" style="margin-bottom:20px;"><!-- Populated by JS --></div>
 
       <!-- Stale Tasks Alert (populated by JS) -->
-      <div id="dash-stale-alert" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:color-mix(in srgb,#f59e0b 10%,transparent);border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);border-radius:8px;color:#92400e;"></div>
+      <div id="dash-stale-alert" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:color-mix(in srgb,var(--yellow) 10%,transparent);border:1px solid color-mix(in srgb,var(--yellow) 35%,transparent);border-radius:8px;color:var(--yellow);"></div>
 
       <!-- Decision Resurfacer (populated by renderDecisionResurfacer) -->
       <div class="card" id="dash-decision-resurfacer" style="display:none;margin-bottom:20px;">
@@ -2477,7 +2477,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input type="text" id="new-task-input" placeholder="Add a task… (try 'call joe #viking @phone !high tomorrow')" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" onkeydown="if(event.key==='Enter')addTask()">
         <select id="new-task-project" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;"><option value="">Project</option></select>
-        <button onclick="addTask()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;">Add</button>
+        <button onclick="addTask()" style="background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;">Add</button>
       </div>
       <div id="smart-list-indicator" style="display:none;align-items:center;gap:10px;padding:8px 12px;background:var(--accent-surface);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:8px;margin-bottom:10px;">
         <span id="smart-list-indicator-label" style="font-size:13px;font-weight:600;color:var(--accent);flex:1;"></span>
@@ -2534,7 +2534,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <p>Architectural and strategic choices K-2 has made — and why</p>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;" id="decision-filter-pills">
-        <button onclick="setDecisionFilter('all')" data-filter="all" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--accent);color:#fff;">All</button>
+        <button onclick="setDecisionFilter('all')" data-filter="all" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--accent);color:var(--bg);">All</button>
         <button onclick="setDecisionFilter('dashboard')" data-filter="dashboard" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Dashboard</button>
         <button onclick="setDecisionFilter('trading')" data-filter="trading" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Trading</button>
         <button onclick="setDecisionFilter('automation')" data-filter="automation" style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Automation</button>
@@ -2559,7 +2559,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <div id="trading-mode-toggle" style="display:flex;align-items:center;gap:8px;">
             <div style="display:flex;background:var(--surface2);border-radius:20px;padding:3px;border:1px solid var(--border);">
               <button id="toggle-live" onclick="setTradingMode('live')" style="padding:6px 16px;border-radius:18px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px;">
-                <span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+                <span class="live-dot" style="width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
                 LIVE
               </button>
               <button id="toggle-paper" onclick="setTradingMode('paper')" style="padding:6px 16px;border-radius:18px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">
@@ -2571,7 +2571,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
       <style>
         @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .trading-live-mode #trading-page-header { border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(239,68,68,0.1); }
+        .trading-live-mode #trading-page-header { border-bottom: 2px solid var(--red); padding-bottom: 12px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(239,68,68,0.1); }
         .trading-paper-mode #trading-page-header { border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-bottom: 24px; }
         .trading-paper-mode .paper-watermark { display: block !important; }
       </style>
@@ -2632,7 +2632,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
             <div style="font-size:11px;color:var(--text-muted);">Hyperliquid market-maker · equity delta per day</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;">
-            <button id="cmm-range-7" onclick="setCombinedMmRange(7)" class="time-toggle-btn active" style="padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:#000;font-weight:700;">7d</button>
+            <button id="cmm-range-7" onclick="setCombinedMmRange(7)" class="time-toggle-btn active" style="padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:var(--bg);font-weight:700;">7d</button>
             <button id="cmm-range-14" onclick="setCombinedMmRange(14)" class="time-toggle-btn" style="padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);font-weight:600;">14d</button>
           </div>
         </div>
@@ -2656,7 +2656,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
             <p>Every open task + every jot/note with implied action. Captured anywhere, surfaced here. Recency-ranked, last 30 days.</p>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-            <button class="action-inbox-filter-btn active" data-filter="open" onclick="setActionInboxFilter('open',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:#000;font-weight:700;">Open</button>
+            <button class="action-inbox-filter-btn active" data-filter="open" onclick="setActionInboxFilter('open',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:var(--bg);font-weight:700;">Open</button>
             <button class="action-inbox-filter-btn" data-filter="handled" onclick="setActionInboxFilter('handled',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">Handled</button>
             <button class="action-inbox-filter-btn" data-filter="dismissed" onclick="setActionInboxFilter('dismissed',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">Dismissed</button>
             <button class="action-inbox-filter-btn" data-filter="all" onclick="setActionInboxFilter('all',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">All</button>
@@ -2717,7 +2717,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
             <p>Every meaningful action, linked to its source</p>
           </div>
           <div style="display:flex;gap:6px;align-items:center;">
-            <button class="activity-filter-btn active" data-filter="all" onclick="setActivityFilter('all',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:#000;font-weight:700;">All</button>
+            <button class="activity-filter-btn active" data-filter="all" onclick="setActivityFilter('all',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--accent);color:var(--bg);font-weight:700;">All</button>
             <button class="activity-filter-btn" data-filter="awaiting" onclick="setActivityFilter('awaiting',this)" style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--surface2);color:var(--text-dim);">⏳ Awaiting you</button>
           </div>
         </div>
@@ -2862,7 +2862,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <div id="note-k2-text" class="md-content" style="font-size:14px;color:var(--text);line-height:1.7;"></div>
         </div>
         <div style="margin-top:16px;text-align:center;">
-          <button onclick="requestK2TakeFromEditor()" id="note-k2-btn" style="padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🤖 Get K-2's Take</button>
+          <button onclick="requestK2TakeFromEditor()" id="note-k2-btn" style="padding:10px 24px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">🤖 Get K-2's Take</button>
         </div>
         <div id="note-backlinks" style="display:none;margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
           <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px;">Referenced in</div>
@@ -2928,7 +2928,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button id="mem-tab-daily" onclick="switchMemTab('daily')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">📅 Recent Sessions</button>
+        <button id="mem-tab-daily" onclick="switchMemTab('daily')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--bg);font-size:12px;font-weight:600;cursor:pointer;">📅 Recent Sessions</button>
         <button id="mem-tab-longterm" onclick="switchMemTab('longterm')" style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;">🔖 Long-term</button>
       </div>
 
@@ -2959,7 +2959,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Mission Statement</div>
         <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">Use this for reverse prompting — ask K-2 "what should we do right now to advance our mission?"</div>
         <textarea id="mission-input" rows="3" placeholder="e.g. Build a system where AI agents handle my routine work so I can focus on high-leverage decisions..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:13px;resize:vertical;line-height:1.6;box-sizing:border-box;"></textarea>
-        <button onclick="saveMission()" style="margin-top:8px;background:var(--accent);border:none;border-radius:8px;padding:8px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Save Mission</button>
+        <button onclick="saveMission()" style="margin-top:8px;background:var(--accent);border:none;border-radius:8px;padding:8px 20px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">Save Mission</button>
       </div>
 
       <!-- K-2 Team Card -->
@@ -2972,7 +2972,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
               <div style="font-weight:700;font-size:13px;">K-2</div>
               <div style="font-size:11px;color:var(--text-dim);">Chief of Staff · Claude Sonnet · Main session</div>
             </div>
-            <div style="font-size:10px;padding:3px 8px;background:rgba(74,222,128,0.15);color:#4ade80;border-radius:6px;font-weight:600;border:1px solid rgba(74,222,128,0.3);">● Active</div>
+            <div style="font-size:10px;padding:3px 8px;background:rgba(74,222,128,0.15);color:var(--green);border-radius:6px;font-weight:600;border:1px solid rgba(74,222,128,0.3);">● Active</div>
           </div>
         </div>
       </div>
@@ -3013,7 +3013,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <h2>📁 K-2 Docs</h2>
           <p>Documents generated by K-2 — your searchable archive</p>
         </div>
-        <button onclick="openNewDocForm()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 18px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;">+ New Doc</button>
+        <button onclick="openNewDocForm()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 18px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;">+ New Doc</button>
       </div>
 
       <!-- New Doc Form (hidden by default) -->
@@ -3031,7 +3031,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
         <textarea id="new-doc-content" rows="6" placeholder="Content (markdown supported)…" style="width:100%;box-sizing:border-box;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical;line-height:1.5;outline:none;"></textarea>
         <div style="display:flex;gap:8px;margin-top:8px;">
-          <button onclick="saveNewDoc()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 18px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Save</button>
+          <button onclick="saveNewDoc()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 18px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">Save</button>
           <button onclick="closeNewDocForm()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 18px;color:var(--text-dim);font-size:13px;cursor:pointer;">Cancel</button>
         </div>
       </div>
@@ -3041,7 +3041,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <input id="docs-search" type="text" placeholder="Search docs…" oninput="debouncedFilterDocs()"
           style="flex:1;min-width:160px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;">
         <div id="docs-filter-pills" style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button onclick="setDocsFilter('All')" data-filter="All" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--accent);color:#fff;">All</button>
+          <button onclick="setDocsFilter('All')" data-filter="All" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--accent);color:var(--bg);">All</button>
           <button onclick="setDocsFilter('Planning')" data-filter="Planning" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Planning</button>
           <button onclick="setDocsFilter('Reports')" data-filter="Reports" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Reports</button>
           <button onclick="setDocsFilter('Blog')" data-filter="Blog" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;font-weight:600;background:var(--surface2);color:var(--text-dim);">Blog</button>
@@ -3081,7 +3081,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;"
           onkeydown="if(event.key==='Enter'){addToInbox(this.value.trim());this.value='';}">
         <button onclick="(function(){var v=document.getElementById('inbox-input').value.trim();if(v){addToInbox(v);document.getElementById('inbox-input').value='';}})();"
-          style="padding:10px 18px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Capture</button>
+          style="padding:10px 18px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">Capture</button>
       </div>
       <div id="inbox-list"></div>
     </div>
@@ -3257,7 +3257,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;"
           onkeydown="if(event.key==='Enter'){addToSomeday(this.value.trim());this.value='';}">
         <button onclick="(function(){var v=document.getElementById('someday-input').value.trim();if(v){addToSomeday(v);document.getElementById('someday-input').value='';}})();"
-          style="padding:10px 18px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Park It</button>
+          style="padding:10px 18px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">Park It</button>
       </div>
       <div id="someday-list"></div>
     </div>
@@ -3282,7 +3282,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <input type="text" id="task-msg-input" placeholder="Message or instruction for K-2..." 
             style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;"
             onkeydown="if(event.key==='Enter')sendTaskMessage()">
-          <button onclick="sendTaskMessage()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Send to K-2</button>
+          <button onclick="sendTaskMessage()" style="padding:10px 16px;background:var(--accent);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Send to K-2</button>
         </div>
       </div>
     </div>
@@ -3340,7 +3340,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px;">
-        <button onclick="saveNewSmartList()" style="flex:1;background:var(--accent);color:#000;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">Save Smart List</button>
+        <button onclick="saveNewSmartList()" style="flex:1;background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">Save Smart List</button>
         <button onclick="closeCreateSmartList()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer;">Cancel</button>
       </div>
     </div>
@@ -3387,7 +3387,7 @@ function setMobileActive(el) {
 async function forceAppRefresh() {
   try {
     const banner = document.createElement('div');
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--accent);color:#000;padding:10px 14px;text-align:center;font-weight:700;font-size:13px;';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--accent);color:var(--bg);padding:10px 14px;text-align:center;font-weight:700;font-size:13px;';
     banner.textContent = '🔄 Refreshing — clearing cache…';
     document.body.appendChild(banner);
     if ('serviceWorker' in navigator) {
@@ -4247,7 +4247,7 @@ function setActionInboxFilter(f, btn) {
   document.querySelectorAll('.action-inbox-filter-btn').forEach(b => {
     const active = b.dataset.filter === f;
     b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
-    b.style.color = active ? '#000' : 'var(--text-dim)';
+    b.style.color = active ? 'var(--bg)' : 'var(--text-dim)';
     b.style.fontWeight = active ? '700' : '400';
     b.classList.toggle('active', active);
   });
@@ -4799,7 +4799,7 @@ function setActivityFilter(f, btn) {
   document.querySelectorAll('.activity-filter-btn').forEach(b => {
     const active = b === btn;
     b.style.background = active ? 'var(--accent)' : 'var(--surface2)';
-    b.style.color = active ? '#000' : 'var(--text-dim)';
+    b.style.color = active ? 'var(--bg)' : 'var(--text-dim)';
     b.classList.toggle('active', active);
   });
   renderActivity();
@@ -5244,7 +5244,7 @@ function setCombinedMmRange(n) {
     if (!btn) continue;
     const active = r === n;
     btn.style.background = active ? 'var(--accent)' : 'var(--surface2)';
-    btn.style.color = active ? '#000' : 'var(--text-dim)';
+    btn.style.color = active ? 'var(--bg)' : 'var(--text-dim)';
     btn.style.fontWeight = active ? '700' : '600';
     btn.classList.toggle('active', active);
   }
@@ -5995,7 +5995,7 @@ function renderJotMatchNudge(match) {
     (match.date ? ' · <span style="color:var(--text-muted);">' + escapeHtml(match.date) + '</span>' : '') + '</span>' +
     '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(snippet) + '…</span>' +
     '<button onclick="_memMatchNavigate(\'' + String(match.kind).replace(/'/g,"\\'") + '\',\'' + String(match.id).replace(/'/g,"\\'") + '\');" ' +
-    'style="flex-shrink:0;padding:3px 10px;background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Compare →</button>' +
+    'style="flex-shrink:0;padding:3px 10px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Compare →</button>' +
     '<button onclick="_memMatchDismiss();" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
   el.classList.add('is-open');
 }
@@ -6272,9 +6272,9 @@ function renderStaleJots() {
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:200px;">
         <button onclick="staleJotConvertToTask('${safeKey}')" title="Convert to task" style="${baseBtn}border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);">➡️ Task</button>
-        <button onclick="staleJotLinkToNote('${safeKey}')" title="Link to note" style="${baseBtn}border-color:color-mix(in srgb,var(--blue) 40%,transparent);color:var(--blue,#5cb3ff);">🔗 Note</button>
+        <button onclick="staleJotLinkToNote('${safeKey}')" title="Link to note" style="${baseBtn}border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);">🔗 Note</button>
         <button onclick="staleJotArchive('${safeKey}')" title="Archive (keep in jot history, hide here)" style="${baseBtn}color:var(--text-muted);" aria-label="Archive">📦</button>
-        <button onclick="staleJotDiscard('${safeKey}')" title="Discard (delete line from daily doc)" style="${baseBtn}color:var(--red,#ff7575);" aria-label="Discard">🗑️</button>
+        <button onclick="staleJotDiscard('${safeKey}')" title="Discard (delete line from daily doc)" style="${baseBtn}color:var(--red);" aria-label="Discard">🗑️</button>
       </div>
     </div>`;
   }).join('');
@@ -6627,7 +6627,7 @@ function renderStaleNotes() {
       + '</div>'
       + '<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;max-width:220px;">'
       + '<button onclick="event.stopPropagation();staleNoteConvertToTask(\'' + rawId + '\')" title="Convert to task" style="' + baseBtn + 'border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);">➡️ Task</button>'
-      + '<button onclick="event.stopPropagation();staleNoteOpenProjectPicker(\'' + rawId + '\')" title="Link to active project" style="' + baseBtn + 'border-color:color-mix(in srgb,var(--blue,#5cb3ff) 40%,transparent);color:var(--blue,#5cb3ff);">🔗 Project</button>'
+      + '<button onclick="event.stopPropagation();staleNoteOpenProjectPicker(\'' + rawId + '\')" title="Link to active project" style="' + baseBtn + 'border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent);">🔗 Project</button>'
       + '<button onclick="event.stopPropagation();staleNoteArchive(\'' + rawId + '\',event.shiftKey)" title="Archive (⇧+click to delete immediately)" style="' + baseBtn + 'color:var(--text-muted);" aria-label="Archive">📦</button>'
       + '</div>'
       + '</div>';
@@ -6950,8 +6950,8 @@ function renderDecisionsNeededPanel() {
   }
   el.innerHTML = rows.map(r => {
     const days = (r.daysSinceModified || 0);
-    const ageColor = days >= 14 ? '#ef4444' : days >= 7 ? '#f59e0b' : 'var(--text-dim)';
-    const markerColor = r.marker === 'Awaiting' ? '#f59e0b' : r.marker === 'Paused' ? '#64748b' : r.marker === 'Decision Needed' ? '#a855f7' : 'var(--accent)';
+    const ageColor = days >= 14 ? 'var(--red)' : days >= 7 ? 'var(--yellow)' : 'var(--text-dim)';
+    const markerColor = r.marker === 'Awaiting' ? 'var(--yellow)' : r.marker === 'Paused' ? '#64748b' : r.marker === 'Decision Needed' ? '#a855f7' : 'var(--accent)';
     const fileUrl = 'file://' + (r.file || '');
     return `
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
@@ -6985,7 +6985,7 @@ function renderSpecOpenQuestionsPanel() {
   }
   el.innerHTML = open.map(q => {
     const fileUrl = 'file://' + (q.file || '');
-    const markerColor = q.marker === '[INFERRED]' ? '#f59e0b' : '#a855f7';
+    const markerColor = q.marker === '[INFERRED]' ? 'var(--yellow)' : '#a855f7';
     return `
       <div id="spec-q-${q.id}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
         <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,${markerColor} 15%,transparent);color:${markerColor};border:1px solid color-mix(in srgb,${markerColor} 35%,transparent);white-space:nowrap;flex-shrink:0;">${q.marker}</span>
@@ -6996,7 +6996,7 @@ function renderSpecOpenQuestionsPanel() {
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="confirmSpecQuestion('${q.id}')" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;" title="Stamp the spec file: [INFERRED] → [CONFIRMED today]">✓ Confirm</button>
+          <button onclick="confirmSpecQuestion('${q.id}')" style="background:var(--green);border:none;border-radius:6px;color:var(--bg);padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;" title="Stamp the spec file: [INFERRED] → [CONFIRMED today]">✓ Confirm</button>
           <button onclick="overrideSpecQuestion('${q.id}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;" title="Type a replacement, the cron will rewrite the line">✎ Override</button>
         </div>
       </div>`;
@@ -7062,9 +7062,9 @@ function renderMissionSpendRollup() {
   el.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
       <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);font-weight:700;">7d cron spend</span>
-      ${seg('Opus', r.opus, '#ef4444')}
+      ${seg('Opus', r.opus, 'var(--red)')}
       ${seg('Sonnet', r.sonnet, '#a855f7')}
-      ${seg('Haiku', r.haiku, '#22c55e')}
+      ${seg('Haiku', r.haiku, 'var(--green)')}
       <span style="font-size:11px;color:var(--text);font-weight:700;">Total $${(r.total||0).toFixed(2)}</span>
       ${computed ? `<span style="font-size:10px;color:var(--text-dim);margin-left:auto;">refreshed ${computed}</span>` : ''}
     </div>`;
@@ -7121,21 +7121,21 @@ function renderMissionCronList() {
     const running = _cronIsRunning(j);
     const errored = (j.consecutiveErrors || 0) > 0 || j.lastRunStatus === 'error';
     let dotColor, dotAnim;
-    if (running) { dotColor = '#22c55e'; dotAnim = 'animation:pulse-dot 1.1s ease-in-out infinite;'; }
-    else if (errored) { dotColor = '#ef4444'; dotAnim = ''; }
+    if (running) { dotColor = 'var(--green)'; dotAnim = 'animation:pulse-dot 1.1s ease-in-out infinite;'; }
+    else if (errored) { dotColor = 'var(--red)'; dotAnim = ''; }
     else { dotColor = '#64748b'; dotAnim = ''; }
     const schedHuman = j.scheduleHuman || j.scheduleExpr || j.schedule || '';
     const last = j.lastRunAtMs ? _relTime(j.lastRunAtMs) : (j.lastRun || '—');
     const next = j.nextRunAtMs ? _relTime(j.nextRunAtMs) : '';
     const statusLabel = running ? '● RUNNING' : (errored ? `✕ ${j.consecutiveErrors || 1} consec error${(j.consecutiveErrors||1)===1?'':'s'}` : '');
-    const statusColor = running ? '#22c55e' : '#ef4444';
-    const errSnippet = !running && errored && j.lastError ? `<div style="font-size:10px;color:#ef4444;margin-top:3px;line-height:1.3;">${escapeHtml(String(j.lastError).slice(0,140))}</div>` : '';
+    const statusColor = running ? 'var(--green)' : 'var(--red)';
+    const errSnippet = !running && errored && j.lastError ? `<div style="font-size:10px;color:var(--red);margin-top:3px;line-height:1.3;">${escapeHtml(String(j.lastError).slice(0,140))}</div>` : '';
     const sp = spendByJob[j.id];
-    const tierColor = sp ? (sp.tier === 'opus' ? '#ef4444' : sp.tier === 'sonnet' ? '#a855f7' : sp.tier === 'haiku' ? '#22c55e' : '#64748b') : null;
+    const tierColor = sp ? (sp.tier === 'opus' ? 'var(--red)' : sp.tier === 'sonnet' ? '#a855f7' : sp.tier === 'haiku' ? 'var(--green)' : '#64748b') : null;
     const spendChip = sp && sp.dollars > 0 ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,${tierColor} 15%,transparent);color:${tierColor};border:1px solid color-mix(in srgb,${tierColor} 35%,transparent);" title="${sp.runCount} runs · ${sp.inputTokens.toLocaleString()} in + ${sp.outputTokens.toLocaleString()} out tokens">$${sp.dollars.toFixed(2)} 7d</span>` : '';
-    const overChip = sp && sp.overTier ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.4);" title="Opus tier ≥ $1.00 — consider downgrading to Sonnet">💸 Opus → Sonnet</span>` : '';
+    const overChip = sp && sp.overTier ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.4);" title="Opus tier ≥ $1.00 — consider downgrading to Sonnet">💸 Opus → Sonnet</span>` : '';
     return `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);${running ? 'background:color-mix(in srgb,#22c55e 6%,transparent);margin:0 -6px;padding-left:6px;padding-right:6px;border-radius:6px;' : ''}">
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);${running ? 'background:color-mix(in srgb,var(--green) 6%,transparent);margin:0 -6px;padding-left:6px;padding-right:6px;border-radius:6px;' : ''}">
         <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};margin-top:5px;flex-shrink:0;${dotAnim}box-shadow:${running?`0 0 6px ${dotColor}`:'none'};"></span>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -7406,7 +7406,7 @@ function renderDashboard() {
     if (staleCount > 0) {
       staleAlertEl.style.display = 'flex';
       staleAlertEl.innerHTML = `<span style="font-size:13px;flex:1;">⚠️ <strong>${staleCount} stale task${staleCount === 1 ? '' : 's'}</strong> need triage (${staleCount > 1 ? 'tasks older' : 'task older'} than 14 days)</span>
-        <span onclick="navigateTo('tasks')" style="font-size:12px;font-weight:600;color:#92400e;cursor:pointer;white-space:nowrap;">Review Tasks →</span>`;
+        <span onclick="navigateTo('tasks')" style="font-size:12px;font-weight:600;color:var(--yellow);cursor:pointer;white-space:nowrap;">Review Tasks →</span>`;
     } else {
       staleAlertEl.style.display = 'none';
     }
@@ -7423,7 +7423,7 @@ function renderDashboard() {
           return `<div onclick="navigateTo('projects')" style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
           <div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span>${p.name}</span>
-            ${pq>0 ? `<span title="${pq} pending decision${pq===1?'':'s'} from plan file" style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,#f59e0b 15%,transparent);color:#f59e0b;border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);">⚠ ${pq}</span>` : ''}
+            ${pq>0 ? `<span title="${pq} pending decision${pq===1?'':'s'} from plan file" style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,var(--yellow) 15%,transparent);color:var(--yellow);border:1px solid color-mix(in srgb,var(--yellow) 35%,transparent);">⚠ ${pq}</span>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${(p.description||'').slice(0,60)}</div>
         </div>`;}).join('');
@@ -7932,7 +7932,7 @@ function renderTrading() {
   const tradingPage = document.getElementById('page-trading');
   if (liveBtn && paperBtn) {
     if (tradingMode === 'live') {
-      liveBtn.style.background = '#ef4444';
+      liveBtn.style.background = 'var(--red)';
       liveBtn.style.color = '#fff';
       paperBtn.style.background = 'transparent';
       paperBtn.style.color = 'var(--text-dim)';
@@ -8055,7 +8055,7 @@ let _tradingBooks = []; // cached for re-render on range change
 const BOOK_COLORS = {
   'Tennis': '#10b981',
   'Polymarket': '#8b5cf6',
-  'Crypto 15m': '#f59e0b',
+  'Crypto 15m': 'var(--yellow)',
   'Polymarket 5m': '#3b82f6'
 };
 function getBookColor(name) {
@@ -8473,7 +8473,7 @@ function renderProjects() {
                  onclick="openProjectModal('${p.id}')">
               <div class="kanban-card-title">
                 ${p.name}
-                ${pendingCount > 0 ? `<span title="${pendingCount} open question${pendingCount===1?'':'s'} from plan file" style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,#f59e0b 15%,transparent);color:#f59e0b;border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);margin-left:6px;vertical-align:middle;">⚠ ${pendingCount} pending decision${pendingCount===1?'':'s'}</span>` : ''}
+                ${pendingCount > 0 ? `<span title="${pendingCount} open question${pendingCount===1?'':'s'} from plan file" style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,var(--yellow) 15%,transparent);color:var(--yellow);border:1px solid color-mix(in srgb,var(--yellow) 35%,transparent);margin-left:6px;vertical-align:middle;">⚠ ${pendingCount} pending decision${pendingCount===1?'':'s'}</span>` : ''}
               </div>
               <div class="kanban-card-desc">${p.description}</div>
               ${isPlanSync ? `<div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;">📄 <span style="font-family:monospace;">${planBasename}</span>${p.lastScannedAt ? ` · scanned ${_relTime(new Date(p.lastScannedAt).getTime())}` : ''}</div>` : ''}
@@ -8515,8 +8515,8 @@ function renderProjects() {
           <div style="font-size:11px;color:var(--text-dim);">${escapeHtml(p.description||'')} · Archived ${p.archivedAt ? new Date(p.archivedAt).toLocaleDateString() : ''}</div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button onclick="restoreProject('${p.id}')" style="padding:6px 12px;background:var(--blue);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Restore</button>
-          <button onclick="deleteProject('${p.id}', event)" title="Delete (⇧+click to delete immediately)" style="padding:6px 12px;background:var(--red);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;">Delete</button>
+          <button onclick="restoreProject('${p.id}')" style="padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);font-size:11px;cursor:pointer;">Restore</button>
+          <button onclick="deleteProject('${p.id}', event)" title="Delete (⇧+click to delete immediately)" style="padding:6px 12px;background:var(--red);border:none;border-radius:6px;color:var(--bg);font-size:11px;cursor:pointer;">Delete</button>
         </div>
       </div>
     `).join('');
@@ -8715,7 +8715,7 @@ function openTaskModal(taskId) {
         const active = type === 'none' ? !task.recurrence : (task.recurrence && task.recurrence.type === type);
         const label = type === 'none' ? 'None' : type.charAt(0).toUpperCase() + type.slice(1);
         const onclick = type === 'none' ? `setTaskRecurrence(${safeId(task.id)}, null)` : `setTaskRecurrence(${safeId(task.id)}, '${type}')`;
-        return `<button onclick="${onclick}" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${active ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${label}</button>`;
+        return `<button onclick="${onclick}" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${active ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${label}</button>`;
       }).join('')}
     </div>
 
@@ -8730,8 +8730,8 @@ function openTaskModal(taskId) {
     <div class="tm-panel">
       <div class="tm-label">📍 Context</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        <button onclick="setTaskContext(${safeId(task.id)}, null)" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${!task.context ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">None</button>
-        ${(DATA.contexts || []).map(ctx => `<button onclick="setTaskContext(${safeId(task.id)}, '${ctx.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${task.context === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${ctx}</button>`).join('')}
+        <button onclick="setTaskContext(${safeId(task.id)}, null)" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${!task.context ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">None</button>
+        ${(DATA.contexts || []).map(ctx => `<button onclick="setTaskContext(${safeId(task.id)}, '${ctx.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${task.context === ctx ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${ctx}</button>`).join('')}
       </div>
     </div>
 
@@ -8743,7 +8743,7 @@ function openTaskModal(taskId) {
           <div style="display:flex;flex-wrap:wrap;gap:5px;">
             ${cat.triggers.map(tr => {
               const on = Array.isArray(task.triggers) && task.triggers.includes(tr.id);
-              return `<button onclick="toggleTaskTrigger(${safeId(task.id)}, '${tr.id.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${on ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${tr.label}${on ? ' ✓' : ''}</button>`;
+              return `<button onclick="toggleTaskTrigger(${safeId(task.id)}, '${tr.id.replace(/'/g, "\\'")}')" style="font-size:11px;padding:3px 10px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:${on ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface);color:var(--text-dim)'};transition:all 0.15s;">${tr.label}${on ? ' ✓' : ''}</button>`;
             }).join('')}
           </div>
         </div>
@@ -8803,14 +8803,14 @@ function openTaskModal(taskId) {
 
     ${isK2 && k2Status === 'pending' && !task.done ? `
     <div style="margin-bottom:12px;">
-      <button onclick="queueTaskForK2(${safeId(task.id)})" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">▶ Queue for K-2</button>
+      <button onclick="queueTaskForK2(${safeId(task.id)})" style="width:100%;padding:10px;background:var(--green);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">▶ Queue for K-2</button>
     </div>
     ` : ''}
 
     ${isK2 && k2Status === 'review' ? `
     <div style="margin-bottom:12px;display:flex;gap:8px;">
-      <button onclick="acceptK2Task(${safeId(task.id)})" style="flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:600;cursor:pointer;">👍 Accept</button>
-      <button onclick="reworkK2Task(${safeId(task.id)})" style="flex:1;padding:10px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">👎 Rework</button>
+      <button onclick="acceptK2Task(${safeId(task.id)})" style="flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">👍 Accept</button>
+      <button onclick="reworkK2Task(${safeId(task.id)})" style="flex:1;padding:10px;background:var(--red);border:none;border-radius:8px;color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">👎 Rework</button>
     </div>
     ` : ''}
 
@@ -9085,15 +9085,15 @@ function openProjectModal(projectId) {
     <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;" onclick="editProjectField('${p.id}','description',this)" title="Click to edit">${p.description}</p>
 
     ${p.source === 'plan-sync' && p.planFile ? `
-      <div style="margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:12px;border-left:3px solid #f59e0b;">
+      <div style="margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:12px;border-left:3px solid var(--yellow);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;font-weight:700;">📄 Plan File · ${p.planFile.split('/').pop()}</div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--yellow);font-weight:700;">📄 Plan File · ${p.planFile.split('/').pop()}</div>
           <div style="font-size:10px;color:var(--text-dim);">${p.lastScannedAt ? 'Scanned '+_relTime(new Date(p.lastScannedAt).getTime()) : 'never scanned'}</div>
         </div>
         ${p.extractedStatus ? `<div style="font-size:12px;color:var(--text);margin-bottom:8px;"><strong>Status from plan:</strong> ${p.extractedStatus}</div>` : ''}
         ${(p.openQuestions||[]).length ? `
           <div style="margin-top:8px;">
-            <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:4px;">⚠ Pending Decisions (${p.openQuestions.length})</div>
+            <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:4px;">⚠ Pending Decisions (${p.openQuestions.length})</div>
             <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--text);line-height:1.5;">
               ${p.openQuestions.map(q => `<li style="margin-bottom:3px;">${escapeHtml(typeof q === 'string' ? q : q.text || '')}</li>`).join('')}
             </ul>
@@ -9151,10 +9151,10 @@ function openProjectModal(projectId) {
             const pri = typeof s === 'string' ? 'medium' : (s.priority || 'medium');
             const status = (typeof s === 'object' && s.status) || 'pending';
             if (window._hideDoneSteps && status === 'done') return '';
-            const statusBadge = status === 'queued' ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px;">⏳ Queued</span>'
-              : status === 'in-progress' ? '<span style="font-size:10px;background:var(--orange);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">🔨 In Progress</span>'
-              : status === 'done' ? '<span style="font-size:10px;background:var(--green);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">✅ Done</span>'
-              : status === 'review' ? '<span style="font-size:10px;background:var(--yellow);color:#000;padding:2px 6px;border-radius:4px;margin-left:6px;">👀 Review</span>'
+            const statusBadge = status === 'queued' ? '<span style="font-size:10px;background:var(--accent);color:var(--bg);padding:2px 6px;border-radius:4px;margin-left:6px;">⏳ Queued</span>'
+              : status === 'in-progress' ? '<span style="font-size:10px;background:var(--orange);color:var(--bg);padding:2px 6px;border-radius:4px;margin-left:6px;">🔨 In Progress</span>'
+              : status === 'done' ? '<span style="font-size:10px;background:var(--green);color:var(--bg);padding:2px 6px;border-radius:4px;margin-left:6px;">✅ Done</span>'
+              : status === 'review' ? '<span style="font-size:10px;background:var(--yellow);color:var(--bg);padding:2px 6px;border-radius:4px;margin-left:6px;">👀 Review</span>'
               : '';
             const showDoIt = status === 'pending';
             const showAccept = status === 'review';
@@ -9163,10 +9163,10 @@ function openProjectModal(projectId) {
               <span style="cursor:pointer;font-size:14px;" onclick="cycleStepPriority('${p.id}',${i})" title="${pri} priority">${priorityDots[pri]}</span>
               <span style="flex:1;cursor:pointer;${status === 'done' ? 'text-decoration:line-through;' : ''}" onclick="editNextStep('${p.id}',${i},this)" title="Click to edit">${text}</span>
               ${statusBadge}
-              ${showDoIt ? `<button onclick="queueStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;" title="Send to K-2">▶ Do it</button>` : ''}
+              ${showDoIt ? `<button onclick="queueStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:var(--bg);padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;" title="Send to K-2">▶ Do it</button>` : ''}
               ${showAccept ? `
-                <button onclick="acceptStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Accept" aria-label="Accept">👍</button>
-                <button onclick="rejectStep('${p.id}',${i})" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Reject" aria-label="Reject">👎</button>
+                <button onclick="acceptStep('${p.id}',${i})" style="background:var(--green);border:none;border-radius:6px;color:var(--bg);padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Accept" aria-label="Accept">👍</button>
+                <button onclick="rejectStep('${p.id}',${i})" style="background:var(--red);border:none;border-radius:6px;color:var(--bg);padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;" title="Reject" aria-label="Reject">👎</button>
               ` : ''}
               <button onclick="deleteStep('${p.id}',${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:4px;" title="Delete" aria-label="Delete">✕</button>
             </div>
@@ -9211,7 +9211,7 @@ function openProjectModal(projectId) {
 
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;">
       <button onclick="archiveProject('${p.id}')" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;">Archive</button>
-      <button onclick="deleteProject('${p.id}', event)" title="Delete (⇧+click to delete immediately)" style="flex:1;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;">Delete</button>
+      <button onclick="deleteProject('${p.id}', event)" title="Delete (⇧+click to delete immediately)" style="flex:1;padding:8px 12px;background:var(--red);border:none;border-radius:8px;color:var(--bg);font-size:12px;cursor:pointer;">Delete</button>
     </div>
   `;
 
@@ -9401,9 +9401,9 @@ function renderTaskRow(task) {
   if (isK2) {
     leftEl = '<span style="font-size:16px;flex-shrink:0;margin-top:1px;" title="' + statusInfo.label + '">' + statusInfo.icon + '</span>';
     if (k2Status === 'pending' && !task.done) {
-      actionBtns = '<button onclick="event.stopPropagation();queueTaskForK2(' + taskId + ')" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>';
+      actionBtns = '<button onclick="event.stopPropagation();queueTaskForK2(' + taskId + ')" style="background:var(--green);border:none;border-radius:6px;color:var(--bg);padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap;margin-right:8px;" title="Queue for K-2">▶ Do it</button>';
     } else if (k2Status === 'review') {
-      actionBtns = '<button onclick="event.stopPropagation();acceptK2Task(' + taskId + ')" style="background:var(--green);border:none;border-radius:6px;color:#000;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" title="Accept" aria-label="Accept">👍</button><button onclick="event.stopPropagation();reworkK2Task(' + taskId + ')" style="background:var(--red);border:none;border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:8px;" title="Rework" aria-label="Rework">👎</button>';
+      actionBtns = '<button onclick="event.stopPropagation();acceptK2Task(' + taskId + ')" style="background:var(--green);border:none;border-radius:6px;color:var(--bg);padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" title="Accept" aria-label="Accept">👍</button><button onclick="event.stopPropagation();reworkK2Task(' + taskId + ')" style="background:var(--red);border:none;border-radius:6px;color:var(--bg);padding:4px 8px;cursor:pointer;font-size:11px;font-weight:600;margin-right:8px;" title="Rework" aria-label="Rework">👎</button>';
     }
   } else {
     leftEl = '<div class="task-check ' + (task.done ? 'done' : '') + '" onclick="event.stopPropagation();toggleTask(' + taskId + ')"></div>';
@@ -9583,17 +9583,17 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
       if (t.project) projectsWithTasks.set(t.project, true);
     });
     const projectPills = [
-      '<button onclick="window._focusProjectFilter=null;renderTasks()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (!window._focusProjectFilter ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">All</button>'
+      '<button onclick="window._focusProjectFilter=null;renderTasks()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (!window._focusProjectFilter ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">All</button>'
     ];
     DATA.projects.filter(p => projectsWithTasks.has(p.id)).forEach(p => {
-      projectPills.push('<button onclick="window._focusProjectFilter=\'' + p.id.toString().replace(/'/g,"\\'") + '\';renderTasks()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (window._focusProjectFilter === p.id ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">' + p.name + '</button>');
+      projectPills.push('<button onclick="window._focusProjectFilter=\'' + p.id.toString().replace(/'/g,"\\'") + '\';renderTasks()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (window._focusProjectFilter === p.id ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">' + p.name + '</button>');
     });
     // Context pills
     const contexts = DATA.contexts || [];
     const ctxPills = contexts.length ? [
       '<span style="width:1px;height:20px;background:var(--border);display:inline-block;margin:0 4px;vertical-align:middle;"></span>',
-      '<button onclick="setActiveContext(null)" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (!window._activeContext ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">All Contexts</button>',
-      ...contexts.map(ctx => '<button onclick="setActiveContext(\'' + ctx.replace(/'/g,"\\'") + '\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (window._activeContext === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">📍 ' + ctx + '</button>')
+      '<button onclick="setActiveContext(null)" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (!window._activeContext ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">All Contexts</button>',
+      ...contexts.map(ctx => '<button onclick="setActiveContext(\'' + ctx.replace(/'/g,"\\'") + '\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:' + (window._activeContext === ctx ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">📍 ' + ctx + '</button>')
     ] : [];
     filterBar.innerHTML = projectPills.concat(ctxPills).join('');
   }
@@ -9608,8 +9608,8 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
     const currentSort = window._taskSortMode || 'score';
     sortBar.innerHTML = 
       '<span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-right:8px;">Sort:</span>' +
-      '<button onclick="setSortMode(\'score\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (currentSort === 'score' ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">Priority</button>' +
-      '<button onclick="setSortMode(\'date\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (currentSort === 'date' ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">Recently Added</button>';
+      '<button onclick="setSortMode(\'score\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (currentSort === 'score' ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">Priority</button>' +
+      '<button onclick="setSortMode(\'date\')" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:' + (currentSort === 'date' ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)') + ';">Recently Added</button>';
   }
 
   // Bucket logic
@@ -10193,7 +10193,7 @@ function renderSmartListChips() {
   const chips = lists.map(sl => {
     const isActive = window._activeSmartList === sl.id;
     const count = applySmartListFilter(activeTasks, sl.rules).length;
-    return `<button onclick="activateSmartList('${sl.id}')" title="${sl.name}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};background:${isActive ? 'var(--accent)' : 'var(--surface2)'};color:${isActive ? '#000' : 'var(--text)'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .1s,border-color .1s;" onmouseover="if(!${isActive})this.style.borderColor='var(--accent)'" onmouseout="if(!${isActive})this.style.borderColor='var(--border)'">${sl.icon} ${sl.name}${count > 0 ? ` <span style="background:${isActive ? 'rgba(0,0,0,0.2)' : 'var(--accent-surface)'};color:${isActive ? '#000' : 'var(--accent)'};border-radius:9px;padding:0 5px;font-size:10px;">${count}</span>` : ''}</button>`;
+    return `<button onclick="activateSmartList('${sl.id}')" title="${sl.name}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};background:${isActive ? 'var(--accent)' : 'var(--surface2)'};color:${isActive ? 'var(--bg)' : 'var(--text)'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .1s,border-color .1s;" onmouseover="if(!${isActive})this.style.borderColor='var(--accent)'" onmouseout="if(!${isActive})this.style.borderColor='var(--border)'">${sl.icon} ${sl.name}${count > 0 ? ` <span style="background:${isActive ? 'rgba(0,0,0,0.2)' : 'var(--accent-surface)'};color:${isActive ? 'var(--bg)' : 'var(--accent)'};border-radius:9px;padding:0 5px;font-size:10px;">${count}</span>` : ''}</button>`;
   });
   chips.push(`<button onclick="openCreateSmartList()" title="Create smart list" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);cursor:pointer;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">+ Create</button>`);
   container.innerHTML = chips.join('');
@@ -10481,7 +10481,7 @@ function openKairosPicker() {
       const on = active.has(t.id);
       return '<button onclick="activateTrigger(\'' + t.id.replace(/'/g,"\\'") + "');document.getElementById('kairos-picker-overlay').remove()\" "
         + 'style="font-size:12px;padding:5px 12px;border-radius:12px;border:1px solid var(--border);cursor:pointer;background:'
-        + (on ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface);color:var(--text)') + ';">'
+        + (on ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface);color:var(--text)') + ';">'
         + t.label + (on ? ' ✓' : '') + '</button>';
     }).join('');
     return '<div style="margin-bottom:10px;"><div style="font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">' + cat.category + '</div>'
@@ -10507,7 +10507,7 @@ function renderKairosTopBar() {
   const chips = active.map(a => {
     const lbl = kairosLabel(a.trigger);
     const esc = a.trigger.replace(/'/g, "\\'");
-    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:12px;background:var(--accent);color:#000;font-weight:700;">'
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:12px;background:var(--accent);color:var(--bg);font-weight:700;">'
       + lbl + '<span onclick="deactivateTrigger(\'' + esc + '\')" style="cursor:pointer;font-size:13px;line-height:1;opacity:0.7;" title="End moment" aria-label=\'End moment\' role=\'button\' tabindex=\'0\'>✕</span></span>';
   }).join('');
   const addBtn = '<button onclick="openKairosPicker()" style="font-size:11px;padding:4px 12px;border-radius:12px;border:1px dashed var(--border);cursor:pointer;background:transparent;color:var(--text-muted);">'
@@ -10532,9 +10532,9 @@ function renderContextFilterBar() {
   if (!bar) return;
   const contexts = DATA.contexts || [];
   bar.innerHTML = [
-    `<button onclick="setActiveContext(null)" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:${!window._activeContext ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)'};transition:all 0.15s;">All</button>`,
+    `<button onclick="setActiveContext(null)" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:${!window._activeContext ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)'};transition:all 0.15s;">All</button>`,
     ...contexts.map(ctx =>
-      `<button onclick="setActiveContext('${ctx.replace(/'/g, "\\'")}') " style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:${window._activeContext === ctx ? 'var(--accent);color:#000;font-weight:700' : 'var(--surface2);color:var(--text-dim)'};transition:all 0.15s;">📍 ${ctx}</button>`
+      `<button onclick="setActiveContext('${ctx.replace(/'/g, "\\'")}') " style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:${window._activeContext === ctx ? 'var(--accent);color:var(--bg);font-weight:700' : 'var(--surface2);color:var(--text-dim)'};transition:all 0.15s;">📍 ${ctx}</button>`
     ),
     `<button onclick="addContextPrompt()" style="font-size:11px;padding:4px 12px;border-radius:10px;border:1px dashed var(--border);cursor:pointer;white-space:nowrap;background:transparent;color:var(--text-muted);">+ Add Context</button>`
   ].join('');
@@ -11297,7 +11297,7 @@ function renderBacklinks(noteId) {
       </div>`;
     }
     return `<div style="padding:6px 8px;border-radius:6px;margin-bottom:4px;background:var(--surface);cursor:pointer;font-size:13px;" onclick="openNoteEditor('${ref.id}');">
-      <span style="color:#34d399;margin-right:6px;">📄</span><span style="color:var(--text);">${ref.label}</span>
+      <span style="color:var(--green);margin-right:6px;">📄</span><span style="color:var(--text);">${ref.label}</span>
     </div>`;
   }).join('');
 }
@@ -12034,7 +12034,7 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;">
         <button id="jira-modal-cancel" style="padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:13px;font-family:inherit;">Cancel</button>
-        <button id="jira-modal-submit" style="padding:8px 14px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600;">Send to Jira</button>
+        <button id="jira-modal-submit" style="padding:8px 14px;background:var(--accent);border:none;border-radius:6px;color:var(--bg);cursor:pointer;font-size:13px;font-family:inherit;font-weight:600;">Send to Jira</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -13836,12 +13836,12 @@ function renderFamilyFinanceCard() {
   const netVal = np.mtdNet || 0;
   const netSign = netVal >= 0 ? '+' : '−';
   const netAbs = Math.abs(netVal).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-  const netColor = stale ? 'var(--text-dim)' : (netVal >= 0 ? '#22c55e' : (np.deltaPctOfIncome > 100 ? '#ef4444' : 'var(--text)'));
+  const netColor = stale ? 'var(--text-dim)' : (netVal >= 0 ? 'var(--green)' : (np.deltaPctOfIncome > 100 ? 'var(--red)' : 'var(--text)'));
   const incomeNote = np.mtdIncome > 0 ? `${(np.deltaPctOfIncome || 0).toFixed(1)}% of MTD income` : 'no income MTD';
 
   // Burn rate row
   const b = s.burnRate || {};
-  const burnStatusColor = stale ? '#64748b' : (b.status === 'over' ? '#ef4444' : b.status === 'watch' ? '#f59e0b' : '#22c55e');
+  const burnStatusColor = stale ? '#64748b' : (b.status === 'over' ? 'var(--red)' : b.status === 'watch' ? 'var(--yellow)' : 'var(--green)');
   const burnStatusLabel = b.status === 'over' ? '🔥 OVER' : b.status === 'watch' ? '⚠ WATCH' : '✓ OK';
   const burnPct = (b.pctOfBudget || 0).toFixed(0);
   const burnSpend = (b.monthSpendSoFar || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -13861,18 +13861,18 @@ function renderFamilyFinanceCard() {
     : `<div style="font-size:12px;color:var(--text-dim);font-style:italic;padding:6px 0;">No discretionary spend yet this month.</div>`;
 
   const staleNote = stale
-    ? `<div style="margin-top:8px;font-size:11px;color:#f59e0b;font-style:italic;">data stale — projections paused</div>`
+    ? `<div style="margin-top:8px;font-size:11px;color:var(--yellow);font-style:italic;">data stale — projections paused</div>`
     : '';
 
   const staleChip = stale
-    ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">🟡 STALE</span>`
+    ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.4);">🟡 STALE</span>`
     : '';
 
   // Going-out envelope burn bar (Dining + Entertainment vs $400/mo cap)
   const eb = s.envelopeBurnRate;
   let envelopeBlock = '';
   if (eb && typeof eb.pct === 'number') {
-    const ebColor = eb.status === 'over' ? '#ef4444' : eb.status === 'warn' ? '#f59e0b' : '#22c55e';
+    const ebColor = eb.status === 'over' ? 'var(--red)' : eb.status === 'warn' ? 'var(--yellow)' : 'var(--green)';
     const ebWidth = Math.min(100, eb.pct || 0);
     const ebPctStr = (eb.pct || 0).toFixed(0);
     const ebLabel = eb.status === 'over' ? '🔥 OVER' : eb.status === 'warn' ? '⚠ WATCH' : '✓ OK';
@@ -13897,11 +13897,11 @@ function renderFamilyFinanceCard() {
   let safeToSpendBlock = '';
   if (sts && typeof sts.corrected === 'number') {
     const isRed = !stale && (sts.deltaPct || 0) > (sts.redThresholdPct || 20);
-    const correctedColor = stale ? 'var(--text-dim)' : (isRed ? '#ef4444' : '#22c55e');
+    const correctedColor = stale ? 'var(--text-dim)' : (isRed ? 'var(--red)' : 'var(--green)');
     const fco = sts.fixedCostsOmitted || {};
     const fmt0 = (n) => '$' + Math.round(n || 0).toLocaleString();
     const chipBg = isRed ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.12)';
-    const chipColor = isRed ? '#ef4444' : '#f59e0b';
+    const chipColor = isRed ? 'var(--red)' : 'var(--yellow)';
     const chipBorder = isRed ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.35)';
     safeToSpendBlock = `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);${numDim}">
@@ -13980,10 +13980,10 @@ function renderTwoOfUsRitualCard() {
   const r = DATA.twoOfUsRitual;
   if (!r || typeof r.streak !== 'number') { el.style.display = 'none'; return; }
 
-  const PINK = '#ec4899';
+  const PINK = 'var(--accent)';
   const rate = r.completionRate30d || 0;
-  const rateColor = rate >= 70 ? '#22c55e' : rate >= 40 ? '#f59e0b' : '#ef4444';
-  const streakColor = r.streak >= 3 ? '#22c55e' : r.streak >= 1 ? '#f59e0b' : 'var(--text-dim)';
+  const rateColor = rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)';
+  const streakColor = r.streak >= 3 ? 'var(--green)' : r.streak >= 1 ? 'var(--yellow)' : 'var(--text-dim)';
   const flame = r.streak > 0 ? '🔥' : '💤';
   const computedAgo = r.computedAt ? _relTime(new Date(r.computedAt).getTime()) : '';
 
@@ -13994,7 +13994,7 @@ function renderTwoOfUsRitualCard() {
   if (t.question) {
     const fully = !!t.fullyAnswered;
     const pending = (t.pendingPartners || []).map(p => names[p] || p);
-    const badgeColor = fully ? '#22c55e' : PINK;
+    const badgeColor = fully ? 'var(--green)' : PINK;
     const badgeText = fully
       ? '✓ both answered'
       : (t.answered ? `waiting on ${pending.join(' & ')}` : 'unanswered');
@@ -14158,7 +14158,7 @@ function renderFloatingDecisions() {
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:10px;color:var(--text-dim);">${sourceLabel}</span>
         <button onclick="_fdLog('${escapeHtml(item.id||'')}','${excerpt.replace(/'/g,"\\'")}')"
-          style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #a78bfa;background:rgba(167,139,250,0.1);color:#a78bfa;cursor:pointer;font-weight:600;">Log as Decision</button>
+          style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--accent);background:rgba(167,139,250,0.1);color:var(--accent);cursor:pointer;font-weight:600;">Log as Decision</button>
         <button onclick="_fdDismiss('${escapeHtml(item.id||'')}')"
           style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;">Dismiss</button>
       </div>
@@ -14213,10 +14213,10 @@ function renderRepoScoutCard() {
   const checkedAgo = s.generatedAt ? _relTime(new Date(s.generatedAt).getTime()) : 'never';
 
   const badgeHtml = behindCount > 0
-    ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.4);">${behindCount} BEHIND</span>`
-    : `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">ALL CURRENT</span>`;
+    ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.4);">${behindCount} BEHIND</span>`
+    : `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.3);">ALL CURRENT</span>`;
 
-  const driftColor = { behind: '#ef4444', current: '#22c55e', unknown: '#94a3b8' };
+  const driftColor = { behind: 'var(--red)', current: 'var(--green)', unknown: '#94a3b8' };
   const driftLabel = { behind: 'BEHIND', current: 'OK', unknown: '?' };
 
   const rows = s.repos.map(r => {
@@ -14299,7 +14299,7 @@ function renderDailyAdvisor() {
         ${quote}
         ${rationale}
         <div style="display:flex;gap:6px;">
-          <button onclick="promoteAdvisorItem('${idAttr}')" style="background:var(--accent);color:#000;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">→ Promote to Task</button>
+          <button onclick="promoteAdvisorItem('${idAttr}')" style="background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">→ Promote to Task</button>
           <button onclick="dismissAdvisorItem('${idAttr}')" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">Dismiss</button>
         </div>
       </div>`;
@@ -14909,7 +14909,7 @@ function renderInbox() {
     const chip = '<div ' + chipOnclick + ' title="Tap to accept: ' + escapeHtml(item.suggestionReason || meta.label) + '" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:6px 10px;min-height:32px;border-radius:10px;background:color-mix(in srgb,' + meta.color + ' 15%,transparent);color:' + meta.color + ';border:1px solid color-mix(in srgb,' + meta.color + ' 35%,transparent);white-space:nowrap;cursor:pointer;user-select:none;">' + meta.icon + ' ' + meta.label + '</div>';
     // Bumped padding to 8x12, min-height 36, min-width 36 — meets WCAG mobile tap target
     const btnStyle = 'padding:8px 10px;min-height:36px;min-width:36px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-size:14px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;';
-    const acceptStyle = 'padding:8px 14px;min-height:36px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;';
+    const acceptStyle = 'padding:8px 14px;min-height:36px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;';
     return '<div style="padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;">' +
       '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">' +
         '<div style="flex:1;font-size:14px;color:var(--text);">' + escapeHtml(item.text) + '</div>' +
@@ -15355,7 +15355,7 @@ function renderReviewPage() {
             'style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;" ' +
             'onkeydown="if(event.key===\'Enter\'){var v=this.value.trim();if(v){addToInbox(v);this.value=\'\';showToast(\'Added to Inbox\');}}">' +
             '<button onclick="(function(){var el=document.getElementById(\'review-capture-input\');var v=el.value.trim();if(v){addToInbox(v);el.value=\'\';showToast(\'Added to Inbox\');}})()" ' +
-            'style="padding:8px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Add to Inbox</button>' +
+            'style="padding:8px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:600;cursor:pointer;">Add to Inbox</button>' +
             '</div>'
         },
         { i: 1, title: 'Process physical inbox', desc: 'Clear your physical desk, notebook, and any loose papers.' },
@@ -15403,7 +15403,7 @@ function renderReviewPage() {
           extra: '<div style="margin-top:6px;font-size:12px;">' +
             '<span style="color:var(--text-muted);">' + incompleteTasks.length + ' incomplete</span>' +
             (overdueTasks.length > 0 ? ' · <span style="color:var(--red);font-weight:600;">⚠ ' + overdueTasks.length + ' overdue</span>' : '') +
-            (getStaleTaskCount() > 0 ? ' · <span style="color:#f59e0b;font-weight:600;">⚠️ ' + getStaleTaskCount() + ' stale (&gt;14 days old)</span>' : '') +
+            (getStaleTaskCount() > 0 ? ' · <span style="color:var(--yellow);font-weight:600;">⚠️ ' + getStaleTaskCount() + ' stale (&gt;14 days old)</span>' : '') +
             ' <span onclick="navigateTo(\'tasks\')" style="cursor:pointer;color:var(--accent);font-weight:600;">Go to Tasks →</span></div>'
         },
         { i: 7, title: 'Identify next actions', desc: 'Every active project needs a clear next action. Assign one if missing.' },
@@ -15480,7 +15480,7 @@ function renderReviewPage() {
     '</div>' +
     stepsHtml +
     '<div style="text-align:center;padding:var(--sp-4) 0 var(--sp-8);">' +
-    '<button onclick="completeWeeklyReview()" style="padding:14px 32px;background:var(--accent);border:none;border-radius:var(--radius-md);color:#fff;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.02em;">✅ Complete Review</button>' +
+    '<button onclick="completeWeeklyReview()" style="padding:14px 32px;background:var(--accent);border:none;border-radius:var(--radius-md);color:var(--bg);font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.02em;">✅ Complete Review</button>' +
     '</div>';
 }
 
@@ -16740,7 +16740,7 @@ function plannerShowSlotPicker(hour, min, dateStr, slotEl) {
 
   const btnOk = document.createElement('button');
   btnOk.textContent = 'Assign';
-  btnOk.style.cssText = 'background:var(--accent);color:#fff;';
+  btnOk.style.cssText = 'background:var(--accent);color:var(--bg);';
   btnOk.onclick = () => {
     if (!sel.value) { showToast('Select a task first'); return; }
     plannerAssignTask(hour, min, dateStr, sel.value);
@@ -17728,7 +17728,7 @@ function showSuggestion(editor, type, coords, items, triggerPos) {
   
   suggestionEl.innerHTML = items.map((item, i) => {
     if (item._create) {
-      return `<div class="suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}" style="border-top:1px solid var(--border);color:#34d399;">
+      return `<div class="suggestion-item ${i === 0 ? 'active' : ''}" data-idx="${i}" style="border-top:1px solid var(--border);color:var(--green);">
         <span>➕</span>
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Create note: ${item.label}</span>
       </div>`;
@@ -17844,7 +17844,7 @@ function showLinkPopover(editor) {
     _linkPopoverEl.innerHTML = `
       <input id="link-popover-input" type="url" placeholder="https://..." autocomplete="off" autocorrect="off" autocapitalize="off"
         style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:14px;outline:none;min-width:0;">
-      <button id="link-popover-set" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Set</button>
+      <button id="link-popover-set" style="background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Set</button>
       <button id="link-popover-remove" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;cursor:pointer;" title="Remove link" aria-label="Remove link">✕</button>
     `;
     document.body.appendChild(_linkPopoverEl);
@@ -18561,7 +18561,7 @@ setTimeout(() => {
       <div class="preset-edit-grid" id="preset-edit-panels"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
         <button onclick="cancelPresetEdit()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">Cancel</button>
-        <button onclick="savePresetEdit()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;padding:7px 16px;font-size:12px;cursor:pointer;font-family:inherit;">Save preset</button>
+        <button onclick="savePresetEdit()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-weight:700;padding:7px 16px;font-size:12px;cursor:pointer;font-family:inherit;">Save preset</button>
       </div>
     </div>
   </div>
@@ -18589,7 +18589,7 @@ setTimeout(() => {
     <textarea id="settings-gcal-ics" rows="3" placeholder="Paste your Google Calendar secret ICS URL here…" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:10px;resize:vertical;font-family:monospace;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
       <button onclick="closeSettings()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);padding:8px 16px;font-size:13px;cursor:pointer;">Cancel</button>
-      <button onclick="saveSettings()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);color:#000;font-weight:700;padding:8px 18px;font-size:13px;cursor:pointer;">Save</button>
+      <button onclick="saveSettings()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-weight:700;padding:8px 18px;font-size:13px;cursor:pointer;">Save</button>
     </div>
   </div>
 </div>
