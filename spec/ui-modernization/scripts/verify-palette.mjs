@@ -7,7 +7,12 @@ import { readFileSync } from 'node:fs';
 import { withApp, report } from './page.mjs';
 
 const src = readFileSync('/Users/ryansandoval/k2-dashboard/index.html', 'utf8');
-const hexInInline = (src.match(/style="[^"]*?#[0-9a-fA-F]{3,8}\b[^"]*"/g) || []).length;
+// Hex was not the only way out of the token system: rgba() and hsl() bypass it too,
+// which is how a raw rgba(0,0,0,0.7) scrim survived the first pass unnoticed.
+const literal = /(#[0-9a-fA-F]{3,8}\b|\brgba?\(\s*\d|\bhsla?\(\s*\d)/;
+const inlineStyles = src.match(/style="[^"]*"/g) || [];
+const rawColours = inlineStyles.filter(a => literal.test(a));
+const hexInInline = rawColours.length;
 const undefinedVars = [...new Set((src.match(/var\(--[a-z0-9-]+/g) || [])
   .map(v => v.slice(4)))]
   .filter(v => !new RegExp(`(^|[;{\\s])${v}\\s*:`, 'm').test(src));
@@ -44,8 +49,9 @@ const out = await withApp(page => page.evaluate(() => {
 }));
 
 report({
-  noHexInInlineStyles: hexInInline === 0,
-  hexCount: hexInInline,
+  noRawColoursInInlineStyles: hexInInline === 0,
+  rawColourCount: hexInInline,
+  rawColourSample: rawColours.slice(0, 3).map(a => a.slice(0, 90)),
   everyVarDefined: undefinedVars.length === 0,
   undefinedVars,
   // 4.5:1 is WCAG AA for body text. Buttons carry labels, so they need to clear it.

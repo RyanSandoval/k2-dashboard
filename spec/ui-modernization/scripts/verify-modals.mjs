@@ -49,11 +49,25 @@ const out = await withApp(page => page.evaluate(({ taskId, projectId }) => {
     return o;
   };
 
+  // Every modal must actually become visible, not merely get a class. One of these
+  // opened with style.display = '' and would now render hidden.
+  const openable = {};
+  [['task-modal', () => openTaskModal(taskId), closeTaskModal],
+   ['project-modal', () => openProjectModal(projectId), closeProjectModal],
+  ].forEach(([id, open, close]) => {
+    const el = document.getElementById(id);
+    open();
+    openable[id] = getComputedStyle(el).display !== 'none';
+    if (typeof close === 'function') { close(); openable[id + '-closes'] =
+      getComputedStyle(el).display === 'none'; }
+  });
+
   const t = check(openTaskModal, taskId, 'task-modal-content');
   const p = check(openProjectModal, projectId, 'modal-content');
   const panel = document.querySelector('#modal-content .ui-panel.is-callout');
 
   return {
+    ...openable,
     taskRendered: t.rendered, taskClassesDefined: t.everyClassDefined,
     taskNoDupeClass: t.noDupeClass, taskClasses: t.classesUsed, taskUndefined: t.undefined,
     projRendered: p.rendered, projClassesDefined: p.everyClassDefined,

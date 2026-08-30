@@ -67,6 +67,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     --red-dim: oklch(27% 0.06 25);
     --orange: oklch(76% 0.15 55);
     /* Editor-specific */
+    --scrim: oklch(0% 0 0 / 0.7);
     --editor-bg: oklch(18% 0.011 255);
     --editor-text: oklch(91% 0.008 255);
     --editor-caret: oklch(72% 0.135 250);
@@ -915,7 +916,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .md-content th { background: var(--surface2); text-align: left; }
   .md-content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .md-content del { color: var(--text-dim); }
-  .md-content mark { background: rgba(255,213,79,0.3); padding: 1px 3px; border-radius: 3px; }
+  .md-content mark { background: color-mix(in srgb, var(--yellow) 30%, transparent); padding: 1px 3px; border-radius: 3px; }
   /* ProseMirror / TipTap Editor */
   .daily-doc-container { margin-bottom: 24px; position: relative; }
   /* Attach fades in when the note is being worked on. It is not a headline action. */
@@ -1086,7 +1087,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   /* Floating toolbar */
   .editor-float-toolbar {
     position: absolute; display: none; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    border-radius: 10px; padding: 4px; box-shadow: 0 8px 24px oklch(0% 0 0 / 0.4);
     z-index: 500; gap: 2px; align-items: center;
   }
   .editor-float-toolbar.visible { display: flex; }
@@ -1107,7 +1108,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 4px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 8px 24px oklch(0% 0 0 / 0.4);
     z-index: 300;
     gap: 2px;
     align-items: center;
@@ -1255,6 +1256,29 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
      pm-* twin — that habit is how the file ended up with 1,096 one-off styles. */
   /* Form primitives. The reminders page repeated the same eight declarations on
      seven inputs; every other form in the app will want the same shape. */
+  /* Modal chrome. Four modals each carried their own copy of the overlay, the
+     sheet and the close button — twelve inline style attributes describing one
+     component. --scrim replaces a raw rgba() that bypassed the palette entirely. */
+  .ui-modal {
+    display: none; position: fixed; inset: 0; background: var(--scrim);
+    z-index: 200; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .ui-modal.is-open { display: block; }
+  .ui-modal.is-top { z-index: 300; }
+  .ui-modal-sheet {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); max-width: 500px; margin: 40px auto;
+    padding: 24px; position: relative;
+  }
+  .ui-modal-sheet.is-wide { max-width: 600px; }
+  .ui-modal-sheet.is-narrow { max-width: 440px; margin-top: 60px; }
+  .ui-modal-x {
+    position: absolute; top: 12px; right: 16px; background: none; border: none;
+    color: var(--text-dim); font-size: 20px; cursor: pointer; font-family: inherit;
+    line-height: 1; padding: 4px;
+  }
+  .ui-modal-x:hover { color: var(--text); }
+
   .ui-field {
     padding: 10px 12px; background: var(--surface2);
     border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
@@ -1622,7 +1646,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     max-height: 60vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 60px oklch(0% 0 0 / 0.5);
   }
   .search-modal-input {
     display: flex;
@@ -1954,7 +1978,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 24px 64px oklch(0% 0 0 / 0.5), 0 2px 8px rgba(0,0,0,0.3);
     display: flex; flex-direction: column;
     overflow: hidden;
     animation: k2pal-pop 140ms ease-out;
@@ -2060,7 +2084,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     .k2pal-backdrop {
       padding-top: 0;
       backdrop-filter: none;
-      background: rgba(0,0,0,0.7);
+      background: oklch(0% 0 0 / 0.7);
     }
     .k2pal {
       width: 100vw; max-width: 100vw;
@@ -2088,7 +2112,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     color: var(--bg);
     align-items: center; justify-content: center;
     font-size: 20px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 6px 18px oklch(0% 0 0 / 0.4), 0 2px 4px oklch(0% 0 0 / 0.2);
     cursor: pointer;
     z-index: 9000;
     border: none;
@@ -2694,7 +2718,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
 
       <div class="card-grid" id="trading-books-grid"></div>
-      <div class="paper-watermark" style="display:none;text-align:center;color:rgba(136,136,160,0.2);font-size:48px;font-weight:900;letter-spacing:8px;margin-top:24px;user-select:none;">PAPER TRADING</div>
+      <div class="paper-watermark" style="display:none;text-align:center;color:color-mix(in srgb, var(--text-muted) 20%, transparent);font-size:48px;font-weight:900;letter-spacing:8px;margin-top:24px;user-select:none;">PAPER TRADING</div>
     </div>
     <!-- ========== TRADING SECTION END ========== -->
 
@@ -2906,7 +2930,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         </div>
         <input type="text" id="note-title-input" placeholder="Note title..." style="width:100%;padding:12px 0;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:22px;font-weight:700;margin-bottom:12px;outline:none;">
         <div id="note-body-input" style="width:100%;min-height:50vh;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;line-height:1.8;outline:none;font-family:inherit;"></div>
-        <div id="note-k2-response" style="display:none;margin-top:24px;padding:16px;background:rgba(74,158,255,0.08);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
+        <div id="note-k2-response" style="display:none;margin-top:24px;padding:16px;background:color-mix(in srgb, var(--accent) 8%, transparent);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-size:12px;color:var(--accent);font-weight:600;">🤖 K-2's Take</span>
             <span id="note-k2-date" style="font-size:10px;color:var(--text-dim);"></span>
@@ -3024,7 +3048,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
               <div style="font-weight:700;font-size:13px;">K-2</div>
               <div style="font-size:11px;color:var(--text-dim);">Chief of Staff · Claude Sonnet · Main session</div>
             </div>
-            <div style="font-size:10px;padding:3px 8px;background:rgba(74,222,128,0.15);color:var(--green);border-radius:6px;font-weight:600;border:1px solid rgba(74,222,128,0.3);">● Active</div>
+            <div style="font-size:10px;padding:3px 8px;background:color-mix(in srgb, var(--green) 15%, transparent);color:var(--green);border-radius:6px;font-weight:600;border:1px solid color-mix(in srgb, var(--green) 30%, transparent);">● Active</div>
           </div>
         </div>
       </div>
@@ -3107,7 +3131,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
 
     <!-- Doc View Modal -->
-    <div id="doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeDocModal()">
+    <div id="doc-modal" style="display:none;position:fixed;inset:0;background:oklch(0% 0 0 / 0.75);z-index:300;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeDocModal()">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:680px;margin:40px auto;padding:0;position:relative;overflow:hidden;">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);">
           <div id="doc-modal-title" style="font-size:15px;font-weight:700;"></div>
@@ -3317,15 +3341,15 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   </div>
 
   <!-- AI Insight Detail Modal -->
-  <div id="ai-insight-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeAIInsightModal()">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:600px;margin:40px auto;padding:24px;position:relative;">
-      <button onclick="closeAIInsightModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;" aria-label="Close">✕</button>
+  <div id="ai-insight-modal" class="ui-modal" onclick="if(event.target===this)closeAIInsightModal()">
+    <div class="ui-modal-sheet is-wide">
+      <button onclick="closeAIInsightModal()" class="ui-modal-x" aria-label="Close">✕</button>
       <div id="ai-insight-modal-content"></div>
     </div>
   </div>
 
   <!-- Task Detail Modal -->
-  <div id="task-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeTaskModal()">
+  <div id="task-modal" class="ui-modal" onclick="if(event.target===this)closeTaskModal()">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:500px;margin:40px auto;display:flex;flex-direction:column;max-height:calc(100vh - 80px);position:relative;">
       <button onclick="closeTaskModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;z-index:1;" aria-label="Close">✕</button>
       <div id="task-modal-content" style="padding:24px;overflow-y:auto;flex:1;"></div>
@@ -3341,17 +3365,17 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   </div>
 
   <!-- Project Detail Modal -->
-  <div id="project-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;" onclick="if(event.target===this)closeProjectModal()">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:500px;margin:40px auto;padding:24px;position:relative;">
-      <button onclick="closeProjectModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;" aria-label="Close">✕</button>
+  <div id="project-modal" class="ui-modal" onclick="if(event.target===this)closeProjectModal()">
+    <div class="ui-modal-sheet">
+      <button onclick="closeProjectModal()" class="ui-modal-x" aria-label="Close">✕</button>
       <div id="modal-content"></div>
     </div>
   </div>
 
   <!-- Smart List Create Modal -->
-  <div id="smart-list-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;padding:16px;overflow-y:auto;" onclick="if(event.target===this)closeCreateSmartList()">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:440px;margin:60px auto;padding:24px;position:relative;">
-      <button onclick="closeCreateSmartList()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;" aria-label="Close">✕</button>
+  <div id="smart-list-modal" class="ui-modal is-top" onclick="if(event.target===this)closeCreateSmartList()">
+    <div class="ui-modal-sheet is-narrow">
+      <button onclick="closeCreateSmartList()" class="ui-modal-x" aria-label="Close">✕</button>
       <h3 style="font-size:16px;font-weight:700;margin-bottom:20px;">✨ New Smart List</h3>
       <div style="display:flex;gap:10px;margin-bottom:14px;">
         <div style="flex:0 0 auto;">
@@ -3365,29 +3389,29 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
       <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Filter Rules</div>
       <div style="display:grid;gap:10px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Min Priority Score</label>
+        <div class="ui-row">
+          <label class="ui-key is-col">Min Priority Score</label>
           <input id="sl-rule-minscore" type="number" min="1" max="25" placeholder="e.g. 9" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Context</label>
+        <div class="ui-row">
+          <label class="ui-key is-col">Context</label>
           <select id="sl-rule-context" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
             <option value="">Any</option>
           </select>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Project</label>
+        <div class="ui-row">
+          <label class="ui-key is-col">Project</label>
           <select id="sl-rule-project" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
             <option value="__any__">Any</option>
             <option value="">No project</option>
           </select>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Due within (days)</label>
+        <div class="ui-row">
+          <label class="ui-key is-col">Due within (days)</label>
           <input id="sl-rule-duesoon" type="number" min="0" max="365" placeholder="e.g. 0=today" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label style="font-size:12px;color:var(--text-dim);flex:0 0 110px;">Stale tasks only</label>
+        <div class="ui-row">
+          <label class="ui-key is-col">Stale tasks only</label>
           <input id="sl-rule-stale" type="checkbox" style="width:16px;height:16px;cursor:pointer;">
         </div>
       </div>
@@ -6755,7 +6779,7 @@ function staleNoteOpenProjectPicker(id) {
         return '<button onclick="staleNoteLinkToProject(\'' + safeId + '\',\'' + safeProjId + '\');document.getElementById(\'stale-note-project-picker\')?.remove();" style="display:block;width:100%;text-align:left;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;margin-bottom:6px;">' + name + '</button>';
       }).join('')
     : '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;">No active projects found.</div>';
-  overlay.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:92vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">'
+  overlay.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:480px;max-width:92vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px oklch(0% 0 0 / 0.5);">'
     + '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">🔗 Link to Project</div>'
     + projOptions
     + '<button onclick="document.getElementById(\'stale-note-project-picker\')?.remove();" style="margin-top:8px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-dim);font-size:13px;cursor:pointer;">Cancel</button>'
@@ -7185,7 +7209,7 @@ function renderMissionCronList() {
     const sp = spendByJob[j.id];
     const tierColor = sp ? (sp.tier === 'opus' ? 'var(--red)' : sp.tier === 'sonnet' ? '#a855f7' : sp.tier === 'haiku' ? 'var(--green)' : '#64748b') : null;
     const spendChip = sp && sp.dollars > 0 ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb,${tierColor} 15%,transparent);color:${tierColor};border:1px solid color-mix(in srgb,${tierColor} 35%,transparent);" title="${sp.runCount} runs · ${sp.inputTokens.toLocaleString()} in + ${sp.outputTokens.toLocaleString()} out tokens">$${sp.dollars.toFixed(2)} 7d</span>` : '';
-    const overChip = sp && sp.overTier ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.4);" title="Opus tier ≥ $1.00 — consider downgrading to Sonnet">💸 Opus → Sonnet</span>` : '';
+    const overChip = sp && sp.overTier ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:color-mix(in srgb, var(--red) 15%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent);" title="Opus tier ≥ $1.00 — consider downgrading to Sonnet">💸 Opus → Sonnet</span>` : '';
     return `
       <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);${running ? 'background:color-mix(in srgb,var(--green) 6%,transparent);margin:0 -6px;padding-left:6px;padding-right:6px;border-radius:6px;' : ''}">
         <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};margin-top:5px;flex-shrink:0;${dotAnim}box-shadow:${running?`0 0 6px ${dotColor}`:'none'};"></span>
@@ -7650,8 +7674,8 @@ function renderFilteredAIInsights() {
         <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center;">
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <span class="tag tag-blue">${insight.category}</span>
-            <span class="tag" style="background:rgba(${impactColor === 'var(--red)' ? '248,113,113' : impactColor === 'var(--yellow)' ? '251,191,36' : '74,222,128'},0.15);color:${impactColor};">${insight.impact}</span>
-            <span class="tag" style="background:rgba(${statusColor === 'var(--accent)' ? '74,158,255' : statusColor === 'var(--accent2)' ? '124,92,255' : statusColor === 'var(--yellow)' ? '251,191,36' : statusColor === 'var(--green)' ? '74,222,128' : '136,136,160'},0.15);color:${statusColor};">${insight.status}</span>
+            <span class="tag" style="background:color-mix(in srgb, ${impactColor} 15%, transparent);color:${impactColor};">${insight.impact}</span>
+            <span class="tag" style="background:color-mix(in srgb, ${statusColor} 15%, transparent);color:${statusColor};">${insight.status}</span>
           </div>
           <div style="font-size:10px;color:var(--text-dim);">${insight.dateAdded}</div>
         </div>
@@ -7717,7 +7741,7 @@ function openAIInsightModal(insightId) {
       </div>
       <div>
         <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Impact</div>
-        <span class="tag" style="background:rgba(${impactColor === 'var(--red)' ? '248,113,113' : impactColor === 'var(--yellow)' ? '251,191,36' : '74,222,128'},0.15);color:${impactColor};">${insight.impact}</span>
+        <span class="tag" style="background:color-mix(in srgb, ${impactColor} 15%, transparent);color:${impactColor};">${insight.impact}</span>
       </div>
     </div>
 
@@ -7841,7 +7865,7 @@ function openAIInsightModal(insightId) {
     </div>
   `;
 
-  document.getElementById('ai-insight-modal').style.display = 'block';
+  document.getElementById('ai-insight-modal').classList.add('is-open');
   document.body.style.overflow = 'hidden';
 
   // Auto-scroll to bottom of comments
@@ -7854,7 +7878,7 @@ function openAIInsightModal(insightId) {
 }
 
 function closeAIInsightModal() {
-  document.getElementById('ai-insight-modal').style.display = 'none';
+  document.getElementById('ai-insight-modal').classList.remove('is-open');
   document.body.style.overflow = '';
 }
 
@@ -8077,7 +8101,7 @@ function renderTrading() {
                 <tbody>
                   ${trades.map(t => {
                     const sColor = t.status === 'won' ? 'var(--green)' : t.status === 'lost' ? 'var(--red)' : 'var(--yellow)';
-                    const sBg = t.status === 'won' ? 'rgba(74,222,128,0.15)' : t.status === 'lost' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.15)';
+                    const sBg = t.status === 'won' ? 'color-mix(in srgb, var(--green) 15%, transparent)' : t.status === 'lost' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.15)';
                     const tPnl = t.pnl != null ? (t.pnl >= 0 ? '+' : '') + '$' + t.pnl.toFixed(2) : '—';
                     const tPnlColor = t.pnl != null ? (t.pnl >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--text-dim)';
                     return `<tr title="${(t.reasoning||'').replace(/"/g,'&quot;')}" style="border-top:1px solid var(--border);">
@@ -8907,7 +8931,7 @@ function openTaskModal(taskId) {
     </div>
   `;
 
-  document.getElementById('task-modal').style.display = 'block';
+  document.getElementById('task-modal').classList.add('is-open');
   document.body.style.overflow = 'hidden';
   
   // Scroll thread to bottom
@@ -8919,7 +8943,7 @@ function openTaskModal(taskId) {
   // Auto-poll for K2 replies every 30s while modal is open
   if (window._taskModalPollInterval) clearInterval(window._taskModalPollInterval);
   window._taskModalPollInterval = setInterval(async () => {
-    if (document.getElementById('task-modal').style.display === 'none') {
+    if (!document.getElementById('task-modal').classList.contains('is-open')) {
       clearInterval(window._taskModalPollInterval);
       return;
     }
@@ -9006,7 +9030,7 @@ async function taskToSomeday(taskId) {
 }
 
 function closeTaskModal() {
-  document.getElementById('task-modal').style.display = 'none';
+  document.getElementById('task-modal').classList.remove('is-open');
   document.body.style.overflow = '';
   activeTaskId = null;
   if (window._taskModalPollInterval) { clearInterval(window._taskModalPollInterval); window._taskModalPollInterval = null; }
@@ -9267,12 +9291,12 @@ function openProjectModal(projectId) {
     </div>
   `;
 
-  document.getElementById('project-modal').style.display = 'block';
+  document.getElementById('project-modal').classList.add('is-open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeProjectModal() {
-  document.getElementById('project-modal').style.display = 'none';
+  document.getElementById('project-modal').classList.remove('is-open');
   document.body.style.overflow = '';
 }
 
@@ -10245,7 +10269,7 @@ function renderSmartListChips() {
   const chips = lists.map(sl => {
     const isActive = window._activeSmartList === sl.id;
     const count = applySmartListFilter(activeTasks, sl.rules).length;
-    return `<button onclick="activateSmartList('${sl.id}')" title="${sl.name}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};background:${isActive ? 'var(--accent)' : 'var(--surface2)'};color:${isActive ? 'var(--bg)' : 'var(--text)'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .1s,border-color .1s;" onmouseover="if(!${isActive})this.style.borderColor='var(--accent)'" onmouseout="if(!${isActive})this.style.borderColor='var(--border)'">${sl.icon} ${sl.name}${count > 0 ? ` <span style="background:${isActive ? 'rgba(0,0,0,0.2)' : 'var(--accent-surface)'};color:${isActive ? 'var(--bg)' : 'var(--accent)'};border-radius:9px;padding:0 5px;font-size:10px;">${count}</span>` : ''}</button>`;
+    return `<button onclick="activateSmartList('${sl.id}')" title="${sl.name}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'};background:${isActive ? 'var(--accent)' : 'var(--surface2)'};color:${isActive ? 'var(--bg)' : 'var(--text)'};cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .1s,border-color .1s;" onmouseover="if(!${isActive})this.style.borderColor='var(--accent)'" onmouseout="if(!${isActive})this.style.borderColor='var(--border)'">${sl.icon} ${sl.name}${count > 0 ? ` <span style="background:${isActive ? 'oklch(0% 0 0 / 0.2)' : 'var(--accent-surface)'};color:${isActive ? 'var(--bg)' : 'var(--accent)'};border-radius:9px;padding:0 5px;font-size:10px;">${count}</span>` : ''}</button>`;
   });
   chips.push(`<button onclick="openCreateSmartList()" title="Create smart list" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;font-size:11px;font-weight:600;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);cursor:pointer;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">+ Create</button>`);
   container.innerHTML = chips.join('');
@@ -10288,12 +10312,12 @@ function openCreateSmartList() {
   if (minScore) minScore.value = '';
   if (dueSoon) dueSoon.value = '';
   if (stale) stale.checked = false;
-  document.getElementById('smart-list-modal').style.display = '';
+  document.getElementById('smart-list-modal').classList.add('is-open');
   setTimeout(() => { if (nameEl) nameEl.focus(); }, 50);
 }
 
 function closeCreateSmartList() {
-  document.getElementById('smart-list-modal').style.display = 'none';
+  document.getElementById('smart-list-modal').classList.remove('is-open');
 }
 
 async function saveNewSmartList() {
@@ -10541,7 +10565,7 @@ function openKairosPicker() {
   }).join('');
   const overlay = document.createElement('div');
   overlay.id = 'kairos-picker-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:oklch(0% 0 0 / 0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   overlay.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
@@ -10614,7 +10638,7 @@ function openContextPicker() {
   const contexts = DATA.contexts || [];
   const overlay = document.createElement('div');
   overlay.id = 'context-picker-overlay';
-  overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:220px;';
+  overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 32px oklch(0% 0 0 / 0.4);min-width:220px;';
   overlay.innerHTML = `
     <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">📍 Filter by Context</div>
     <div style="display:flex;flex-direction:column;gap:6px;">
@@ -10719,7 +10743,7 @@ function renderClipsList() {
       <div class="clip-actions">
         <div style="position:relative;">
           <button class="clip-action-btn" onclick="toggleClipSendMenu(${clip.id},this)" title="Send to…" aria-label="Send to…">→</button>
-          <div class="clip-send-menu" id="clip-send-menu-${clip.id}" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;min-width:160px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
+          <div class="clip-send-menu" id="clip-send-menu-${clip.id}" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;min-width:160px;z-index:50;box-shadow:0 8px 24px oklch(0% 0 0 / 0.4);"></div>
         </div>
         ${readBtn}
         ${archiveBtn}
@@ -10869,7 +10893,7 @@ function openAddClipModal(prefillUrl) {
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:200;';
     overlay.onclick = (e) => { if (e.target === overlay) closeAddClipModal(); };
     overlay.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:92vw;box-shadow:0 20px 60px oklch(0% 0 0 / 0.5);">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">🔗 Add Clip</div>
         <label style="font-size:12px;color:var(--text-dim);font-weight:600;">URL *</label>
         <input id="clip-url-input" type="url" placeholder="https://..."
@@ -12059,9 +12083,9 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
 
   const modal = document.createElement('div');
   modal.id = 'jira-fire-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.style.cssText = 'position:fixed;inset:0;background:oklch(0% 0 0 / 0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:560px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.4);">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:560px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px oklch(0% 0 0 / 0.4);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text);">🎫 Send to Jira</h3>
         <button id="jira-modal-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;" aria-label="Close">×</button>
@@ -13349,7 +13373,7 @@ function renderMarkdown(text) {
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
   html = html.replace(/~~(.+?)~~/g, '<del style="color:var(--text-dim);">$1</del>');
-  html = html.replace(/==(.+?)==/g, '<mark style="background:rgba(255,213,79,0.3);padding:1px 3px;border-radius:3px;">$1</mark>');
+  html = html.replace(/==(.+?)==/g, '<mark style="background:color-mix(in srgb, var(--yellow) 30%, transparent);padding:1px 3px;border-radius:3px;">$1</mark>');
   html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)+)/gm, (match, headerRow, sepRow, bodyRows) => {
     const headers = headerRow.split('|').filter(c => c.trim());
     const rows = bodyRows.trim().split('\n').map(r => r.split('|').filter(c => c.trim()));
@@ -13544,7 +13568,7 @@ function openCapturePopover() {
     pop.id = 'global-capture-popover';
     pop.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding-top:20vh;background:rgba(0,0,0,0.55);';
     pop.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 24px;width:480px;max-width:92vw;box-shadow:0 20px 60px oklch(0% 0 0 / 0.5);">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">⚡ Quick Capture → Inbox</div>
         <input id="global-capture-input" type="text" placeholder="What's on your mind?"
           style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);color:var(--text);font-size:15px;outline:none;font-family:inherit;caret-color:var(--accent);"
@@ -13660,7 +13684,7 @@ function toggleShortcutsHelp() {
   help = document.createElement('div');
   help.id = 'shortcuts-help';
   help.onclick = () => help.remove();
-  help.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;';
+  help.style.cssText = 'position:fixed;inset:0;background:var(--scrim);z-index:500;display:flex;align-items:center;justify-content:center;';
   help.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;width:90%;" onclick="event.stopPropagation()">
       <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">⌨️ Keyboard Shortcuts</h3>
@@ -13917,7 +13941,7 @@ function renderFamilyFinanceCard() {
     : '';
 
   const staleChip = stale
-    ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.4);">🟡 STALE</span>`
+    ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:color-mix(in srgb, var(--yellow) 15%, transparent);color:var(--yellow);border:1px solid color-mix(in srgb, var(--yellow) 40%, transparent);">🟡 STALE</span>`
     : '';
 
   // Going-out envelope burn bar (Dining + Entertainment vs $400/mo cap)
@@ -13952,9 +13976,9 @@ function renderFamilyFinanceCard() {
     const correctedColor = stale ? 'var(--text-dim)' : (isRed ? 'var(--red)' : 'var(--green)');
     const fco = sts.fixedCostsOmitted || {};
     const fmt0 = (n) => '$' + Math.round(n || 0).toLocaleString();
-    const chipBg = isRed ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.12)';
+    const chipBg = isRed ? 'color-mix(in srgb, var(--red) 15%, transparent)' : 'rgba(245,158,11,0.12)';
     const chipColor = isRed ? 'var(--red)' : 'var(--yellow)';
-    const chipBorder = isRed ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.35)';
+    const chipBorder = isRed ? 'color-mix(in srgb, var(--red) 40%, transparent)' : 'rgba(245,158,11,0.35)';
     safeToSpendBlock = `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);${numDim}">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap;">
@@ -14210,7 +14234,7 @@ function renderFloatingDecisions() {
       <div style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:10px;color:var(--text-dim);">${sourceLabel}</span>
         <button onclick="_fdLog('${escapeHtml(item.id||'')}','${excerpt.replace(/'/g,"\\'")}')"
-          style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--accent);background:rgba(167,139,250,0.1);color:var(--accent);cursor:pointer;font-weight:600;">Log as Decision</button>
+          style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--accent);background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);cursor:pointer;font-weight:600;">Log as Decision</button>
         <button onclick="_fdDismiss('${escapeHtml(item.id||'')}')"
           style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-dim);cursor:pointer;">Dismiss</button>
       </div>
@@ -14265,8 +14289,8 @@ function renderRepoScoutCard() {
   const checkedAgo = s.generatedAt ? _relTime(new Date(s.generatedAt).getTime()) : 'never';
 
   const badgeHtml = behindCount > 0
-    ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.4);">${behindCount} BEHIND</span>`
-    : `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(34,197,94,0.12);color:var(--green);border:1px solid rgba(34,197,94,0.3);">ALL CURRENT</span>`;
+    ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:color-mix(in srgb, var(--red) 15%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent);">${behindCount} BEHIND</span>`
+    : `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:color-mix(in srgb, var(--green) 12%, transparent);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 30%, transparent);">ALL CURRENT</span>`;
 
   const driftColor = { behind: 'var(--red)', current: 'var(--green)', unknown: '#94a3b8' };
   const driftLabel = { behind: 'BEHIND', current: 'OK', unknown: '?' };
@@ -15907,7 +15931,7 @@ function showImpactNotePrompt(taskId) {
 
   var div = document.createElement('div');
   div.id = promptId;
-  div.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-md);padding:16px;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+  div.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;background:var(--surface2);border:1px solid var(--accent);border-radius:var(--radius-md);padding:16px;max-width:340px;box-shadow:0 4px 20px oklch(0% 0 0 / 0.4);';
   div.innerHTML =
     '<div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">🏆 High-priority task completed!</div>' +
     '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">What was the impact? <span style="font-weight:400;color:var(--text-dim)">(optional)</span></div>' +
@@ -17678,7 +17702,7 @@ function showDatePickerForSlash(editor) {
 
   const picker = document.createElement('div');
   picker.id = 'slash-date-picker';
-  picker.style.cssText = `position:fixed;z-index:9000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:8px;min-width:220px;left:${Math.min(coords.left, window.innerWidth-240)}px;top:${Math.min(coords.bottom+4, window.innerHeight-300)}px;`;
+  picker.style.cssText = `position:fixed;z-index:9000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 32px oklch(0% 0 0 / 0.5);padding:8px;min-width:220px;left:${Math.min(coords.left, window.innerWidth-240)}px;top:${Math.min(coords.bottom+4, window.innerHeight-300)}px;`;
 
   const options = [
     { label: 'Today', sub: fmt(today), value: iso(today) },
@@ -17886,7 +17910,7 @@ function showLinkPopover(editor) {
   _linkPopoverEditor = editor;
   if (!_linkPopoverEl) {
     _linkPopoverEl = document.createElement('div');
-    _linkPopoverEl.style.cssText = 'position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;box-shadow:0 4px 24px rgba(0,0,0,0.4);display:flex;gap:8px;align-items:center;min-width:260px;';
+    _linkPopoverEl.style.cssText = 'position:fixed;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;box-shadow:0 4px 24px oklch(0% 0 0 / 0.4);display:flex;gap:8px;align-items:center;min-width:260px;';
     _linkPopoverEl.innerHTML = `
       <input id="link-popover-input" type="url" placeholder="https://..." autocomplete="off" autocorrect="off" autocapitalize="off"
         style="flex:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:14px;outline:none;min-width:0;">
@@ -18580,7 +18604,7 @@ setTimeout(() => {
 </script>
 
 <!-- Work Mode Presets — Manage Modal -->
-<div id="presets-manage-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+<div id="presets-manage-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:oklch(0% 0 0 / 0.7);align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;max-width:520px;width:calc(100% - 32px);max-height:85vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div style="font-size:16px;font-weight:700;">🎛️ Work Mode Presets</div>
@@ -18614,7 +18638,7 @@ setTimeout(() => {
 </div>
 
 <!-- Settings Modal -->
-<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:oklch(0% 0 0 / 0.7);align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;max-width:480px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div style="font-size:16px;font-weight:700;">⚙️ Settings</div>
@@ -19043,7 +19067,7 @@ setTimeout(() => {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 24px oklch(0% 0 0 / 0.4), 0 2px 4px oklch(0% 0 0 / 0.2);
     padding: 10px 14px;
     display: flex; align-items: center; gap: 14px;
     font-size: 13px;
