@@ -166,6 +166,62 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
   /* Agent result — the answer under the line that asked for it. */
   /* ── Home: editorial header, then what matters, then the note ── */
+/* ── Today page shell ────────────────────────────────────────────────────── */
+  .jot-search {
+    width: 100%; padding: 9px 0; background: none; border: none;
+    border-bottom: 1px solid transparent; color: var(--text-dim);
+    font-size: 13px; font-family: inherit; outline: none;
+    transition: border-color var(--dur-md) var(--ease-out), color var(--dur-md);
+  }
+  .jot-search:focus { border-bottom-color: var(--accent); color: var(--text); }
+  .jot-search-wrap { margin-bottom: 12px; }
+
+  .shortcuts {
+    display: none; margin-bottom: 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 12px 16px; font-size: 12px; color: var(--text-dim);
+    column-count: 2; column-gap: 24px;
+  }
+  .shortcuts.is-open { display: block; }
+  .shortcuts-hd {
+    font-weight: 700; color: var(--text); column-span: all; margin-bottom: 6px;
+  }
+  .shortcuts-hd + .shortcuts-hd, .shortcuts-hd.is-later {
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+  }
+  .shortcuts kbd {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; font-family: inherit; font-size: 11px;
+  }
+
+  .jot-panel { display: none; margin-bottom: 14px; }
+  .jot-panel.is-open { display: block; }
+
+  .jot-nudge {
+    display: none; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 12px; margin-top: 6px; font-size: 12px; line-height: 1.4;
+    color: var(--text-dim); border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border: 1px solid var(--accent-dim);
+  }
+  .jot-nudge.is-open { display: flex; }
+
+  .jot-linker {
+    display: none; margin: 12px 0 20px; background: var(--surface);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px;
+  }
+  .jot-linker.is-open { display: block; }
+  .jot-linker-hd {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  }
+  .jot-linker-hd .t { font-size: 12px; font-weight: 700; color: var(--text); }
+  .jot-linker-x {
+    background: none; border: 0; color: var(--text-muted); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 2px 4px; font-family: inherit;
+  }
+  .jot-linker-x:hover { color: var(--text); }
+  .jot-linker-list { display: flex; flex-direction: column; gap: 6px; }
+
   .home-head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:2px; }
   .home-date { font-size:clamp(1.75rem,1.5rem+1.4vw,2.1rem); font-weight:800; letter-spacing:-0.025em; line-height:1.1; color:var(--text); }
   .home-date .dow { font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.09em; margin-left:10px; }
@@ -2288,7 +2344,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     </div>
 
     <!-- Jots / Daily Docs Page -->
-    <div class="page active" id="page-jots" style="max-width:900px;margin:0 auto;">
+    <div class="page active is-narrow" id="page-jots">
       <!-- The home. Date, what is due, what to start on, then the note. Everything above
            the editor has to earn its place: it is the first thing seen every single day. -->
       <div class="home-head">
@@ -2297,39 +2353,39 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
       <div id="home-due"></div>
       <div id="home-start"></div>
-      <div style="margin-bottom:12px;">
-        <input type="text" id="jot-search" placeholder="Search notes" oninput="debouncedFilterDailyDocs()" style="width:100%;padding:7px 0;background:none;border:none;border-bottom:1px solid transparent;color:var(--text-dim);font-size:12.5px;outline:none;transition:border-color var(--dur-md) var(--ease-out),color var(--dur-md);" onfocus="this.style.borderBottomColor='var(--accent)';this.style.color='var(--text)'" onblur="this.style.borderBottomColor='transparent';this.style.color='var(--text-dim)'">
+      <div class="jot-search-wrap">
+        <input type="text" id="jot-search" class="jot-search" placeholder="Search notes" oninput="debouncedFilterDailyDocs()" aria-label="Search notes">
       </div>
-      <div id="shortcuts-panel" style="display:none;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--text-dim);column-count:2;column-gap:24px;">
-        <div style="margin-bottom:6px;font-weight:700;color:var(--text);column-span:all;">⌨️ Keyboard Shortcuts</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘B</kbd> Bold</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘I</kbd> Italic</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧K</kbd> Add link</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧H</kbd> Heading cycle</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧U</kbd> Task checkbox</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧B</kbd> Blockquote</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘Z</kbd> Undo</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">⌘⇧Z</kbd> Redo</div>
-        <div style="column-span:all;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-weight:600;color:var(--text);">Editor triggers</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">/</kbd> Slash commands</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">@</kbd> Mention project</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">#</kbd> Link note</div>
-        <div><kbd style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">[[</kbd> Link note (alt)</div>
+      <div id="shortcuts-panel" class="shortcuts">
+        <div class="shortcuts-hd">⌨️ Keyboard Shortcuts</div>
+        <div><kbd>⌘B</kbd> Bold</div>
+        <div><kbd>⌘I</kbd> Italic</div>
+        <div><kbd>⌘⇧K</kbd> Add link</div>
+        <div><kbd>⌘⇧H</kbd> Heading cycle</div>
+        <div><kbd>⌘⇧U</kbd> Task checkbox</div>
+        <div><kbd>⌘⇧B</kbd> Blockquote</div>
+        <div><kbd>⌘Z</kbd> Undo</div>
+        <div><kbd>⌘⇧Z</kbd> Redo</div>
+        <div class="shortcuts-hd is-later">Editor triggers</div>
+        <div><kbd>/</kbd> Slash commands</div>
+        <div><kbd>@</kbd> Mention project</div>
+        <div><kbd>#</kbd> Link note</div>
+        <div><kbd>[[</kbd> Link note (alt)</div>
       </div>
       <!-- Live Daily Brief panel — rendered from current DATA.tasks, NOT persisted into doc HTML.
            This fixes the legacy bug where Tiptap stripped mention-task chips on every save. -->
-      <div id="daily-brief-panel" style="display:none;margin-bottom:14px;"></div>
+      <div id="daily-brief-panel" class="jot-panel"></div>
       <div id="daily-doc-today" class="daily-doc-container">
         <div id="daily-doc-today-editor" class="daily-doc-editor"></div>
-        <div id="jot-match-nudge" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;margin-top:6px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid var(--accent-dim);border-radius:var(--radius-sm);font-size:12px;color:var(--text-dim);line-height:1.4;"></div>
+        <div id="jot-match-nudge" class="jot-nudge"></div>
       </div>
       <!-- Jot Linker suggestions (populated by updateJotLinkerSuggestions) -->
-      <div id="jot-linker" style="display:none;margin:12px 0 20px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:10px;padding:12px 14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="font-size:12px;font-weight:700;color:var(--text);">🔗 Link to…</div>
-          <button onclick="document.getElementById('jot-linker').style.display='none';window._jotLinkerDismissed=true;" title="Dismiss" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;line-height:1;padding:0;" aria-label="Dismiss">✕</button>
+      <div id="jot-linker" class="jot-linker">
+        <div class="jot-linker-hd">
+          <div class="t">🔗 Link to…</div>
+          <button onclick="document.getElementById('jot-linker').classList.remove('is-open');window._jotLinkerDismissed=true;" title="Dismiss" class="jot-linker-x" aria-label="Dismiss">✕</button>
         </div>
-        <div id="jot-linker-suggestions" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <div id="jot-linker-suggestions" class="jot-linker-list"></div>
       </div>
       <div id="daily-doc-previous"></div>
     </div>
@@ -5874,7 +5930,7 @@ function _runMemoryMatch() {
 function renderJotMatchNudge(match) {
   const el = document.getElementById('jot-match-nudge');
   if (!el) return;
-  if (!match) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  if (!match) { el.classList.remove('is-open'); el.innerHTML = ''; return; }
   window._memMatchLastId = match.id;
   const snippet = match.text.replace(/\s+/g, ' ').trim().slice(0, 80);
   el.innerHTML =
@@ -5886,7 +5942,7 @@ function renderJotMatchNudge(match) {
     '<button onclick="_memMatchNavigate(\'' + String(match.kind).replace(/'/g,"\\'") + '\',\'' + String(match.id).replace(/'/g,"\\'") + '\');" ' +
     'style="flex-shrink:0;padding:3px 10px;background:var(--accent);color:#000;border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Compare →</button>' +
     '<button onclick="_memMatchDismiss();" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
-  el.style.display = 'flex';
+  el.classList.add('is-open');
 }
 function _memMatchDismiss() {
   window._memMatchDismissed = true;
@@ -12077,7 +12133,7 @@ function migrateJotsToDailyDocs() {
 function renderJots() { renderDailyDocs(); }
 function toggleShortcutsPanel() {
   const p = document.getElementById('shortcuts-panel');
-  if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  if (p) p.classList.toggle('is-open');
 }
 
 function generateDailyBrief() {
@@ -12148,13 +12204,13 @@ function renderDailyBriefPanel() {
   if (!panel) return;
   const briefHtml = generateDailyBrief();
   if (!briefHtml) {
-    panel.style.display = 'none';
+    panel.classList.remove('is-open');
     panel.innerHTML = '';
     return;
   }
   // Strip the trailing <hr><p></p> separator that's only useful when embedded in doc HTML.
   const cleaned = briefHtml.replace(/<hr><p><\/p>\s*$/, '');
-  panel.style.display = '';
+  panel.classList.add('is-open');
   panel.innerHTML = `<div class="card" style="padding:14px 18px;border-left:3px solid var(--accent);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;">📌 Today's Brief</div>
@@ -16919,7 +16975,7 @@ function updateJotLinkerSuggestions() {
   if (!panel || !list || !window._todayEditor) return;
 
   const fullText = window._todayEditor.getText() || '';
-  if (fullText.length < 15) { panel.style.display = 'none'; return; }
+  if (fullText.length < 15) { panel.classList.remove('is-open'); return; }
   const recent = fullText.slice(-400);
   const recentTokens = _tokenize(recent);
   const fullLower = fullText.toLowerCase();
@@ -16953,7 +17009,7 @@ function updateJotLinkerSuggestions() {
   candidates.sort((a, b) => b.score - a.score);
   const top = candidates.slice(0, 3);
 
-  if (top.length === 0) { panel.style.display = 'none'; return; }
+  if (top.length === 0) { panel.classList.remove('is-open'); return; }
 
   list.innerHTML = top.map((c, i) => {
     const icon = c.type === 'project' ? '📁' : c.type === 'decision' ? '⚖️' : '📄';
@@ -16968,7 +17024,7 @@ function updateJotLinkerSuggestions() {
       '<button onclick="insertJotLink(\'' + payload + '\')" style="padding:4px 10px;background:var(--accent-surface);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;">+ Link</button>' +
       '</div>';
   }).join('');
-  panel.style.display = '';
+  panel.classList.add('is-open');
 }
 window.updateJotLinkerSuggestions = updateJotLinkerSuggestions;
 
