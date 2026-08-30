@@ -2904,6 +2904,30 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="stale-notes-list"><!-- Populated by renderStaleNotes() --></div>
     </div>
 
+    <!-- Task Retirement Page -->
+    <div class="page" id="page-task-retirement" style="max-width:880px;margin:0 auto;">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2>♻️ Task Retirement</h2>
+            <p>Open tasks nothing has touched in weeks, grouped by where they came from. Most of this pile was written by a machine — retire it by the group, not the row.</p>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input id="task-retire-search" type="text" placeholder="🔍 Search stale tasks…" autocomplete="off"
+            style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"
+            oninput="debouncedRenderTaskRetirement()">
+        </div>
+        <div id="task-retire-bulk-toolbar" style="display:none;margin-top:10px;padding:10px 12px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:8px;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span id="task-retire-bulk-count" style="font-size:12px;color:var(--accent);font-weight:700;">0 selected</span>
+          <button onclick="taskRetireBulk()" class="ui-btn is-danger" style="font-size:12px;">♻️ Retire selected</button>
+          <button onclick="taskRetireClearSelection()" class="ui-btn" style="font-size:12px;">Clear</button>
+        </div>
+        <div id="task-retire-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="task-retire-list"><!-- Populated by renderTaskRetirement() --></div>
+    </div>
+
     <!-- Skills Page — discoverable catalog of every K2 capability -->
     <div class="page" id="page-skills" style="max-width:1000px;margin:0 auto;">
       <div class="page-header">
@@ -3586,6 +3610,7 @@ const K2_TOOLS = [
   { page:'clips',           icon:'🔗', label:'Clips',        group:'machine' },
   { page:'stale-jots',      icon:'📋', label:'Stale Jots',   group:'machine' },
   { page:'stale-notes',     icon:'🧊', label:'Stale Notes',  group:'machine' },
+  { page:'task-retirement', icon:'♻️', label:'Task Retirement', group:'machine' },
   { page:'trash',           icon:'🗑️', label:'Trash',        group:'machine' },
 ];
 
@@ -3781,6 +3806,7 @@ const debouncedFilterDailyDocs = debounce(() => { if (typeof filterDailyDocs ===
 const debouncedRenderActionInbox = debounce(() => { if (typeof renderActionInbox === 'function') renderActionInbox(); }, 250);
 const debouncedRenderStaleJots = debounce(() => { if (typeof renderStaleJots === 'function') renderStaleJots(); }, 250);
 const debouncedRenderStaleNotes = debounce(() => { if (typeof renderStaleNotes === 'function') renderStaleNotes(); }, 250);
+const debouncedRenderTaskRetirement = debounce(() => { if (typeof renderTaskRetirement === 'function') renderTaskRetirement(); }, 250);
 const debouncedRenderSkills = debounce(() => { if (typeof renderSkills === 'function') renderSkills(false); }, 250);
 const debouncedRenderJiraLedger = debounce(() => { if (typeof renderJiraLedger === 'function') renderJiraLedger(); }, 250);
 const debouncedRenderNotes = debounce(() => { if (typeof renderNotes === 'function') renderNotes(0); }, 250);
@@ -4187,6 +4213,7 @@ function _rerenderCurrentPage() {
     else if (page === 'reminders') renderReminders();
     else if (page === 'stale-jots')   renderStaleJots();
     else if (page === 'stale-notes')  renderStaleNotes();
+    else if (page === 'task-retirement') renderTaskRetirement();
     else if (page === 'workers')  renderWorkers();
     else if (page === 'skills')   renderSkills(false);
     else if (page === 'memory')   renderMemoryPage();
@@ -4253,7 +4280,7 @@ function navigateTo(page) {
   // If the page is in a collapsible section, expand it
   const sectionPages = {
     work: ['planner','inbox','someday','waiting','review','completed','discussions','trading','growth'],
-    reference: ['stale-jots','stale-notes','clips','docs','decisions','accomplishments','memory','mission','ai-insights','jira-ledger']
+    reference: ['stale-jots','stale-notes','task-retirement','clips','docs','decisions','accomplishments','memory','mission','ai-insights','jira-ledger']
   };
   for (const [name, pages] of Object.entries(sectionPages)) {
     if (pages.includes(page)) {
@@ -4305,6 +4332,7 @@ function navigateTo(page) {
   if (page === 'reminders') renderReminders();
   if (page === 'stale-jots') renderStaleJots();
   if (page === 'stale-notes') renderStaleNotes();
+  if (page === 'task-retirement') renderTaskRetirement();
   if (page === 'workers') renderWorkers();
   if (page === 'skills') renderSkills(false);
   // Pages removed from renderAll() (lazy render): trigger here on first visit.
@@ -6719,6 +6747,208 @@ async function staleJotsBulkAction(action) {
 }
 window.staleJotsBulkAction = staleJotsBulkAction;
 
+// ═══ Task Retirement ═══
+// The three triage buttons have shipped on every stale row for months and lastTriaged
+// is set on zero of 883 tasks. Nobody triages 700 things one at a time — and 547 of
+// them were written by the plan-files cron, not by Ryan. So this surface groups by
+// origin and retires by the group. Soft archive only: the cron dedupes against tasks
+// that are still in the array, so a soft-archived task stays retired, while a hard
+// purge would drop it from the array and the cron would rewrite it the next morning.
+window._taskRetireSelection = new Set();
+
+const _TASK_SOURCE_LABELS = {
+  'plan-sync': '🤖 Plan files cron',
+  'jot': '🪶 Your jots',
+  'jot-promoted': '🤖 Jot promoter',
+  'jot-mention': '🪶 Jot mentions',
+  'ideas-log': '🤖 Ideas log',
+  'commitment': '🤖 Commitment scan',
+  'note': '📝 Notes',
+  'none': '✍️ Added by hand',
+};
+function _taskSourceLabel(src) { return _TASK_SOURCE_LABELS[src] || src; }
+
+// DATA.tasks is not id-unique — the live store has 3 ids covering 7 rows, and one of
+// those pairs holds two different tasks. Selecting by id alone would let find() retire
+// the wrong row and strand the other, so identity here is id + text. Rows that are true
+// duplicates (same id, same text) collapse to one key and retire together, which is what
+// you want from a duplicate.
+function _taskRetireKey(task) {
+  return String(task.id) + '\u0000' + (task.text || task.title || '');
+}
+
+function _taskAgeDays(task) {
+  if (!task.created) return 0;
+  const c = new Date(task.created);
+  if (isNaN(c.getTime())) return 0;
+  return Math.floor((Date.now() - c.getTime()) / 86400000);
+}
+
+// Open, top-level, stale, not already in the trash — oldest first.
+function _retirableTasks() {
+  const notArchived = window.K2Archive ? K2Archive.notArchived : () => true;
+  return (DATA.tasks || [])
+    .filter(t => !t.done && t.status !== 'done' && !t.parentId && !t.archived && notArchived(t) && isTaskStale(t))
+    .sort((a, b) => _taskAgeDays(b) - _taskAgeDays(a));
+}
+
+function _retireGroups(query) {
+  const q = (query || '').trim().toLowerCase();
+  const groups = new Map();
+  for (const t of _retirableTasks()) {
+    if (q && !((t.text || t.title || '').toLowerCase().includes(q))) continue;
+    const src = t.source || 'none';
+    if (!groups.has(src)) groups.set(src, []);
+    groups.get(src).push(t);
+  }
+  // biggest pile first — that is the one worth clearing
+  return [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+}
+
+const _RETIRE_ROWS_SHOWN = 15;
+
+function renderTaskRetirement() {
+  const listEl = document.getElementById('task-retire-list');
+  if (!listEl) return;
+  const query = document.getElementById('task-retire-search')?.value || '';
+  const groups = _retireGroups(query);
+  const total = groups.reduce((n, [, items]) => n + items.length, 0);
+
+  const metaEl = document.getElementById('task-retire-meta');
+  if (metaEl) {
+    const all = _retirableTasks().length;
+    metaEl.textContent = query
+      ? `${total} of ${all} stale tasks match "${query}"`
+      : `${all} stale tasks across ${groups.length} source${groups.length === 1 ? '' : 's'}`;
+  }
+
+  if (!total) {
+    listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13px;">'
+      + (query ? 'No stale tasks match that search.' : 'Nothing stale. The pile is clear.') + '</div>';
+    _taskRetireSyncToolbar();
+    return;
+  }
+
+  listEl.innerHTML = groups.map(([src, items]) => {
+    const keys = items.map(_taskRetireKey);
+    const selectedHere = keys.filter(k => window._taskRetireSelection.has(k)).length;
+    const shown = items.slice(0, _RETIRE_ROWS_SHOWN);
+    const hidden = items.length - shown.length;
+    return `<div style="margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--surface2);border-bottom:1px solid var(--border);">
+        <span style="font-size:13px;font-weight:700;">${escapeHtml(_taskSourceLabel(src))}</span>
+        <span style="font-size:11px;color:var(--text-muted);">${items.length} stale</span>
+        ${selectedHere ? `<span style="font-size:11px;color:var(--accent);font-weight:700;">${selectedHere} selected</span>` : ''}
+        <span style="flex:1;"></span>
+        <button onclick="taskRetireSelectSource('${escapeHtml(src).replace(/'/g, "\\'")}')" class="ui-btn" style="font-size:11px;">
+          ${selectedHere === items.length ? 'Deselect all' : `Select all ${items.length}`}
+        </button>
+      </div>
+      ${shown.map(t => {
+        const key = _taskRetireKey(t);
+        const checked = window._taskRetireSelection.has(key);
+        return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border-subtle);">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="taskRetireToggleSelect(${JSON.stringify(key).replace(/"/g, '&quot;')})"
+            style="margin-top:2px;width:15px;height:15px;cursor:pointer;flex-shrink:0;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;line-height:1.4;">${escapeHtml((t.text || t.title || 'Untitled').slice(0, 140))}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${_taskAgeDays(t)} days old</div>
+          </div>
+          <button onclick="triageTask(${JSON.stringify(t.id)}, 'keep')" class="ui-btn" style="font-size:11px;flex-shrink:0;" title="Keep — resurfaces in 7 days">Keep</button>
+          <button onclick="triageTask(${JSON.stringify(t.id)}, 'snooze')" class="ui-btn" style="font-size:11px;flex-shrink:0;" title="Snooze 7 days">Snooze</button>
+        </div>`;
+      }).join('')}
+      ${hidden > 0 ? `<div style="padding:8px 12px;font-size:11px;color:var(--text-dim);">…and ${hidden} more. "Select all" covers every one of them, not just the ${_RETIRE_ROWS_SHOWN} shown.</div>` : ''}
+    </div>`;
+  }).join('');
+
+  _taskRetireSyncToolbar();
+}
+window.renderTaskRetirement = renderTaskRetirement;
+
+function _taskRetireSyncToolbar() {
+  const toolbar = document.getElementById('task-retire-bulk-toolbar');
+  const countEl = document.getElementById('task-retire-bulk-count');
+  if (!toolbar) return;
+  const n = window._taskRetireSelection.size;
+  toolbar.style.display = n > 0 ? 'flex' : 'none';
+  if (countEl) countEl.textContent = `${n} selected`;
+}
+
+function taskRetireToggleSelect(key) {
+  if (window._taskRetireSelection.has(key)) window._taskRetireSelection.delete(key);
+  else window._taskRetireSelection.add(key);
+  renderTaskRetirement();
+}
+window.taskRetireToggleSelect = taskRetireToggleSelect;
+
+// Selects the whole group, including the rows past the render cap — that is the
+// entire point of the surface.
+function taskRetireSelectSource(src) {
+  const query = document.getElementById('task-retire-search')?.value || '';
+  const group = _retireGroups(query).find(([s]) => s === src);
+  if (!group) return;
+  const keys = group[1].map(_taskRetireKey);
+  const allSelected = keys.every(k => window._taskRetireSelection.has(k));
+  for (const k of keys) {
+    if (allSelected) window._taskRetireSelection.delete(k);
+    else window._taskRetireSelection.add(k);
+  }
+  renderTaskRetirement();
+}
+window.taskRetireSelectSource = taskRetireSelectSource;
+
+function taskRetireClearSelection() {
+  window._taskRetireSelection.clear();
+  renderTaskRetirement();
+}
+window.taskRetireClearSelection = taskRetireClearSelection;
+
+// One save for the whole batch. K2Archive.archive() saves per item, which would be
+// 547 writes to a 900KB file on GitHub — so this flags in memory the way the stale-jots
+// bulk action does, saves once, and hands back a single undo.
+async function taskRetireBulk() {
+  const keys = new Set(window._taskRetireSelection);
+  if (!keys.size) return;
+  const nowIso = new Date().toISOString();
+  const touched = [];
+  for (const task of (DATA.tasks || [])) {
+    if (!keys.has(_taskRetireKey(task)) || task.archived) continue;
+    touched.push({ task, hadArchivedAt: task.archivedAt });
+    task.archived = true;
+    task.archivedAt = nowIso;
+    delete task.archivedHard;   // soft only: a hard purge would let the cron rewrite it
+  }
+  if (!touched.length) { window._taskRetireSelection.clear(); renderTaskRetirement(); return; }
+
+  window._taskRetireSelection.clear();
+  await saveData();
+  renderTaskRetirement();
+  try { if (typeof renderTasks === 'function') renderTasks(); } catch (_) {}
+  try { if (typeof renderDashboard === 'function') renderDashboard(); } catch (_) {}
+  try { K2Archive.renderTrash(); K2Archive.renderTrashBadge(); } catch (_) {}
+
+  const undo = async () => {
+    for (const rec of touched) {
+      const task = rec.task;
+      if (!task) continue;
+      task.archived = false;
+      if (rec.hadArchivedAt === undefined) delete task.archivedAt; else task.archivedAt = rec.hadArchivedAt;
+    }
+    await saveData();
+    renderTaskRetirement();
+    try { if (typeof renderTasks === 'function') renderTasks(); } catch (_) {}
+    try { if (typeof renderDashboard === 'function') renderDashboard(); } catch (_) {}
+    try { K2Archive.renderTrash(); K2Archive.renderTrashBadge(); } catch (_) {}
+  };
+  if (window.K2Archive?.toast) {
+    K2Archive.toast({ message: `Retired ${touched.length} task${touched.length === 1 ? '' : 's'}`, undoFn: undo, durationMs: 10000 });
+  } else {
+    showToast?.(`♻️ Retired ${touched.length}`);
+  }
+}
+window.taskRetireBulk = taskRetireBulk;
+
 // ═══ Stale Notes Reclaim Panel ═══
 
 function _noteLastTouch(note) {
@@ -7599,7 +7829,7 @@ function renderDashboard() {
     if (staleCount > 0) {
       staleAlertEl.style.display = 'flex';
       staleAlertEl.innerHTML = `<span style="font-size:13px;flex:1;">⚠️ <strong>${staleCount} stale task${staleCount === 1 ? '' : 's'}</strong> need triage (${staleCount > 1 ? 'tasks older' : 'task older'} than 14 days)</span>
-        <span onclick="navigateTo('tasks')" style="font-size:12px;font-weight:600;color:var(--yellow);cursor:pointer;white-space:nowrap;">Review Tasks →</span>`;
+        <span onclick="navigateTo('task-retirement')" style="font-size:12px;font-weight:600;color:var(--yellow);cursor:pointer;white-space:nowrap;">Retire them →</span>`;
     } else {
       staleAlertEl.style.display = 'none';
     }
