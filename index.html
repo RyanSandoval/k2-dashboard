@@ -13207,6 +13207,11 @@ function renderDailyDocs() {
     // New jot starts empty — the brief lives in its own panel above the editor now.
     DATA.dailyDocs[today] = { content: '<p></p>', updatedAt: new Date().toISOString(), linkedProjects: [], linkedNotes: [] };
   }
+  // Outside the creation branch on purpose: today's doc is often already there and empty
+  // (a cron or an earlier visit made it), and a create-only hook would skip those days
+  // entirely. carryForwardUnfinished() carries its own guards — it refuses a doc that has
+  // been written in, and stamps carriedFrom so it only ever asks once per day.
+  try { carryForwardUnfinished(today); } catch (e) { console.warn('[K2] carry-forward:', e); }
 
   // One-time cleanup of any legacy embedded brief still living in today's doc.
   // Without this, the editor will keep showing the old (broken) brief blocks
@@ -13252,6 +13257,93 @@ function renderDailyDocs() {
   // Render previous days
   renderPreviousDays(today);
 }
+
+// ═══ Carry Forward ═══
+// Yesterday's unfinished lines follow you into today, visibly, instead of dying with the
+// day that wrote them. Runs once, at the moment today's doc is created.
+//
+// Deliberately string-based rather than DOMParser: this same code has to run in the gates
+// under node, and a check that exercises a DOM stub is a check of the stub. The scanner is
+// depth-aware because 10 of the 138 daily docs nest a taskList inside a taskItem, which is
+// exactly what naive <li>…</li> pairing gets wrong.
+
+// Index just past the </li> that closes the <li> opened before `from`.
+// Returns -1 when the markup is unbalanced, which callers treat as "skip this one".
+function _liEnd(html, from) {
+  const tok = /<li\b[^>]*>|<\/li\s*>/gi;
+  tok.lastIndex = from;
+  let depth = 1, m;
+  while ((m = tok.exec(html))) {
+    depth += m[0][1] === '/' ? -1 : 1;
+    if (depth === 0) return tok.lastIndex;
+  }
+  return -1;
+}
+
+// Outer HTML of every unchecked taskItem in `html`. An unchecked item is taken whole —
+// its own sub-items come with it, so they are not also collected separately. An unchecked
+// item under a *checked* parent is still found, because the parent is not skipped.
+function unfinishedTaskItems(html) {
+  const out = [];
+  const open = /<li\b[^>]*>/gi;
+  let m;
+  while ((m = open.exec(html))) {
+    if (!/data-type\s*=\s*["']taskItem["']/i.test(m[0])) continue;
+    const end = _liEnd(html, open.lastIndex);
+    if (end < 0) continue;
+    if (!/data-checked\s*=\s*["']false["']/i.test(m[0])) continue;  // done, or a checked parent: keep scanning inside it
+    out.push(html.slice(m.index, end));
+    open.lastIndex = end;                                          // its children came with it
+  }
+  return out;
+}
+
+// Most recent day before `today` that has a doc. Dates are ISO, so string sort is date sort.
+function _previousDocDate(today, docs) {
+  return Object.keys(docs || {}).filter(d => d < today).sort().reverse()[0] || null;
+}
+
+// True when a doc holds nothing but empty scaffolding — no text, no images, no result nodes.
+function _docIsBlank(html) {
+  if (!html) return true;
+  if (/<(img|hr|div[^>]*data-type)/i.test(html)) return false;
+  // &nbsp; arrives as six literal characters, not as whitespace — TipTap emits it for an
+  // empty paragraph, so stripping tags alone leaves a doc looking written-in when it is not.
+  return !html.replace(/<[^>]+>/g, '')
+              .replace(/&nbsp;|&#160;|&#xa0;/gi, ' ')
+              .replace(/[\s ]+/g, '').length;
+}
+
+// Carries yesterday's unfinished lines into `today`. Returns { carried, from }.
+// Never runs twice (guarded by doc.carriedFrom), never runs against a doc that already has
+// writing in it, and never mutates the source day.
+function carryForwardUnfinished(today) {
+  const docs = (DATA && DATA.dailyDocs) || {};
+  const doc = docs[today];
+  if (!doc || doc.carriedFrom) return { carried: 0, from: null };
+  if (!_docIsBlank(doc.content)) return { carried: 0, from: null };
+
+  const from = _previousDocDate(today, docs);
+  if (!from) return { carried: 0, from: null };
+
+  const items = unfinishedTaskItems((docs[from] || {}).content || '');
+  doc.carriedFrom = from;                       // stamped even at zero, so we ask once per day
+  if (!items.length) return { carried: 0, from };
+
+  const d = new Date(from + 'T12:00:00');
+  const when = isNaN(d) ? from : d.toLocaleDateString('en-US', { weekday: 'long' });
+  // A plain paragraph, not a custom node: it round-trips through TipTap with no schema work.
+  // No class on this paragraph: TipTap's paragraph schema does not preserve `class`, so a
+  // styled marker would look right until Ryan's first keystroke and then flatten on save.
+  // The glyph and the wording carry it instead. Styling this needs the Paragraph extension
+  // extended to keep the attribute — schema surgery on every paragraph in every note, for
+  // a cosmetic gain, so not now. G4 asserts the text survives the round-trip.
+  const header = '<p>↩ Carried over from ' + escapeHtml(when) + '</p>';
+  doc.content = header + '<ul data-type="taskList">' + items.join('') + '</ul>' + (doc.content || '<p></p>');
+  doc.updatedAt = new Date().toISOString();
+  return { carried: items.length, from };
+}
+// ═══ End Carry Forward ═══
 
 // If today's Jot was created before the chip-based brief, replace just the
 // auto-generated brief block at the top with a fresh one. Keeps user content intact.
