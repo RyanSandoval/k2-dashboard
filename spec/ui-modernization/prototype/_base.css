@@ -1,0 +1,7 @@
+:root{--bg:oklch(15.5% .010 255);--raise:oklch(19% .011 255);--r2:oklch(22.5% .012 255);
+--ink:oklch(95.5% .006 255);--ink2:oklch(75% .012 255);--ink3:oklch(58% .015 255);
+--acc:oklch(72% .135 250);--accdim:oklch(61% .11 250);--accsurf:oklch(24% .038 250);
+--rule:oklch(28% .014 255);--red:oklch(70% .17 25);--grn:oklch(78% .14 155)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif;
+font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
