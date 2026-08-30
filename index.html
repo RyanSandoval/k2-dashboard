@@ -1253,6 +1253,53 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
      Named for the shapes, not the screen. The first cut of this was tm-* for "task
      modal", which meant the project modal reused none of it and would have grown a
      pm-* twin — that habit is how the file ended up with 1,096 one-off styles. */
+  /* Form primitives. The reminders page repeated the same eight declarations on
+     seven inputs; every other form in the app will want the same shape. */
+  .ui-field {
+    padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+  }
+  /* These inputs set outline:none and offered nothing in its place, so keyboard
+     users had no focus indicator at all. Not a simplification to carry forward. */
+  .ui-field:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-surface); }
+  .ui-field.is-block { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+  textarea.ui-field { resize: vertical; }
+
+  .ui-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .ui-row.is-tight { gap: 6px; }
+
+  /* Segmented control. The active state was six inline style writes per click in
+     setReminderMode(); aria-pressed is the same state the screen reader needs. */
+  .ui-seg {
+    display: flex; background: var(--surface2);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .ui-seg button {
+    padding: 9px 16px; background: none; border: 0; color: var(--text-dim);
+    font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .ui-seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); font-weight: 700; }
+
+  .ui-pill {
+    padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border-subtle);
+    border-radius: 999px; color: var(--text-dim); font-size: 11px;
+    cursor: pointer; font-family: inherit;
+  }
+  .ui-pill.is-filter { padding: 5px 12px; font-size: 12px; font-weight: 500; }
+  .ui-pill[aria-pressed="true"] {
+    background: var(--accent-surface); border-color: var(--accent);
+    color: var(--accent); font-weight: 700;
+  }
+  .ui-btn.is-primary {
+    flex: none; padding: 10px 20px; background: var(--accent); border: none;
+    color: var(--bg); font-size: 13px; font-weight: 700;
+  }
+  .ui-btn.is-quiet {
+    flex: none; padding: 4px 10px; background: none; border: none;
+    color: var(--text-muted); font-size: 11px; font-weight: 400;
+  }
+
   .ui-panel {
     margin-bottom: 12px; padding: 10px 12px;
     background: var(--surface2); border-radius: var(--radius-sm);
@@ -3126,7 +3173,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div id="waiting-list"></div>
     </div>
 
-    <div class="page" id="page-reminders" style="max-width:880px;margin:0 auto;">
+    <div class="page is-narrow" id="page-reminders">
       <div class="page-header">
         <h2>⏰ Reminders</h2>
         <p>Every live reminder — the ones you asked for in Discord and the ones K-2 scanned out of your notes</p>
@@ -3135,20 +3182,20 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <!-- Create -->
       <div style="background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px;margin-bottom:var(--sp-5);">
         <input id="rem-text" type="text" placeholder="Remind me to…" maxlength="500"
-          style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;margin-bottom:10px;"
+          class="ui-field is-block"
           onkeydown="if(event.key==='Enter')submitNewReminder();">
         <textarea id="rem-note" placeholder="Notes (optional) — anything you want to see when it fires" maxlength="2000" rows="2"
-          style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;width:100%;box-sizing:border-box;margin-bottom:10px;resize:vertical;display:none;"></textarea>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);overflow:hidden;">
-            <button id="rem-mode-once" onclick="setReminderMode('once')" style="padding:9px 16px;background:var(--accent);border:none;color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Once</button>
-            <button id="rem-mode-repeat" onclick="setReminderMode('repeat')" style="padding:9px 16px;background:none;border:none;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Repeat</button>
+          class="ui-field is-block" style="display:none"></textarea>
+        <div class="ui-row">
+          <div class="ui-seg">
+            <button id="rem-mode-once" onclick="setReminderMode('once')" aria-pressed="true">Once</button>
+            <button id="rem-mode-repeat" onclick="setReminderMode('repeat')" aria-pressed="false">Repeat</button>
           </div>
-          <span id="rem-once-fields" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <input id="rem-at" type="datetime-local" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+          <span id="rem-once-fields" class="ui-row">
+            <input id="rem-at" type="datetime-local" class="ui-field">
           </span>
-          <span id="rem-repeat-fields" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;">
-            <select id="rem-repeat" onchange="onRepeatPresetChange()" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+          <span id="rem-repeat-fields" class="ui-row" style="display:none">
+            <select id="rem-repeat" onchange="onRepeatPresetChange()" class="ui-field">
               <option value="daily">Every day</option>
               <option value="weekdays">Every weekday</option>
               <option value="w1">Every Monday</option>
@@ -3161,10 +3208,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
               <option value="monthly">Monthly on the 1st</option>
               <option value="custom">Custom cron…</option>
             </select>
-            <input id="rem-time" type="time" value="09:00" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
-            <input id="rem-expr" type="text" placeholder="0 9 * * 1-5" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;display:none;width:150px;">
+            <input id="rem-time" type="time" value="09:00" class="ui-field">
+            <input id="rem-expr" type="text" placeholder="0 9 * * 1-5" class="ui-field" style="display:none;width:150px">
           </span>
-          <select id="rem-channel" title="Where the reminder gets posted" style="padding:10px 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
+          <select id="rem-channel" title="Where the reminder gets posted" class="ui-field">
             <option value="channel:1476441453394919587">#k2-dashboard</option>
             <option value="channel:1476441496088477788">#k2-health</option>
             <option value="channel:1476663716559720579">#trader</option>
@@ -3179,16 +3226,16 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
             <option value="channel:1477807504980316190">#basketball</option>
             <option value="channel:1478231165931622420">#baseball</option>
           </select>
-          <button onclick="submitNewReminder()" style="padding:10px 20px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Add reminder</button>
+          <button onclick="submitNewReminder()" class="ui-btn is-primary">Add reminder</button>
         </div>
         <div style="margin-top:10px;">
-          <button id="rem-note-toggle" onclick="toggleReminderNote()" style="padding:4px 10px;background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;font-family:inherit;">+ note</button>
+          <button id="rem-note-toggle" onclick="toggleReminderNote()" class="ui-btn is-quiet">+ note</button>
         </div>
-        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="rem-quick-chips">
-          <button onclick="setReminderQuick(3)" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">in 3h</button>
-          <button onclick="setReminderQuick('tonight')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">tonight 6pm</button>
-          <button onclick="setReminderQuick('tomorrow')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">tomorrow 9am</button>
-          <button onclick="setReminderQuick('monday')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:999px;color:var(--text-dim);font-size:11px;cursor:pointer;font-family:inherit;">next Monday 9am</button>
+        <div class="ui-row is-tight" style="margin-top:6px" id="rem-quick-chips">
+          <button onclick="setReminderQuick(3)" class="ui-pill">in 3h</button>
+          <button onclick="setReminderQuick('tonight')" class="ui-pill">tonight 6pm</button>
+          <button onclick="setReminderQuick('tomorrow')" class="ui-pill">tomorrow 9am</button>
+          <button onclick="setReminderQuick('monday')" class="ui-pill">next Monday 9am</button>
         </div>
       </div>
 
@@ -3196,10 +3243,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
       <div id="rem-queue-banner" style="display:none;margin-bottom:var(--sp-4);"></div>
 
-      <div style="display:flex;gap:6px;margin-bottom:var(--sp-4);flex-wrap:wrap;" id="rem-filters">
-        <button data-remfilter="all" onclick="setReminderFilter('all')" style="padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit;">All</button>
-        <button data-remfilter="asked" onclick="setReminderFilter('asked')" style="padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit;">Asked</button>
-        <button data-remfilter="auto-scan" onclick="setReminderFilter('auto-scan')" style="padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit;">Auto-scanned</button>
+      <div class="ui-row is-tight" style="margin-bottom:var(--sp-4)" id="rem-filters">
+        <button data-remfilter="all" onclick="setReminderFilter('all')" class="ui-pill is-filter">All</button>
+        <button data-remfilter="asked" onclick="setReminderFilter('asked')" class="ui-pill is-filter">Asked</button>
+        <button data-remfilter="auto-scan" onclick="setReminderFilter('auto-scan')" class="ui-pill is-filter">Auto-scanned</button>
       </div>
 
       <div id="reminders-list"></div>
@@ -15945,12 +15992,10 @@ function setReminderMode(mode) {
   if (once) once.style.display = mode === 'once' ? 'flex' : 'none';
   if (rep) rep.style.display = mode === 'repeat' ? 'flex' : 'none';
   if (chips) chips.style.display = mode === 'once' ? 'flex' : 'none';
-  [[bOnce, mode === 'once'], [bRep, mode === 'repeat']].forEach(function (pair) {
-    if (!pair[0]) return;
-    pair[0].style.background = pair[1] ? 'var(--accent)' : 'none';
-    pair[0].style.color = pair[1] ? 'var(--bg)' : 'var(--text-dim)';
-    pair[0].style.fontWeight = pair[1] ? '700' : '600';
-  });
+  // aria-pressed is both the style hook and the state a screen reader needs, so the
+  // three inline writes per button are one attribute now.
+  if (bOnce) bOnce.setAttribute('aria-pressed', String(mode === 'once'));
+  if (bRep) bRep.setAttribute('aria-pressed', String(mode === 'repeat'));
 }
 
 function onRepeatPresetChange() {
@@ -16269,11 +16314,7 @@ function renderReminders() {
 
   // filter chips
   document.querySelectorAll('#rem-filters button').forEach(function (b) {
-    var on = b.dataset.remfilter === _remState.filter;
-    b.style.background = on ? 'var(--accent-surface)' : 'var(--surface2)';
-    b.style.color = on ? 'var(--accent)' : 'var(--text-dim)';
-    b.style.border = '1px solid ' + (on ? 'var(--accent)' : 'var(--border-subtle)');
-    b.style.fontWeight = on ? '700' : '500';
+    b.setAttribute('aria-pressed', String(b.dataset.remfilter === _remState.filter));
   });
 
   // queued-change banner
