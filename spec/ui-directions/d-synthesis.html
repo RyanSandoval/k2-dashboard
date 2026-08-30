@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>D — Note first, with a nav that answers "where is my stuff"</title>
+<style>
+:root{
+  --bg:oklch(16% 0.010 255); --panel:oklch(19.5% 0.010 255); --ink:oklch(95% 0.005 255);
+  --dim:oklch(64% 0.012 255); --faint:oklch(45% 0.010 255); --line:oklch(25% 0.010 255);
+  --hair:oklch(21.5% 0.008 255); --accent:oklch(72% 0.135 250);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;height:100vh;overflow:hidden}
+
+/* ── nav: visible search + 5 real places + everything else one click away ── */
+nav{width:238px;flex:none;border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column}
+.brand{font-size:14px;font-weight:640;letter-spacing:-.01em;padding:0 9px 18px;display:flex;align-items:center;gap:9px}
+.mark{width:19px;height:19px;border-radius:6px;background:linear-gradient(145deg,var(--accent),oklch(58% 0.14 265));flex:none}
+.search{display:flex;align-items:center;gap:8px;background:oklch(21% 0.010 255);border:1px solid var(--line);
+  border-radius:9px;padding:7px 10px;margin-bottom:16px;font-size:13px;color:var(--faint)}
+.search svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;flex:none}
+.search kbd{margin-left:auto;font-family:var(--sans);background:oklch(24% 0.010 255);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px;font-size:10.5px}
+.n{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:8px;font-size:13.5px;
+  color:var(--dim);letter-spacing:-.005em;margin-bottom:1px}
+.n svg{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.n.on{background:oklch(24% 0.030 250);color:var(--ink);font-weight:570}
+.n .ct{margin-left:auto;font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.grp{font-size:10.5px;font-weight:620;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);
+  padding:16px 10px 6px;display:flex;align-items:center;gap:6px}
+.grp .chev{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2.2}
+.foot{margin-top:auto;padding:10px;font-size:12px;color:var(--faint);display:flex;align-items:center;gap:8px}
+
+/* ── main: the note is the page ── */
+main{flex:1;overflow:hidden;display:flex;justify-content:center;padding:54px 40px 0}
+.doc{width:100%;max-width:640px}
+.eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+h1{font-size:33px;font-weight:670;letter-spacing:-.028em;margin:7px 0 34px;line-height:1.05}
+h1 .sub{color:var(--faint);font-weight:400;letter-spacing:-.02em}
+.carried{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--faint);margin:0 0 12px;letter-spacing:.01em}
+.carried::after{content:"";flex:1;height:1px;background:var(--hair)}
+.line{display:flex;gap:13px;align-items:flex-start;padding:8px 0;font-size:16px;line-height:1.55;letter-spacing:-.006em}
+.box{width:16px;height:16px;border:1.5px solid var(--faint);border-radius:5px;flex:none;margin-top:4px}
+.line.done .box{background:var(--faint);border-color:var(--faint)}
+.line.done span{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line)}
+.result{margin:1px 0 5px 29px;font-size:13px;color:var(--dim);display:flex;gap:8px;align-items:center}
+.result .arrow{color:var(--faint)}
+.result a{color:var(--accent);text-decoration:none;font-weight:570}
+.result .meta{color:var(--faint)}
+.cursor{display:inline-block;width:2px;height:19px;background:var(--accent);vertical-align:-4px;margin-left:1px}
+
+/* ── start here: below the note, quieter, clearly K2's opinion not Ryan's writing ── */
+.assist{margin-top:38px;padding-top:20px;border-top:1px solid var(--hair)}
+.a-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.a-hd h2{font-size:11.5px;font-weight:620;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.a-hd .of{font-size:11.5px;color:var(--faint)}
+.pick{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13.5px;color:var(--dim);letter-spacing:-.004em}
+.pick .dot{width:4px;height:4px;border-radius:50%;background:var(--faint);flex:none}
+.pick .add{margin-left:auto;font-size:11.5px;color:var(--faint);border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px}
+.why{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.5}
+</style></head><body>
+<nav>
+  <div class="brand"><div class="mark"></div>K2</div>
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Find anything<kbd>⌘K</kbd></div>
+
+  <div class="n on"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h11M4 19h7"/></svg>Today</div>
+  <div class="n"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Reminders<span class="ct">3</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Notes<span class="ct">23</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tasks<span class="ct">911</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4"/></svg>Projects<span class="ct">59</span></div>
+
+  <div class="grp"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Work <span style="color:oklch(35% .01 255)">· 9</span></div>
+  <div class="grp"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Reference <span style="color:oklch(35% .01 255)">· 11</span></div>
+  <div class="grp"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>System <span style="color:oklch(35% .01 255)">· 6</span></div>
+
+  <div class="foot"><svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/></svg>All 34 tools · nothing removed</div>
+</nav>
+
+<main><div class="doc">
+  <div class="eyebrow">Sunday · August 30</div>
+  <h1>Today <span class="sub">· 4 open</span></h1>
+
+  <div class="carried">Carried over from Saturday</div>
+  <div class="line"><div class="box"></div><span>Verify and merge GA4 ecommerce tagging</span></div>
+  <div class="line"><div class="box"></div><span>Decide which account is the emergency fund for auto-sync</span></div>
+
+  <div style="height:22px"></div>
+
+  <div class="line"><div class="box"></div><span>Create a ticket for changing promo cards in itineraries to 2×3 vs. 9×16</span></div>
+  <div class="result"><span class="arrow">↳</span><a href="#">MW-12363</a><span class="meta">Ready for Release · Max Akbar</span></div>
+  <div class="line done"><div class="box"></div><span>Follow up with Joe about the Map FAC</span></div>
+  <div class="line"><div class="box"></div><span>Mobile font size — header and body need to be larger<span class="cursor"></span></span></div>
+
+  <div class="assist">
+    <div class="a-hd"><h2>K2 suggests</h2><span class="of">3 of 911 · the rest are searchable</span></div>
+    <div class="pick"><span class="dot"></span>Build a tool to test homepage experience for quick testing<span class="add">→ note</span></div>
+    <div class="pick"><span class="dot"></span>Create Analytics ticket for Available Cruise inventory<span class="add">→ note</span></div>
+    <div class="pick"><span class="dot"></span>Run Weekly Review for the first time<span class="add">→ note</span></div>
+    <div class="why">Longest open, and each blocks something else.</div>
+  </div>
+</div></main></body></html>
