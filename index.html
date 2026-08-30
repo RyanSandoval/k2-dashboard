@@ -6102,19 +6102,42 @@ function _memTokenize(text) {
   return out;
 }
 
-// TASK-002: Jaccard similarity score
+// The app injects boilerplate into every daily doc (the End-of-Day prompt, the
+// Morning Brief's <h2> sections). Left in, it is the strongest signal in the corpus:
+// on real data it produced three 1.000 matches between days that contained nothing
+// but the template, and 8 of 12 nudges shared only its words. Strip generated blocks
+// before tokenizing so scoring sees what Ryan actually wrote.
+const _MEM_EOD_PROMPT = /<p>\s*What got done\?\s*What(?:'|&#39;|&apos;|\u2019)s carrying over\?\s*<\/p>/gi;
+function _memPlainText(html) {
+  return (html || '')
+    .replace(/<h2\b[^>]*>[\s\S]*?<\/h2>/gi, ' ')
+    .replace(_MEM_EOD_PROMPT, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// TASK-002: overlap coefficient — |A n B| / min(|A|,|B|).
+// Jaccard divides by the union, so a 6-term jot against a 200-term note caps at
+// 0.03 and can never clear any usable threshold. Real jots are short (median 7
+// meaningful terms), so the union term was doing nothing but penalising them for
+// being short. min() drops the length bias; _MEM_MIN_OVERLAP carries the burden of
+// rejecting accidental collisions instead.
+const _MEM_MIN_OVERLAP = 3;   // distinct shared terms required before a score counts
+const _MEM_MIN_SCORE = 0.40;  // overlap-coefficient floor for showing a nudge
 function _memMatchScore(setA, setB) {
   if (!setA.size || !setB.size) return 0;
   let intersection = 0;
   for (const t of setA) { if (setB.has(t)) intersection++; }
-  return intersection / (setA.size + setB.size - intersection);
+  if (intersection < _MEM_MIN_OVERLAP) return 0;
+  return intersection / Math.min(setA.size, setB.size);
 }
 
 // TASK-003: Main match runner
 function _runMemoryMatch() {
   if (!window._todayEditor) return;
   const html = window._todayEditor.getHTML();
-  const plain = (html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const plain = _memPlainText(html);
   if (plain.length < 25) { renderJotMatchNudge(null); return; }
   const jotTerms = _memTokenize(plain);
   const today = window._todayEditorDate || '';
@@ -6122,7 +6145,7 @@ function _runMemoryMatch() {
   // Notes (exclude archived)
   for (const n of (window.DATA?.notes || [])) {
     if (n.archived) continue;
-    const txt = ((n.title || '') + ' ' + (n.text || '')).replace(/<[^>]+>/g, ' ');
+    const txt = _memPlainText((n.title || '') + ' ' + (n.text || ''));
     const title = (n.title && n.title.trim()) || txt.trim().split('\n')[0].slice(0, 60) || 'Untitled';
     candidates.push({ kind: 'note', id: n.id, title, text: txt, date: (n.created || '').slice(0, 10) });
   }
@@ -6130,7 +6153,7 @@ function _runMemoryMatch() {
   const docDates = Object.keys(window.DATA?.dailyDocs || {}).filter(d => d !== today).sort().reverse().slice(0, 30);
   for (const date of docDates) {
     const doc = (window.DATA?.dailyDocs || {})[date];
-    const txt = (doc.content || '').replace(/<[^>]+>/g, ' ');
+    const txt = _memPlainText(doc.content);
     const month = date.slice(5, 7);
     const day = parseInt(date.slice(8, 10), 10);
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -6143,7 +6166,7 @@ function _runMemoryMatch() {
     const score = _memMatchScore(jotTerms, _memTokenize(cand.text));
     if (score > topScore) { topScore = score; topMatch = cand; }
   }
-  if (topScore < 0.12) { renderJotMatchNudge(null); return; }
+  if (topScore < _MEM_MIN_SCORE) { renderJotMatchNudge(null); return; }
   // Dismiss logic: stay hidden if same match was dismissed
   if (window._memMatchDismissed && topMatch.id === window._memMatchLastId) return;
   // New top match clears dismiss
