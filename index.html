@@ -1259,6 +1259,27 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   /* Modal chrome. Four modals each carried their own copy of the overlay, the
      sheet and the close button — twelve inline style attributes describing one
      component. --scrim replaces a raw rgba() that bypassed the palette entirely. */
+  /* Dashboard section chrome. Seven cards each repeated the same header row,
+     title and action link. display:none stays inline on purpose: ten of these
+     reveal themselves with style.display = '', which a class rule would swallow. */
+  .ui-section { margin-bottom: 20px; }
+  .ui-section.is-flagged { border-left: 3px solid var(--accent); }
+  .ui-cardhead {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+  }
+  .ui-title { font-size: 13px; font-weight: 700; }
+  .ui-link {
+    font-size: 11px; color: var(--accent); cursor: pointer; font-weight: 500;
+    background: none; border: none; font-family: inherit; padding: 0;
+  }
+  .ui-link:hover { text-decoration: underline; }
+  .ui-count { font-size: 11px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+  .ui-tab {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 8px 14px; font-size: 12px;
+    font-weight: 600; color: var(--text-dim); cursor: pointer; font-family: inherit;
+  }
+
   .ui-modal {
     display: none; position: fixed; inset: 0; background: var(--scrim);
     z-index: 200; padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -1378,6 +1399,14 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   .ui-cols { display: flex; gap: 16px; flex-wrap: wrap; }
   .ui-body { font-size: 13px; line-height: 1.5; }
   .ui-dim { color: var(--text-dim); }
+  /* "Completed" was three separate inline ternaries writing the same two
+     declarations onto a task, a subtask and a blocker. */
+  .ui-done { color: var(--text-dim); text-decoration: line-through; }
+  .ui-modal-title {
+    font-size: 16px; font-weight: 700; cursor: pointer; margin: 0 0 4px;
+    word-break: break-word; overflow-wrap: anywhere; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  }
   .ui-over { color: var(--red); font-weight: 600; }
 
   /* ── Launcher ──────────────────────────────────────────────────────────────
@@ -2337,36 +2366,36 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
            unresolved-requests review by scripts/requests_sync.py. Outranks
            everything below it: K2 cannot see Outlook/Teams on its own. -->
       <div class="card" id="dash-requests" style="margin-bottom:20px;display:none;border-left:3px solid var(--red);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">📮 People Waiting On You <span id="dash-requests-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
-          <span onclick="navigateTo('requests')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All requests →</span>
+        <div class="ui-cardhead">
+          <div class="ui-title">📮 People Waiting On You <span id="dash-requests-count" class="ui-count"></span></div>
+          <span onclick="navigateTo('requests')" class="ui-link">All requests →</span>
         </div>
         <div id="dash-requests-list"></div>
       </div>
 
       <!-- Action Inbox roll-up — top items pulled in from #k2 nightly scanner -->
-      <div class="card" id="dash-action-inbox" style="margin-bottom:20px;display:none;border-left:3px solid var(--accent);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">🎯 Action Inbox <span id="dash-action-inbox-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
-          <span onclick="navigateTo('action-inbox')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">Open inbox →</span>
+      <div class="card ui-section is-flagged" id="dash-action-inbox"  style="display:none">
+        <div class="ui-cardhead">
+          <div class="ui-title">🎯 Action Inbox <span id="dash-action-inbox-count" class="ui-count"></span></div>
+          <span onclick="navigateTo('action-inbox')" class="ui-link">Open inbox →</span>
         </div>
         <div id="dash-action-inbox-list"></div>
       </div>
 
       <!-- Floating Decision Tray — nightly scan of jots for decision-language; cron writes DATA.floatingDecisions -->
-      <div class="card" id="dash-floating-decisions" style="margin-bottom:20px;display:none;border-left:3px solid var(--accent);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">🤔 Floating Decisions <span id="dash-floating-decisions-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
+      <div class="card ui-section is-flagged" id="dash-floating-decisions"  style="display:none">
+        <div class="ui-cardhead">
+          <div class="ui-title">🤔 Floating Decisions <span id="dash-floating-decisions-count" class="ui-count"></span></div>
           <span style="font-size:11px;color:var(--text-dim);">decisions hiding in jots</span>
         </div>
         <div id="dash-floating-decisions-list"></div>
       </div>
 
       <!-- Waiting For roll-up — what's blocked on someone else -->
-      <div class="card" id="dash-waiting-for" style="margin-bottom:20px;display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">⏳ Waiting For <span id="dash-waiting-count" style="font-size:11px;color:var(--text-dim);font-weight:500;margin-left:4px;"></span></div>
-          <span onclick="navigateTo('waiting')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All →</span>
+      <div class="card ui-section" id="dash-waiting-for"  style="display:none">
+        <div class="ui-cardhead">
+          <div class="ui-title">⏳ Waiting For <span id="dash-waiting-count" class="ui-count"></span></div>
+          <span onclick="navigateTo('waiting')" class="ui-link">All →</span>
         </div>
         <div id="dash-waiting-list"></div>
       </div>
@@ -2381,13 +2410,13 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
 
       <!-- Family Finance Snapshot — written by K2 Family Finance Snapshot cron from family-finance/ emitter -->
-      <div class="card" id="dashboard-family-finance-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
+      <div class="card ui-section is-flagged" id="dashboard-family-finance-card"  style="display:none"></div>
 
       <!-- Two-of-Us Ritual — streak + 30d completion; cron writes DATA.twoOfUsRitual daily from two-of-us/ritual_streak_snapshot.py -->
-      <div class="card" id="dashboard-two-of-us-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
+      <div class="card ui-section is-flagged" id="dashboard-two-of-us-card"  style="display:none"></div>
 
       <!-- Repo Scout — freshness cron writes DATA.repoScout daily 9:30 AM PT; spec: k2-dashboard/spec/repo-scout/ -->
-      <div class="card" id="dashboard-repo-scout-card" style="margin-bottom:20px;border-left:3px solid var(--accent);display:none;"></div>
+      <div class="card ui-section is-flagged" id="dashboard-repo-scout-card"  style="display:none"></div>
 
       <!-- Daily Advisor — hidden tasks + unresolved questions surfaced from jots/notes (cron writes DATA.dailyAdvisor at 9 AM weekdays) -->
       <div class="card" id="dash-daily-advisor" style="margin-bottom:20px;border-left:3px solid var(--accent);"></div>
@@ -2396,9 +2425,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       <div class="card" id="dash-jot-interpreter" style="margin-bottom:20px;border-left:3px solid var(--accent2,var(--accent));"></div>
 
       <!-- AI Focus Recommendation -->
-      <div class="card" style="margin-bottom:20px;" id="dash-ai-focus">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">🤖 What Should I Work On?</div>
+      <div class="card ui-section"  id="dash-ai-focus">
+        <div class="ui-cardhead">
+          <div class="ui-title">🤖 What Should I Work On?</div>
           <button onclick="generateAIFocus()" id="ai-focus-btn" style="padding:5px 14px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Generate</button>
         </div>
         <div id="ai-focus-content" style="font-size:13px;color:var(--text-dim);line-height:1.7;">
@@ -2411,7 +2440,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div class="card" style="cursor:default;">
           <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
             🔥 Top Tasks
-            <span onclick="navigateTo('tasks')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All tasks →</span>
+            <span onclick="navigateTo('tasks')" class="ui-link">All tasks →</span>
           </div>
           <div id="dash-top-tasks"></div>
         </div>
@@ -2426,24 +2455,24 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
 
       <!-- Quick Actions -->
       <div id="dash-quick-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-        <button onclick="navigateTo('tasks')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">✅ + Task</button>
-        <button onclick="navigateTo('jots')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">✏️ Open Jot</button>
-        <button onclick="navigateTo('notes')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">📄 New Note</button>
-        <button onclick="openSearch()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">🔍 Search</button>
-        <button onclick="navigateTo('mission')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;">🎯 Mission</button>
+        <button onclick="navigateTo('tasks')" class="ui-tab">✅ + Task</button>
+        <button onclick="navigateTo('jots')" class="ui-tab">✏️ Open Jot</button>
+        <button onclick="navigateTo('notes')" class="ui-tab">📄 New Note</button>
+        <button onclick="openSearch()" class="ui-tab">🔍 Search</button>
+        <button onclick="navigateTo('mission')" class="ui-tab">🎯 Mission</button>
       </div>
 
       <!-- Stat Row -->
-      <div class="stat-row" id="stats-row" style="margin-bottom:20px;"><!-- Populated by JS --></div>
+      <div class="stat-row ui-section" id="stats-row" ><!-- Populated by JS --></div>
 
       <!-- Stale Tasks Alert (populated by JS) -->
       <div id="dash-stale-alert" style="display:none;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:color-mix(in srgb,var(--yellow) 10%,transparent);border:1px solid color-mix(in srgb,var(--yellow) 35%,transparent);border-radius:8px;color:var(--yellow);"></div>
 
       <!-- Decision Resurfacer (populated by renderDecisionResurfacer) -->
       <div class="card" id="dash-decision-resurfacer" style="display:none;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">🗂️ Decisions to revisit</div>
-          <span onclick="navigateTo('decisions')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All decisions →</span>
+        <div class="ui-cardhead">
+          <div class="ui-title">🗂️ Decisions to revisit</div>
+          <span onclick="navigateTo('decisions')" class="ui-link">All decisions →</span>
         </div>
         <div id="dash-decision-resurfacer-list"></div>
       </div>
@@ -2453,7 +2482,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div>
           <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;">
             🚀 Active Projects
-            <span onclick="navigateTo('projects')" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">All →</span>
+            <span onclick="navigateTo('projects')" class="ui-link">All →</span>
           </div>
           <div id="dashboard-projects"></div>
         </div>
@@ -2464,10 +2493,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
 
       <!-- Google Calendar widget -->
-      <div class="card" style="margin-bottom:20px;" id="dash-gcal-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:13px;font-weight:700;">📅 Today</div>
-          <span onclick="openSettings()" style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:500;">⚙️ Calendar settings</span>
+      <div class="card ui-section"  id="dash-gcal-card">
+        <div class="ui-cardhead">
+          <div class="ui-title">📅 Today</div>
+          <span onclick="openSettings()" class="ui-link">⚙️ Calendar settings</span>
         </div>
         <div id="dash-gcal-events"></div>
       </div>
@@ -8739,7 +8768,7 @@ function openTaskModal(taskId) {
     <div class="ui-head">
       ${leftElModal}
       <div class="ui-head-body">
-        <h3 style="font-size:16px;font-weight:700;cursor:pointer;word-break:break-word;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0 0 4px 0;${task.done ? 'text-decoration:line-through;color:var(--text-dim)' : ''}" onclick="editTaskField(${safeId(task.id)},'text',this)" title="${(task.text || task.title || 'Untitled').replace(/"/g,'&quot;')}">${task.text || task.title || 'Untitled'}</h3>
+        <h3 class="ui-modal-title${task.done ? ' ui-done' : ''}" onclick="editTaskField(${safeId(task.id)},'text',this)" title="${(task.text || task.title || 'Untitled').replace(/"/g,'&quot;')}">${task.text || task.title || 'Untitled'}</h3>
         <div class="ui-chips">
           <span style="cursor:pointer;font-size:14px;background:var(--surface2);padding:2px 8px;border-radius:6px;border:1px solid var(--border);" onclick="cycleTaskOwner(${safeId(task.id)})" title="Click to reassign">${ownerBadge} ${ownerLabel}</span>
           ${isK2 ? `<span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;color:${statusInfo.color};background:color-mix(in srgb, ${statusInfo.color} 15%, transparent);">${statusInfo.icon} ${statusInfo.label}</span>` : ''}
@@ -8842,7 +8871,7 @@ function openTaskModal(taskId) {
         const sid = safeId(s.id);
         return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-subtle);">
           <div class="task-check ${s.done ? 'done' : ''}" onclick="event.stopPropagation();toggleTask(${sid});openTaskModal(${safeId(task.id)})" style="flex-shrink:0;width:16px;height:16px;min-width:16px;"></div>
-          <span onclick="openTaskModal(${sid})" style="flex:1;font-size:13px;cursor:pointer;color:${s.done ? 'var(--text-dim)' : 'var(--text)'};text-decoration:${s.done ? 'line-through' : 'none'};">${s.text || 'Untitled'}</span>
+          <span onclick="openTaskModal(${sid})" class="${s.done ? 'ui-done' : ''}" style="flex:1;font-size:13px;cursor:pointer;">${s.text || 'Untitled'}</span>
         </div>`;
       }).join('');
       return `<div class="ui-panel">
@@ -8860,7 +8889,7 @@ function openTaskModal(taskId) {
       const blockers = blockedByIds.map(bid => DATA.tasks.find(t => String(t.id) === String(bid))).filter(Boolean);
       const blockerRows = blockers.map(b => {
         return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-subtle);">
-          <span onclick="openTaskModal(${safeId(b.id)})" style="flex:1;font-size:12px;cursor:pointer;color:${b.done ? 'var(--text-dim)' : 'var(--text)'};text-decoration:${b.done ? 'line-through' : 'none'};">${b.done ? '✅' : '🔒'} ${b.text || 'Untitled'}</span>
+          <span onclick="openTaskModal(${safeId(b.id)})" class="${b.done ? 'ui-done' : ''}" style="flex:1;font-size:12px;cursor:pointer;">${b.done ? '✅' : '🔒'} ${b.text || 'Untitled'}</span>
           <span onclick="removeDependency(${safeId(task.id)},${safeId(b.id)})" style="cursor:pointer;font-size:12px;color:var(--text-dim);padding:2px 6px;border-radius:4px;" title="Remove dependency" aria-label="Remove dependency" role="button" tabindex="0">✕</span>
         </div>`;
       }).join('');
