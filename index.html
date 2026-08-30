@@ -12834,11 +12834,44 @@ function renderHome() {
 function homePickToNote(id) {
   const t = (DATA.tasks || []).find(x => String(x.id) === String(id));
   if (!t || !window._todayEditor) return;
+
+  // Already in today's note: jump to it rather than adding a second copy.
+  let existing = null;
+  window._todayEditor.state.doc.descendants((node, pos) => {
+    if (node.type.name === 'taskItem' && String(node.attrs.taskId) === String(id)) {
+      existing = pos;
+      return false;
+    }
+  });
+  if (existing !== null) {
+    window._todayEditor.chain().focus().setTextSelection(existing + 1).scrollIntoView().run();
+    showToast('Already in today\'s note');
+    return;
+  }
+
   window._todayEditor.chain().focus('end')
-    .insertContent({ type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: false },
+    .insertContent({ type: 'taskList', content: [{ type: 'taskItem',
+      attrs: { checked: !!t.done, taskId: String(t.id) },
       content: [{ type: 'paragraph', content: [{ type: 'text', text: t.text }] }] }] })
     .run();
   showToast('✍️ Added to today');
+}
+
+// Ticking a task-linked line in the note closes the task it came from. Without this
+// the note and the task disagree: the line goes through, the task stays open, and
+// Start here keeps offering it back.
+async function syncNoteChecksToTasks() {
+  if (!window._todayEditor) return;
+  const pending = [];
+  window._todayEditor.state.doc.descendants((node) => {
+    if (node.type.name !== 'taskItem' || !node.attrs.taskId) return;
+    const task = (DATA.tasks || []).find(t => String(t.id) === String(node.attrs.taskId));
+    if (task && !!task.done !== !!node.attrs.checked) pending.push(task.id);
+  });
+  for (const id of pending) await toggleTask(id);
+  if (pending.length) {
+    try { renderHome(); } catch (e) { console.warn('[K2] renderHome:', e); }
+  }
 }
 
 function renderDailyDocs() {
@@ -18396,7 +18429,20 @@ function createEditor(element, content, options = {}) {
       heading: { levels: [1, 2, 3] },
     }),
     TaskList,
-    TaskItem.configure({ nested: true }),
+    // Carries the id of the task a line came from, so a checkbox in the note can
+    // close the real task instead of only itself.
+    TaskItem.extend({
+      addAttributes() {
+        return {
+          ...this.parent?.(),
+          taskId: {
+            default: null,
+            parseHTML: el => el.getAttribute('data-task-id'),
+            renderHTML: attrs => attrs.taskId ? { 'data-task-id': attrs.taskId } : {},
+          },
+        };
+      },
+    }).configure({ nested: true }),
     EmptyItemBackspace,
     Link.configure({ openOnClick: true, autolink: true, HTMLAttributes: { class: 'note-link', style: 'color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all;' } }),
     Placeholder.configure({ placeholder: options.placeholder || 'Start typing...' }),
@@ -18632,6 +18678,11 @@ window._createTodayEditor = function(today) {
       const isCheckboxToggle = transaction?.steps?.length > 0 &&
         transaction.steps.every(s => s.slice == null || s.slice.size === 0);
       window.debouncedSaveDailyDoc(isCheckboxToggle);
+      // Not gated on isCheckboxToggle: ticking a box goes through setNodeMarkup,
+      // which carries a non-empty slice, so that flag is false for the exact event
+      // this needs to catch. The sync walks the doc and only writes when a linked
+      // line disagrees with its task, so running it on every update is cheap.
+      try { syncNoteChecksToTasks(); } catch (e) { console.warn('[K2] syncNoteChecks:', e); }
       if (!isCheckboxToggle && typeof window.debouncedJotLinker === 'function') {
         window.debouncedJotLinker();
       }

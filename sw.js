@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v60-launcher-actions';
+const CACHE_NAME = 'k2-hq-v61-note-task-link';
 const ASSETS = [
   './',
   './index.html',

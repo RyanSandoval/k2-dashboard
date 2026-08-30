@@ -10,6 +10,8 @@
 
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { createServer } from 'node:http';
+import { extname, join, normalize } from 'node:path';
 
 const require = createRequire(import.meta.url);
 const NODE_MODULES = '/Users/ryansandoval/mkt-ai-lab/review-runner/node_modules';
@@ -23,7 +25,29 @@ try {
   process.exit(2);
 }
 
-export const APP = 'file:///Users/ryansandoval/k2-dashboard/index.html';
+const ROOT = '/Users/ryansandoval/k2-dashboard';
+
+// Served over HTTP, not file://. Chrome refuses to run <script type="module"> from
+// a file:// origin, so the Tiptap block never executed and window._todayEditor was
+// never defined — the editor, the single most important thing in this app, was
+// absent from every check written before this one.
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
+                '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
+                '.png': 'image/png' };
+async function serve() {
+  const server = createServer((req, res) => {
+    const rel = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[/\\])+/, '');
+    const file = join(ROOT, rel === '/' ? 'index.html' : rel);
+    try {
+      res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream' });
+      res.end(readFileSync(file));
+    } catch { res.writeHead(404); res.end('not found'); }
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  return { server, url: `http://127.0.0.1:${server.address().port}/index.html` };
+}
+
+export const APP = 'served at runtime';
 export const DATA_FILE = '/Users/ryansandoval/k2-data/data.json';
 
 // DATA is a `let` binding, not a window property. The app mirrors it onto window.DATA
@@ -38,14 +62,16 @@ const seed = (data) => `
 `;
 
 export async function withApp(fn, { width = 390, height = 900, seedData = true } = {}) {
+  const { server, url } = await serve();
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
-    await page.goto(APP, { waitUntil: 'load' });
+    await page.goto(url, { waitUntil: 'load' });
     if (seedData) await page.evaluate(seed(JSON.parse(readFileSync(DATA_FILE, 'utf8'))));
     return await fn(page);
   } finally {
     await browser.close();
+    await new Promise(r => server.close(r));
   }
 }
 
