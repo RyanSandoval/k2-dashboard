@@ -1,0 +1,114 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>E — Brain dump is the primary interaction</title>
+<style>
+:root{
+  --bg:oklch(16% 0.010 255); --ink:oklch(95% 0.005 255); --dim:oklch(64% 0.012 255);
+  --faint:oklch(45% 0.010 255); --ghost:oklch(34% 0.010 255); --line:oklch(25% 0.010 255);
+  --hair:oklch(21.5% 0.008 255); --accent:oklch(72% 0.135 250);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;height:100vh;overflow:hidden}
+nav{width:236px;flex:none;border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column}
+.brand{font-size:14px;font-weight:640;letter-spacing:-.01em;padding:0 9px 18px;display:flex;align-items:center;gap:9px}
+.mark{width:19px;height:19px;border-radius:6px;background:linear-gradient(145deg,var(--accent),oklch(58% 0.14 265));flex:none}
+.search{display:flex;align-items:center;gap:8px;background:oklch(21% 0.010 255);border:1px solid var(--line);
+  border-radius:9px;padding:7px 10px;margin-bottom:16px;font-size:13px;color:var(--faint)}
+.search svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;flex:none}
+.search kbd{margin-left:auto;font-family:var(--sans);background:oklch(24% 0.010 255);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:10.5px}
+.n{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:8px;font-size:13.5px;color:var(--dim);letter-spacing:-.005em;margin-bottom:1px}
+.n svg{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.n.on{background:oklch(24% 0.030 250);color:var(--ink);font-weight:570}
+.n .ct{margin-left:auto;font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.grp{font-size:10.5px;font-weight:620;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);padding:16px 10px 6px;display:flex;align-items:center;gap:6px}
+.grp .chev{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2.2}
+.foot{margin-top:auto;padding:9px 10px;font-size:12px;color:var(--faint);display:flex;align-items:center;gap:8px;
+  border-top:1px solid var(--hair)}
+.foot .d{width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
+
+main{flex:1;overflow:hidden;display:flex;justify-content:center;padding:46px 40px 0}
+.doc{width:100%;max-width:660px;display:flex;flex-direction:column;height:100%}
+.top{display:flex;align-items:baseline;gap:12px;margin-bottom:26px}
+h1{font-size:31px;font-weight:670;letter-spacing:-.028em;line-height:1}
+.date{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.spacer{flex:1}
+.att{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--faint);
+  border:1px solid var(--line);border-radius:8px;padding:5px 10px}
+.att svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* the canvas */
+.canvas{flex:1;overflow:hidden}
+.carried{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--faint);margin:0 0 10px;letter-spacing:.01em}
+.carried::after{content:"";flex:1;height:1px;background:var(--hair)}
+p.dump{font-size:16px;line-height:1.62;letter-spacing:-.006em;color:var(--ink);padding:5px 0}
+p.dump.frag{color:var(--dim)}
+.line{display:flex;gap:13px;align-items:flex-start;padding:5px 0;font-size:16px;line-height:1.62;letter-spacing:-.006em}
+.box{width:16px;height:16px;border:1.5px solid var(--faint);border-radius:5px;flex:none;margin-top:4px}
+.line.done .box{background:var(--faint);border-color:var(--faint)}
+.line.done span{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line)}
+.res{margin:0 0 4px 29px;font-size:12.5px;color:var(--dim);display:flex;gap:8px;align-items:center}
+.res .arrow{color:var(--ghost)}
+.res a{color:var(--accent);text-decoration:none;font-weight:570}
+.res .meta{color:var(--faint)}
+.shot{margin:10px 0 6px;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:330px}
+.shot .img{height:112px;background:
+  linear-gradient(115deg,oklch(30% 0.05 250) 0%,oklch(24% 0.03 262) 45%,oklch(27% 0.045 236) 100%);
+  position:relative}
+.shot .img::after{content:"";position:absolute;left:14px;right:14px;top:20px;height:7px;border-radius:3px;
+  background:oklch(100% 0 0/.13);box-shadow:0 15px 0 oklch(100% 0 0/.10),0 30px 0 oklch(100% 0 0/.07),0 45px 0 oklch(100% 0 0/.05)}
+.shot .cap{font-size:11.5px;color:var(--faint);padding:6px 10px;background:oklch(18.5% 0.008 255)}
+.file{display:inline-flex;align-items:center;gap:7px;font-size:14.5px;color:var(--accent);
+  text-decoration:none;padding:5px 0}
+.file svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+.caret{display:inline-block;width:2px;height:19px;background:var(--accent);vertical-align:-4px;margin-left:1px}
+.ph{font-size:16px;line-height:1.62;color:var(--ghost);padding:5px 0;letter-spacing:-.006em}
+.rest{flex:1;min-height:90px}
+
+.strip{border-top:1px solid var(--hair);padding:11px 0 16px;display:flex;align-items:center;gap:10px;
+  font-size:12.5px;color:var(--faint)}
+.strip b{color:var(--dim);font-weight:560}
+.strip .more{margin-left:auto;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-size:11.5px}
+</style></head><body>
+<nav>
+  <div class="brand"><div class="mark"></div>K2</div>
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Find anything<kbd>⌘K</kbd></div>
+  <div class="n on"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h11M4 19h7"/></svg>Today</div>
+  <div class="n"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Reminders<span class="ct">3</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Notes<span class="ct">23</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tasks<span class="ct">911</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4"/></svg>Projects<span class="ct">59</span></div>
+  <div class="grp"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Work <span style="color:oklch(35% .01 255)">· 9</span></div>
+  <div class="grp"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>Reference <span style="color:oklch(35% .01 255)">· 11</span></div>
+  <div class="grp"><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>System <span style="color:oklch(35% .01 255)">· 6</span></div>
+  <div class="foot"><span class="d"></span>K2 is reading as you write</div>
+</nav>
+
+<main><div class="doc">
+  <div class="top">
+    <h1>Today</h1><div class="date">Sunday · Aug 30</div>
+    <div class="spacer"></div>
+    <div class="att"><svg viewBox="0 0 24 24"><path d="M21 12l-8.5 8.5a5 5 0 01-7-7L14 5a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 7"/></svg>Drop photos, PDFs, anything</div>
+  </div>
+
+  <div class="canvas">
+    <div class="carried">Carried over from Saturday</div>
+    <div class="line"><div class="box"></div><span>Verify and merge GA4 ecommerce tagging</span></div>
+
+    <p class="dump">Maps ticket — sorting is wrong when you zoom by FAC. Uses cities FAC instead. Joe thinks it's the same root cause as the stateroom thing, not sure I buy it</p>
+
+    <div class="shot"><div class="img"></div><div class="cap">Screenshot 2026-08-30 at 11.42.png</div></div>
+
+    <p class="dump frag">^ that's the zoom state where it breaks</p>
+
+    <div class="line"><div class="box"></div><span>Create a ticket for the promo cards — 2×3 vs 9×16 🤖</span></div>
+    <div class="res"><span class="arrow">↳</span><a href="#">MW-12363</a><span class="meta">filed · Ready for Release · Max Akbar</span></div>
+
+    <a class="file" href="#"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/></svg>Q3-capacity-draft.pdf</a>
+
+    <p class="dump">ask Tim whether the FAC sort is worth a ticket or just a comment on the existing one<span class="caret"></span></p>
+    <div class="ph">Keep going — K2 sorts it out after.</div>
+    <div class="rest"></div>
+  </div>
+
+  <div class="strip"><b>K2 read 4 lines</b> · 1 ticket filed, 1 task, 2 left as notes<span class="more">What it did ▸</span></div>
+</div></main></body></html>
