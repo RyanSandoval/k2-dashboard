@@ -3664,7 +3664,9 @@ function k2ToolCount(page) {
 function k2ToolTile(t) {
   const n = k2ToolCount(t.page);
   const badge = n > 0 ? `<span class="tile-count">${n > 99 ? '99+' : n}</span>` : '';
-  return `<button class="tile${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
+  // mobile-more-item class is required so navigateTo() and mobileNavMore() can sync
+  // the active state on drawer items (both functions query '.mobile-more-item[data-page]').
+  return `<button class="tile mobile-more-item${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
      onclick="k2Launch('${t.page}')" title="${escapeHtml(t.label)}">
      ${badge}<span class="tile-ic">${t.icon}</span><span class="tile-nm">${escapeHtml(t.label)}</span></button>`;
 }
@@ -14085,9 +14087,11 @@ function toggleShortcutsHelp() {
 }
 
 function closeAllModals() {
-  // Close any open modals
+  // Close any open modals — use classList so a subsequent classList.add('is-open')
+  // isn't blocked by a stale inline style (inline style beats CSS class specificity).
   document.querySelectorAll('[id$="-modal"]').forEach(m => {
-    if (m.style.display !== 'none') m.style.display = 'none';
+    m.classList.remove('is-open');
+    m.style.display = '';
   });
   document.getElementById('shortcuts-help')?.remove();
   document.body.style.overflow = '';
