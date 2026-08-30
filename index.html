@@ -1178,7 +1178,10 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     right: 0;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 6px 0 env(safe-area-inset-bottom, 10px);
+    /* env(safe-area-inset-bottom, 10px) never used its fallback: the variable is
+       defined as 0 on a non-notched viewport, so the second argument only applies
+       where the property is unsupported entirely. max() is what sets a real floor. */
+    padding: 6px 0 calc(max(env(safe-area-inset-bottom, 0px), 10px) + 6px);
     z-index: 100;
     justify-content: space-around;
     align-items: flex-start;
@@ -1188,17 +1191,19 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 8px 4px 4px;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 4px;
     min-width: 60px;
-    font-size: 11px;
+    min-height: 64px;
+    font-size: 12px;
     color: var(--text-dim);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     flex: 1;
   }
-  .mobile-nav-item .icon { font-size: 24px; line-height: 1; }
+  .mobile-nav-item .icon { font-size: 26px; line-height: 1; }
   .mobile-nav-item.active { color: var(--accent); }
   .mobile-nav-item.active .icon { transform: scale(1.1); }
 
@@ -2531,7 +2536,6 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div class="home-sub" id="home-sub"></div>
       </div>
       <div id="home-due"></div>
-      <div id="home-start"></div>
       <div class="jot-search-wrap">
         <input type="text" id="jot-search" class="jot-search" placeholder="Search notes" oninput="debouncedFilterDailyDocs()" aria-label="Search notes">
       </div>
@@ -2558,6 +2562,9 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
         <div id="daily-doc-today-editor" class="daily-doc-editor"></div>
         <div id="jot-match-nudge" class="jot-nudge"></div>
       </div>
+      <!-- Below the note on purpose: writing comes first, the nudge about what to
+           pick up next reads better once you have already put the day down. -->
+      <div id="home-start"></div>
       <!-- Jot Linker suggestions (populated by updateJotLinkerSuggestions) -->
       <div id="jot-linker" class="jot-linker">
         <div class="jot-linker-hd">

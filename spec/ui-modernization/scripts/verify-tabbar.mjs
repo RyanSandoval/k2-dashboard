@@ -11,6 +11,18 @@ const out = await withApp(page => page.evaluate(() => {
   const bar = document.getElementById('mobile-nav');
   o.tabBarVisible = getComputedStyle(bar).display !== 'none';
 
+  // WCAG 2.5.8 asks 24x24 and Apple's HIG asks 44x44. Both were already met at
+  // 78x56 and it still missed on a real phone: the home-indicator strip overlaps
+  // the bottom of the bar, so the usable part is shorter than the measurement.
+  // 64 with real padding underneath is the number that actually worked.
+  const items = [...bar.querySelectorAll('.mobile-nav-item')];
+  const boxes = items.map(i => i.getBoundingClientRect());
+  o.tapTargetsBigEnough = boxes.every(r => r.height >= 64 && r.width >= 44);
+  o.smallestTapTarget = Math.round(Math.min(...boxes.map(r => r.height)));
+  // Clearance below the last row of content, so the bottom row is not on the edge.
+  o.barClearsHomeIndicator =
+    parseFloat(getComputedStyle(bar).paddingBottom) >= 16;
+
   // Counts must be present on load, not only after the drawer has been opened once.
   const counts = [...bar.querySelectorAll('.tab-count')];
   o.countsRendered = counts.length === 3;
