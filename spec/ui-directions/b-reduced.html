@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>B — Radical reduction, keep the shell</title>
+<style>
+:root{
+  --bg:oklch(16% 0.010 255); --panel:oklch(19% 0.010 255); --ink:oklch(95% 0.005 255);
+  --dim:oklch(64% 0.012 255); --faint:oklch(44% 0.010 255); --line:oklch(25% 0.010 255);
+  --accent:oklch(72% 0.135 250); --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;
+  display:flex;height:100vh;overflow:hidden}
+nav{width:232px;flex:none;border-right:1px solid var(--line);padding:26px 14px;display:flex;flex-direction:column}
+.brand{font-size:14px;font-weight:640;letter-spacing:-.01em;padding:0 10px 26px;display:flex;align-items:center;gap:9px}
+.mark{width:20px;height:20px;border-radius:6px;background:linear-gradient(145deg,var(--accent),oklch(58% 0.14 265));flex:none}
+.n{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;font-size:14px;
+  color:var(--dim);letter-spacing:-.005em;margin-bottom:1px}
+.n svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.n.on{background:oklch(24% 0.028 250);color:var(--ink);font-weight:560}
+.n .ct{margin-left:auto;font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.sep{height:1px;background:var(--line);margin:14px 10px}
+.more{padding:8px 10px;font-size:13px;color:var(--faint);display:flex;align-items:center;gap:11px}
+.more kbd{margin-left:auto;font-family:var(--sans);background:oklch(23% 0.010 255);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px;font-size:10.5px}
+main{flex:1;overflow:hidden;padding:52px 56px}
+.eyebrow{font-size:12px;font-weight:590;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+h1{font-size:34px;font-weight:660;letter-spacing:-.028em;margin:7px 0 4px}
+.lede{font-size:15px;color:var(--dim);margin-bottom:44px;letter-spacing:-.005em}
+.focus{border-left:2px solid var(--accent);padding:2px 0 2px 20px;margin-bottom:40px;max-width:620px}
+.focus h2{font-size:12px;font-weight:590;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.f-line{font-size:16.5px;line-height:1.6;letter-spacing:-.007em;padding:5px 0;display:flex;gap:13px}
+.f-line .b{width:16px;height:16px;border:1.5px solid var(--faint);border-radius:5px;flex:none;margin-top:4px}
+.why{font-size:13px;color:var(--faint);margin-top:12px;line-height:1.55}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:620px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:17px 18px}
+.card .t{font-size:12px;color:var(--faint);letter-spacing:.03em;text-transform:uppercase;font-weight:590}
+.card .v{font-size:27px;font-weight:640;letter-spacing:-.02em;margin-top:9px;font-variant-numeric:tabular-nums}
+.card .s{font-size:12.5px;color:var(--dim);margin-top:3px}
+.card .v.acc{color:var(--accent)}
+</style></head><body>
+<nav>
+  <div class="brand"><div class="mark"></div>K2</div>
+  <div class="n on"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h11M4 19h7"/></svg>Today</div>
+  <div class="n"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Reminders<span class="ct">3</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Notes<span class="ct">23</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Work<span class="ct">18</span></div>
+  <div class="n"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>System</div>
+  <div class="sep"></div>
+  <div class="more"><svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>29 more<kbd>⌘K</kbd></div>
+</nav>
+<main>
+  <div class="eyebrow">Sunday · August 30</div>
+  <h1>Good afternoon, Ryan</h1>
+  <div class="lede">Four things open. Two carried from Saturday.</div>
+
+  <div class="focus">
+    <h2>Start here</h2>
+    <div class="f-line"><div class="b"></div><div>Verify and merge GA4 ecommerce tagging</div></div>
+    <div class="f-line"><div class="b"></div><div>Decide which account is the emergency fund for auto-sync</div></div>
+    <div class="f-line"><div class="b"></div><div>Mobile font size — header and body need to be larger</div></div>
+    <div class="why">Picked because each has been open longest and blocks something else. The other 908 are searchable, not browsable.</div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="t">Carried over</div><div class="v">2</div><div class="s">from Saturday</div></div>
+    <div class="card"><div class="t">Filed by K2</div><div class="v acc">MW-12363</div><div class="s">Ready for Release</div></div>
+  </div>
+</main></body></html>
