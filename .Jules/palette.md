@@ -5,3 +5,6 @@
 ## 2024-05-24 - Interactive DIVs missing keyboard handlers
 **Learning:** Adding `role="button"`, `tabindex="0"`, and `aria-label` to a `div` element makes it discoverable by screen readers and focusable via keyboard, but it does *not* automatically map the `Enter` or `Space` key to trigger the `onclick` handler. This creates a keyboard trap where elements can be focused but not activated.
 **Action:** When converting `div` elements to buttons (instead of using native `<button>` tags), ensure an `onkeydown` event listener is also added to map `Enter` and `Space` keys to the click action.
+## 2024-08-17 - Added aria-labels to orphaned inputs
+**Learning:** Found a pattern of orphaned search/capture input fields without labels in index.html (relying solely on placeholders). Placeholders are insufficient for screen readers as accessible names.
+**Action:** When adding new inputs, always include a corresponding `<label>` element or, if visually hidden, an `aria-label` attribute.
