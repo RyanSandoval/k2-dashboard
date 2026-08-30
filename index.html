@@ -3740,13 +3740,21 @@ function renderTabCounts() {
 }
 
 function renderNav() {
-  try { renderLauncher(); } catch (e) { console.warn('[K2] renderLauncher:', e); }
+  // Skip the launcher when the mobile drawer is closed — it injects ~140 nodes for
+  // 38 tiles that are never visible on desktop and aren't shown until the drawer opens.
+  // openMobileMore() calls renderNav() before showing the drawer, so counts are still
+  // fresh when the user actually opens it.
+  const drawerOpen = document.getElementById('mobile-more-drawer')?.classList.contains('open');
+  if (drawerOpen) {
+    try { renderLauncher(); } catch (e) { console.warn('[K2] renderLauncher:', e); }
+  }
   try { renderSidebarRest(); } catch (e) { console.warn('[K2] renderSidebarRest:', e); }
   try { renderTabCounts(); } catch (e) { console.warn('[K2] renderTabCounts:', e); }
 }
 
 function openMobileMore() {
-  renderNav();
+  renderNav();       // sidebar counts
+  renderLauncher();  // build launcher tiles fresh on each open
   document.getElementById('mobile-more-overlay').classList.add('open');
   document.getElementById('mobile-more-drawer').classList.add('open');
 }
