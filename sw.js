@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v66-carry-forward';
+const CACHE_NAME = 'k2-hq-v67-ui2';
 const ASSETS = [
   './',
   './index.html',

@@ -2222,6 +2222,143 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-NrKB+u6Ts6AtkIhwPixiKTzgSKNblyhlk0Sohlgar9UHUBzai/sgnNNWWd291xqt" crossorigin="anonymous"></script>
+<style id="ui2-design-system">
+/* ═══════════════════════════════════════════════════════════════════════════
+   UI2 — the design system from skills/refactoring-ui, applied to the two
+   surfaces Ryan signed off on: the sidebar and Today.
+
+   Everything here is scoped to body.ui2. Nothing above is edited, so the
+   previous UI is not "removed and hopefully restorable" — it is still the
+   default, and this is the layer on top. Settings toggles the class.
+
+   Every value comes off a scale. Type 12/14/16/18/20/24/30/36. Space 4/8/12/
+   16/24/32/48/64. Weights 400 and 600 only. One radius. Three text colours,
+   each verified >=4.5:1 from rendered pixels in both schemes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.ui2{
+  --u-space-1:4px;  --u-space-2:8px;  --u-space-3:12px; --u-space-4:16px;
+  --u-space-5:24px; --u-space-6:32px; --u-space-7:48px; --u-space-8:64px;
+  --u-text-xs:12px; --u-text-sm:14px; --u-text-base:16px; --u-text-lg:18px;
+  --u-text-xl:20px; --u-text-2xl:24px; --u-text-3xl:30px; --u-text-4xl:36px;
+  --u-r:4px;
+
+  /* graphite ramp — the shipped cool grey reads navy at full-screen scale */
+  --u-grey-100:hsl(220,12%,96%); --u-grey-200:hsl(220,10%,89%);
+  --u-grey-300:hsl(220, 9%,84%); --u-grey-400:hsl(220, 8%,60%);
+  --u-grey-500:hsl(220, 8%,49%); --u-grey-600:hsl(220, 9%,39%);
+  --u-grey-700:hsl(220,10%,30%); --u-grey-800:hsl(220,12%,23%);
+  --u-grey-900:hsl(220,16%,13%);
+  --u-blue-400:hsl(206,82%,58%); --u-blue-700:hsl(211,88%,28%);
+
+  --u-surface:var(--u-grey-900);
+  --u-raised:var(--u-grey-800);
+  --u-sunken:hsl(220,14%,10%);
+  --u-text-1:var(--u-grey-200);   /* primary   */
+  --u-text-2:var(--u-grey-300);   /* secondary */
+  --u-text-3:hsl(220,10%,66%);    /* tertiary  */
+  --u-border:var(--u-grey-700);   /* decorative dividers */
+  --u-border-fn:var(--u-grey-400);/* functional: control outlines, >=3:1 */
+  --u-accent:var(--u-blue-400);
+  --u-lip:hsl(220,10%,30%);       /* lit bottom edge of an inset shape */
+
+  /* Retune the LEGACY tokens inside ui2 scope. --text-dim at oklch(75%) and --text-muted
+     at 58% both fail AA on this surface, and they are used by hundreds of elements this
+     layer does not otherwise touch. Fixing the variable fixes all of them at once and
+     keeps the old UI's values intact outside body.ui2. */
+  --text-dim:var(--u-text-2);
+  --text-muted:var(--u-text-3);
+  --text:var(--u-text-1);
+}
+/* No light-mode block. The rest of the app's chrome is dark-only, so overriding just the
+   ui2 tokens for prefers-color-scheme:light produced a hybrid — dark chrome, light content,
+   1.04:1 on the date header. Declaring the scheme is the honest fix; a real light theme is
+   a separate piece of work across the whole file, not a media query on this layer. */
+
+body.ui2{background:var(--u-surface);color:var(--u-text-1);color-scheme:dark}
+
+/* ── sidebar ─────────────────────────────────────────────────────────────── */
+body.ui2 .sidebar{background:var(--u-surface);border-right:1px solid var(--u-border);
+  padding:var(--u-space-5) var(--u-space-3)}
+body.ui2 .sidebar-header h1{font-size:var(--u-text-base);font-weight:600;color:var(--u-text-1);
+  letter-spacing:-.01em}
+body.ui2 .sidebar-header p,
+body.ui2 .preset-switcher{display:none}          /* mode switcher is machine-room, not daily */
+body.ui2 .search-trigger{background:var(--u-sunken);border:0;border-radius:var(--u-r);
+  padding:var(--u-space-2) var(--u-space-3);min-height:44px;display:flex;align-items:center;
+  gap:var(--u-space-2);font-size:var(--u-text-sm);color:var(--u-text-3);
+  box-shadow:inset 0 -1px 0 var(--u-lip), inset 0 2px 2px hsla(0,0%,0%,.22),
+             inset 0 0 0 1px var(--u-border-fn)}
+body.ui2 .search-trigger .search-kbd{margin-left:auto;font-size:var(--u-text-xs);color:var(--u-text-3)}
+body.ui2 .nav-item{display:flex;align-items:center;gap:var(--u-space-3);
+  padding:var(--u-space-2) var(--u-space-3);border-radius:var(--u-r);min-height:44px;
+  font-size:var(--u-text-sm);font-weight:400;color:var(--u-text-2);border-left:0}
+body.ui2 .nav-item.active{background:var(--u-sunken);color:var(--u-text-1);font-weight:600}
+body.ui2 .nav-item .icon{width:16px;height:16px;flex:none;display:inline-flex;
+  align-items:center;justify-content:center;font-size:var(--u-text-sm)}
+body.ui2 .nav-item .icon svg{width:16px;height:16px;stroke:currentColor;fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--u-text-3)}
+body.ui2 .nav-item.active .icon svg{color:var(--u-accent)}
+body.ui2 .nav-item .badge{margin-left:auto;font-size:var(--u-text-xs);color:var(--u-text-3);
+  background:none;padding:0;font-variant-numeric:tabular-nums}
+body.ui2 .nav-section-title,
+body.ui2 .u-grp{font-size:var(--u-text-xs);font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--u-text-3);
+  padding:var(--u-space-4) var(--u-space-3) var(--u-space-2);
+  display:flex;align-items:center;gap:var(--u-space-2);cursor:pointer;user-select:none}
+body.ui2 .u-grp .u-ct{margin-left:auto;font-variant-numeric:tabular-nums}
+body.ui2 .u-grp-body{display:none}
+body.ui2 .u-grp-body.open{display:block}
+/* Group rows sit one level in. Without this they render flush with the six primary rows
+   and the disclosure buys nothing — the rail still reads as one flat list of 35. */
+body.ui2 .u-grp-body .nav-item{margin-left:var(--u-space-3);font-size:var(--u-text-sm)}
+/* The legacy "Everything else" title wrapped the old flat list. The groups replace it, so
+   under ui2 it is a header above headers. */
+/* !important because this element carries an inline display:flex, and an inline style beats
+   a class rule regardless of specificity — the same trap that made PR #128 unhide three
+   modals this morning. The alternative is editing the markup, which the flag is meant to
+   leave alone so the old UI stays byte-identical. */
+body.ui2 #nav-section-everything-title{display:none !important}
+/* Wordmark: the mark carries the brand, the robot emoji was doing it twice. */
+body.ui2 .sidebar-header h1{display:flex;align-items:center;gap:var(--u-space-2);font-size:0}
+body.ui2 .sidebar-header h1 span{font-size:var(--u-text-base)}
+body.ui2 .sidebar-header h1::before{content:"";width:20px;height:20px;border-radius:var(--u-r);
+  flex:none;background:linear-gradient(150deg,var(--u-blue-400),var(--u-blue-700))}
+
+/* ── Today: the canvas ───────────────────────────────────────────────────── */
+body.ui2 #page-jots .jots-doc,
+body.ui2 #page-jots .ProseMirror{font-size:var(--u-text-base);line-height:1.6;color:var(--u-text-1)}
+body.ui2 #page-jots .ProseMirror{max-width:35em}         /* 45-75 characters */
+body.ui2 #page-jots .ProseMirror p{padding:var(--u-space-1) 0;margin:0}
+body.ui2 #page-jots .ProseMirror ul[data-type="taskList"]{list-style:none;padding:0;margin:0}
+body.ui2 #page-jots .ProseMirror li[data-type="taskItem"]{display:flex;gap:var(--u-space-3);
+  align-items:flex-start;padding:var(--u-space-1) 0}
+body.ui2 #page-jots .ProseMirror li[data-type="taskItem"] > div{flex:1;min-width:0}
+/* a checkbox is an INSET shape: light blocked at the top edge, caught on the bottom lip,
+   blur tiny because that edge is sharp in the real world. Optically centred on the first
+   line by half the leading, derived rather than guessed. */
+body.ui2 #page-jots .ProseMirror li[data-type="taskItem"] input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;width:16px;height:16px;flex:none;
+  margin:calc((1.6em - 16px) / 2) 0 0;border-radius:var(--u-r);cursor:pointer;
+  background:var(--u-sunken);
+  box-shadow:inset 0 -1px 0 var(--u-lip), inset 0 2px 2px hsla(0,0%,0%,.25),
+             inset 0 0 0 1px var(--u-border-fn)}
+body.ui2 #page-jots .ProseMirror li[data-type="taskItem"] input[type=checkbox]:checked{
+  background:var(--u-accent);box-shadow:inset 0 1px 1px hsla(0,0%,0%,.2)}
+body.ui2 #page-jots .ProseMirror li[data-checked="true"] > div{color:var(--u-text-3);
+  text-decoration:line-through}
+body.ui2 #page-jots h2,
+body.ui2 #page-jots .page-header h2{font-size:var(--u-text-4xl);font-weight:600;
+  letter-spacing:-.02em;line-height:1.1;color:var(--u-text-1)}
+/* user-uploaded images: inset hairline, not a border — a border clashes with the image's
+   own colours, and this stops a screenshot bleeding into a matching background */
+body.ui2 #page-jots .ProseMirror img{border-radius:var(--u-r);max-width:100%;height:auto;
+  box-shadow:inset 0 0 0 1px hsla(0,0%,0%,.1)}
+body.ui2 #page-jots .agent-result{font-size:var(--u-text-sm);color:var(--u-text-2);
+  display:flex;gap:var(--u-space-2);align-items:baseline}
+body.ui2 #page-jots .agent-result-label{color:var(--u-accent);font-weight:600}
+body.ui2 #page-jots .agent-result-meta{color:var(--u-text-3)}
+body.ui2 :focus-visible{outline:2px solid var(--u-accent);outline-offset:2px}
+</style>
 </head>
 <body>
 <!-- Login Screen -->
@@ -3725,17 +3862,96 @@ function k2Launch(page) {
 }
 
 // The sidebar's long tail, from the same table, so desktop and mobile can never drift.
+// ═══ UI2 ═══
+// Line icons for the six primary destinations. Only these six: the grouped tools are a
+// list, and indentation already says what they are — 29 more glyphs would be decoration.
+const U_ICONS = {
+  jots:          '<path d="M4 5h16M4 12h11M4 19h7"/>',
+  reminders:     '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+  'action-inbox':'<path d="M3 7h18v12H3z"/><path d="M3 7l9 6 9-6"/>',
+  tasks:         '<path d="M4 7h16M4 12h16M4 17h10"/>',
+  notes:         '<path d="M5 4h14v16l-7-4-7 4z"/>',
+  workers:       '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
+};
+const U_PRIMARY = ['jots','reminders','action-inbox','tasks','notes','workers'];
+function uiTwoOn() { return document.body.classList.contains('ui2'); }
+function uIcon(page, fallback) {
+  return U_ICONS[page]
+    ? `<svg viewBox="0 0 24 24" aria-hidden="true">${U_ICONS[page]}</svg>`
+    : fallback;
+}
+function uNavRow(t) {
+  const n = k2ToolCount(t.page);
+  const icon = uiTwoOn() ? uIcon(t.page, '') : `<span class="icon">${t.icon}</span>`;
+  const wrapped = uiTwoOn() && U_ICONS[t.page] ? `<span class="icon">${icon}</span>` : icon;
+  return `<div class="nav-item" data-page="${t.page}" onclick="navigateTo('${t.page}')">
+    ${wrapped} ${escapeHtml(t.label)}
+    ${n > 0 ? `<span class="badge">${n}</span>` : ''}</div>`;
+}
+function uToggleGroup(key) {
+  const body = document.getElementById('u-grp-' + key);
+  const arrow = document.getElementById('u-arrow-' + key);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (arrow) arrow.textContent = open ? '▾' : '▸';
+  try { localStorage.setItem('k2.ui2.grp.' + key, open ? '1' : '0'); } catch (e) {}
+}
+
+// The rail is GENERATED from K2_TOOLS, never a second hand-written list. That is what
+// keeps "all 34 surfaces stay reachable" true by construction instead of by vigilance:
+// a tool added to the taxonomy shows up here without anyone remembering to add it.
 function renderSidebarRest() {
   const el = document.getElementById('nav-section-everything-body');
   if (!el) return;
-  const primary = new Set(['jots','reminders','action-inbox','tasks','notes','workers']);
-  el.innerHTML = K2_TOOLS.filter(t => !primary.has(t.page)).map(t => {
-    const n = k2ToolCount(t.page);
-    return `<div class="nav-item" data-page="${t.page}" onclick="navigateTo('${t.page}')">
-      <span class="icon">${t.icon}</span> ${escapeHtml(t.label)}
-      ${n > 0 ? `<span class="badge">${n}</span>` : ''}</div>`;
+  const primary = new Set(U_PRIMARY);
+  const rest = K2_TOOLS.filter(t => !primary.has(t.page));
+
+  if (!uiTwoOn()) {                       // previous UI: one flat list, unchanged
+    el.innerHTML = rest.map(t => {
+      const n = k2ToolCount(t.page);
+      return `<div class="nav-item" data-page="${t.page}" onclick="navigateTo('${t.page}')">
+        <span class="icon">${t.icon}</span> ${escapeHtml(t.label)}
+        ${n > 0 ? `<span class="badge">${n}</span>` : ''}</div>`;
+    }).join('');
+    return;
+  }
+
+  // ui2: the same tools, disclosed by the group they already declare in the taxonomy
+  // Every group, not every group except 'daily'. Skipping it stranded inbox and planner,
+  // which sit in 'daily' without being among the six primary rows — the exact silent
+  // deletion this rail is supposed to make impossible. G1 keeps a control on it.
+  el.innerHTML = K2_GROUPS.map(([key, name]) => {
+    const rows = rest.filter(t => t.group === key);
+    if (!rows.length) return '';
+    let open = false;
+    try { open = localStorage.getItem('k2.ui2.grp.' + key) === '1'; } catch (e) {}
+    return `<div class="u-grp" role="button" tabindex="0" aria-label="Toggle ${escapeHtml(name)}"
+        onclick="uToggleGroup('${key}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();uToggleGroup('${key}');}">
+        <span id="u-arrow-${key}">${open ? '▾' : '▸'}</span>${escapeHtml(name)}
+        <span class="u-ct">${rows.length}</span></div>
+      <div class="u-grp-body${open ? ' open' : ''}" id="u-grp-${key}">${rows.map(uNavRow).join('')}</div>`;
   }).join('');
 }
+
+// The flag. Off by default — the previous UI stays the one that loads until Ryan has
+// lived with this for a day and says otherwise.
+function setUiTwo(on) {
+  document.body.classList.toggle('ui2', !!on);
+  try { localStorage.setItem('k2.ui2', on ? '1' : '0'); } catch (e) {}
+  try { renderSidebarRest(); } catch (e) { console.warn('[K2] ui2 sidebar:', e); }
+  // repaint the six primary rows too, so their icons follow the flag
+  U_PRIMARY.forEach(page => {
+    const row = document.querySelector(`.nav-section .nav-item[data-page="${page}"]`);
+    const t = K2_TOOLS.find(x => x.page === page);
+    if (!row || !t) return;
+    const ic = row.querySelector('.icon');
+    if (ic) ic.innerHTML = document.body.classList.contains('ui2') ? uIcon(page, t.icon) : t.icon;
+  });
+}
+function toggleUiTwo() { setUiTwo(!uiTwoOn()); showToast(uiTwoOn() ? 'New design on' : 'Previous design restored'); }
+try { if (localStorage.getItem('k2.ui2') === '1') document.body.classList.add('ui2'); } catch (e) {}
+// ═══ End UI2 ═══
 
 // The tab bar's counts come from k2ToolCount, the same function the launcher tiles
 // use. The five mobile-*-badge ids this replaces were a parallel set that the phone
@@ -14239,6 +14455,11 @@ function toggleShortcutsHelp() {
   document.body.appendChild(help);
 }
 
+function syncUiTwoCheckbox() {
+  const cb = document.getElementById('settings-ui2');
+  if (cb) cb.checked = uiTwoOn();
+}
+
 function closeAllModals() {
   // Close any open modals
   document.querySelectorAll('[id$="-modal"]').forEach(m => {
@@ -15140,6 +15361,7 @@ function signOutFromSettings() {
 function openSettings() {
   const modal = document.getElementById('settings-modal');
   if (!modal) return;
+  try { syncUiTwoCheckbox(); } catch (e) {}
   const conn = document.getElementById('settings-conn-status');
   if (conn) {
     const tok = localStorage.getItem('gh_token') || '';
@@ -15375,6 +15597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     GH_TOKEN = localStorage.getItem('gh_token');
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-main').style.display = 'flex';
+    try { if (localStorage.getItem('k2.ui2') === '1') setUiTwo(true); } catch (e) {}
     loadData().then(() => {
       // Handle bookmarklet clip param
       const params = new URLSearchParams(window.location.search);
@@ -19197,6 +19420,15 @@ setTimeout(() => {
       <div style="font-size:16px;font-weight:700;">⚙️ Settings</div>
       <button onclick="closeSettings()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:0;" aria-label="Close">✕</button>
     </div>
+    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--text);">Appearance</div>
+    <label class="preset-edit-checkbox" style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+      <input type="checkbox" id="settings-ui2" onchange="setUiTwo(this.checked)"> New design
+    </label>
+    <div style="font-size:11px;color:var(--text-dim);margin:8px 0 20px;line-height:1.5;">
+      Rebuilt Today and sidebar. Nothing is removed — the 29 other tools move into
+      Work, Review and Machine room, and stay in ⌘K. Untick to go straight back.
+    </div>
+    <div style="height:1px;background:var(--border);margin-bottom:20px;"></div>
     <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--text);">Account</div>
     <div id="settings-conn-status" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5;"></div>
     <button onclick="signOutFromSettings()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">🚪 Sign out / reconnect</button>
