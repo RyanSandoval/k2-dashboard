@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v64-pr-backlog';
+const CACHE_NAME = 'k2-hq-v65-a11y-names';
 const ASSETS = [
   './',
   './index.html',

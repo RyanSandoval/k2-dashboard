@@ -2374,7 +2374,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
       </div>
     </div>
     <div class="nav-section">
-      <div class="nav-section-title" onclick="toggleNavSection('everything')" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-everything-title">
+      <div class="nav-section-title" onclick="toggleNavSection('everything')" role="button" tabindex="0" aria-label="Toggle Everything section" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavSection('everything');}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;" id="nav-section-everything-title">
         <span id="nav-section-everything-arrow">▸</span> Everything else
       </div>
       <div id="nav-section-everything-body" class="nav-everything"><!-- built by renderSidebarRest() --></div>
@@ -3504,7 +3504,7 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
           <input id="sl-rule-duesoon" type="number" min="0" max="365" placeholder="e.g. 0=today" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Stale tasks only</label>
+          <label class="ui-key is-col" for="sl-rule-stale">Stale tasks only</label>
           <input id="sl-rule-stale" type="checkbox" style="width:16px;height:16px;cursor:pointer;">
         </div>
       </div>
@@ -6902,7 +6902,7 @@ function renderTaskRetirement() {
         const key = _taskRetireKey(t);
         const checked = window._taskRetireSelection.has(key);
         return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border-subtle);">
-          <input type="checkbox" ${checked ? 'checked' : ''} onchange="taskRetireToggleSelect(${JSON.stringify(key).replace(/"/g, '&quot;')})"
+          <input type="checkbox" aria-label="Select this task to retire" ${checked ? 'checked' : ''} onchange="taskRetireToggleSelect(${JSON.stringify(key).replace(/"/g, '&quot;')})"
             style="margin-top:2px;width:15px;height:15px;cursor:pointer;flex-shrink:0;">
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;line-height:1.4;">${escapeHtml((t.text || t.title || 'Untitled').slice(0, 140))}</div>
@@ -8854,7 +8854,7 @@ function renderGrowth() {
       const priorityColor = item.priority === 'high' ? '#f87171' : item.priority === 'medium' ? '#fbbf24' : 'var(--text-dim)';
       const cadenceBadge = item.cadence ? `<span style="font-size:10px;background:var(--surface2);color:var(--text-dim);padding:2px 6px;border-radius:4px;margin-left:6px;">${item.cadence}</span>` : '';
       html += `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
-        <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleGrowthItem('${p.id}',${idx},this.checked)" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;">
+        <input type="checkbox" aria-label="Toggle growth item" ${item.done ? 'checked' : ''} onchange="toggleGrowthItem('${p.id}',${idx},this.checked)" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;">
         <div style="flex:1;">
           <span style="font-size:13px;color:${item.done ? 'var(--text-dim)' : 'var(--text)'};${item.done ? 'text-decoration:line-through;' : ''}">${item.text}</span>
           ${cadenceBadge}
@@ -9613,7 +9613,7 @@ function openProjectModal(projectId) {
 
     <div style="margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:10px 12px;border:1px solid var(--border);">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);">
-        <input type="checkbox" ${p.useSpecDriven ? 'checked' : ''} onchange="toggleProjectSpecDriven('${p.id}', this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent);">
+        <input type="checkbox" aria-label="Spec-driven development" ${p.useSpecDriven ? 'checked' : ''} onchange="toggleProjectSpecDriven('${p.id}', this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent);">
         <span style="font-weight:600;">📐 Use spec-driven-dev skill</span>
       </label>
       <div style="font-size:10px;color:var(--text-dim);margin-top:4px;margin-left:22px;line-height:1.4;">
@@ -12242,7 +12242,7 @@ function convertTextToHTML(text) {
     // Handle task items ([] or [x])
     if (line.match(/^\s*\[\s*\]\s+/) || line.match(/^\s*\[x\]\s+/i)) {
       const checked = line.match(/^\s*\[x\]\s+/i) ? 'true' : 'false';
-      const checkboxHtml = checked === 'true' ? '<input type="checkbox" checked>' : '<input type="checkbox">';
+      const checkboxHtml = checked === 'true' ? '<input type="checkbox" aria-label="Toggle task" checked>' : '<input type="checkbox" aria-label="Toggle task">';
       const taskText = line.replace(/^\s*\[[x\s]*\]\s+/i, '');
       result.push(`<ul data-type="taskList"><li data-type="taskItem" data-checked="${checked}"><label>${checkboxHtml}</label><div><p>${taskText}</p></div></li></ul>`);
       i++;
@@ -12645,7 +12645,7 @@ function migrateJotsToDailyDocs() {
       if (jot.done !== undefined && (text.match(/\[\s*\]/) || text.match(/\[x\]/i))) {
         // Task item
         const cleanText = text.replace(/\[\s*\]/g, '').replace(/\[x\]/gi, '').trim();
-        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" ${jot.done ? 'checked' : ''}></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
+        html += `<ul data-type="taskList"><li data-type="taskItem" data-checked="${jot.done ? 'true' : 'false'}"><label><input type="checkbox" aria-label="Toggle task" ${jot.done ? 'checked' : ''}></label><div><p>${timeSpan}${cleanText}${mentions}</p></div></li></ul>`;
       } else {
         html += `<p>${timeSpan}${text}${mentions}</p>`;
       }
@@ -15972,7 +15972,7 @@ function renderReviewPage() {
           escapeHtml(draft.reflections[step.textarea.key] || '') + '</textarea>'
         : '';
       return '<div class="review-step" data-step="' + step.i + '" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:8px;transition:opacity 0.2s;' + (checked ? 'opacity:0.55;' : '') + '">' +
-        '<input type="checkbox" ' + (checked ? 'checked' : '') + ' ' +
+        '<input type="checkbox" aria-label="Toggle task" ' + (checked ? 'checked' : '') + ' ' +
         'onchange="(function(cb,i){var d=window._reviewDraft=window._reviewDraft||{completedSteps:[],reflections:{wentWell:\'\',didntGo:\'\',priority:\'\'}};if(cb.checked){if(!d.completedSteps.includes(i))d.completedSteps.push(i);}else{d.completedSteps=d.completedSteps.filter(function(x){return x!==i;});}cb.closest(\'.review-step\').style.opacity=cb.checked?\'0.55\':\'1\';})(this,' + step.i + ')" ' +
         'style="margin-top:2px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;">' +
         '<div style="flex:1;">' +
