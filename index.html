@@ -18098,17 +18098,7 @@ setTimeout(() => {
     state.resultsEl = backdrop.querySelector('.k2pal-results');
 
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
-
-    let searchTimeout;
-    state.input.addEventListener('input', () => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        state.query = state.input.value;
-        state.active = 0;
-        refresh();
-      }, 150);
-    });
-
+    state.input.addEventListener('input', () => { state.query = state.input.value; state.active = 0; refresh(); });
     state.input.addEventListener('keydown', onKeyDown);
     const closeBtn = backdrop.querySelector('.k2pal-close-btn');
     if (closeBtn) closeBtn.addEventListener('click', close);
