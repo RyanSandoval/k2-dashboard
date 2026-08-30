@@ -2357,7 +2357,43 @@ body.ui2 #page-jots .agent-result{font-size:var(--u-text-sm);color:var(--u-text-
   display:flex;gap:var(--u-space-2);align-items:baseline}
 body.ui2 #page-jots .agent-result-label{color:var(--u-accent);font-weight:600}
 body.ui2 #page-jots .agent-result-meta{color:var(--u-text-3)}
-body.ui2 :focus-visible{outline:2px solid var(--u-accent);outline-offset:2px}
+/* Focus rings belong on controls, not on a text editor — the caret is already the
+   affordance, and ringing the whole ProseMirror draws a box round the canvas. That box is
+   what Ryan saw on mobile. */
+body.ui2 :focus-visible:not(.ProseMirror){outline:2px solid var(--u-accent);outline-offset:2px}
+body.ui2 .ProseMirror:focus-visible,body.ui2 .ProseMirror:focus{outline:none}
+
+/* The legacy placeholder is float:left with height:0, so nothing contains it once it wraps
+   — on a narrow screen it renders outside the editor entirely. Take it out of flow and let
+   the editor's own min-height hold it. */
+body.ui2 .daily-doc-editor{position:relative}
+body.ui2 .ProseMirror p.is-editor-empty:first-child::before{
+  float:none;position:absolute;left:0;right:0;height:auto;font-style:normal;
+  color:var(--u-text-3)}
+
+/* ── mobile: the sidebar does not exist here, so none of the above was visible on a phone.
+      This is the chrome a phone actually shows. ─────────────────────────────────────── */
+@media (max-width:768px){
+  body.ui2 .mobile-nav{background:var(--u-surface);border-top:1px solid var(--u-border)}
+  body.ui2 .mobile-nav-item{color:var(--u-text-3);font-size:var(--u-text-xs);font-weight:400;
+    gap:var(--u-space-1);min-height:44px}
+  body.ui2 .mobile-nav-item.active{color:var(--u-accent);font-weight:600;background:none}
+  body.ui2 .mobile-nav-item .icon{font-size:var(--u-text-base);line-height:1}
+  body.ui2 .mobile-nav-item .icon svg{width:20px;height:20px;stroke:currentColor;fill:none;
+    stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+  body.ui2 .mobile-nav-item .tab-count{background:var(--u-accent);color:var(--u-grey-900);
+    font-weight:600;font-size:var(--u-text-xs)}
+  /* the canvas gets the screen: full measure, real leading, room to write */
+  body.ui2 #page-jots .ProseMirror{max-width:none;font-size:var(--u-text-base);line-height:1.6}
+  /* Pasted URLs and Outlook ItemIDs are single unbroken tokens; without this one carried
+     line runs off the side of the phone and takes the layout with it. anywhere rather than
+     break-word so it breaks mid-token only when the token alone cannot fit. */
+  body.ui2 #page-jots .ProseMirror{overflow-wrap:anywhere}
+  body.ui2 #page-jots .ProseMirror a{overflow-wrap:anywhere}
+  body.ui2 .daily-doc-editor{padding:var(--u-space-4) 0;min-height:40vh}
+  body.ui2 #page-jots{padding-left:var(--u-space-4);padding-right:var(--u-space-4)}
+  body.ui2 #page-jots h2,body.ui2 #page-jots .page-header h2{font-size:var(--u-text-2xl)}
+}
 </style>
 </head>
 <body>
@@ -3874,6 +3910,27 @@ const U_ICONS = {
   workers:       '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
 };
 const U_PRIMARY = ['jots','reminders','action-inbox','tasks','notes','workers'];
+// The phone never renders .sidebar, so the tab bar is the only chrome it shows. These two
+// have no data-page (they open a popover and a drawer), so they are keyed by label.
+const U_TAB_ICONS = {
+  Capture: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  More:    '<path d="M4 7h16M4 12h16M4 17h16"/>',
+};
+function uPaintTabBar() {
+  document.querySelectorAll('.mobile-nav .mobile-nav-item').forEach(item => {
+    const ic = item.querySelector('.icon');
+    if (!ic) return;
+    if (ic.dataset.emoji === undefined) ic.dataset.emoji = ic.textContent;   // keep the original
+    if (!uiTwoOn()) { ic.textContent = ic.dataset.emoji; return; }
+    const page = item.dataset.page;
+    // text nodes only — item.textContent includes the emoji inside .icon, so "Capture"
+    // arrives as "⚡Capture" and never matches
+    const label = [...item.childNodes].filter(n => n.nodeType === 3)
+      .map(n => n.textContent).join('').replace(/\d+$/, '').trim();
+    const path = (page && U_ICONS[page]) || U_TAB_ICONS[label];
+    ic.innerHTML = path ? `<svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg>` : ic.dataset.emoji;
+  });
+}
 function uiTwoOn() { return document.body.classList.contains('ui2'); }
 function uIcon(page, fallback) {
   return U_ICONS[page]
@@ -3940,6 +3997,7 @@ function setUiTwo(on) {
   document.body.classList.toggle('ui2', !!on);
   try { localStorage.setItem('k2.ui2', on ? '1' : '0'); } catch (e) {}
   try { renderSidebarRest(); } catch (e) { console.warn('[K2] ui2 sidebar:', e); }
+  try { uPaintTabBar(); } catch (e) { console.warn('[K2] ui2 tab bar:', e); }
   // repaint the six primary rows too, so their icons follow the flag
   U_PRIMARY.forEach(page => {
     const row = document.querySelector(`.nav-section .nav-item[data-page="${page}"]`);
