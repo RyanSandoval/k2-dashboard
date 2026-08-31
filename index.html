@@ -20558,11 +20558,12 @@ setTimeout(() => {
   function toggle() { state.open ? close() : open(); }
 
   // ── Scoring ──
+  // ⚡ Bolt: Expects pre-lowercased strings to avoid allocations on every keystroke
   // Simple fuzzy: substring (case-insensitive). Score by where the match starts.
-  function score(haystack, needle) {
-    if (!needle) return 1;
-    const h = haystack.toLowerCase();
-    const n = needle.toLowerCase();
+  function score(haystackLower, needleLower) {
+    if (!needleLower) return 1;
+    const h = haystackLower;
+    const n = needleLower;
     const idx = h.indexOf(n);
     if (idx === -1) {
       // fallback: all-chars-in-order subsequence
@@ -20583,11 +20584,11 @@ setTimeout(() => {
     const items = [];
     // Pages
     for (const [id, icon, label] of PAGES) {
-      items.push({ kind: 'Page', icon, label, run: () => window.navigateTo(id) });
+      items.push({ kind: 'Page', icon, label, labelLower: label.toLowerCase(), run: () => window.navigateTo(id) });
     }
     // Actions
     for (const a of ACTIONS) {
-      items.push({ kind: 'Action', icon: a.icon, label: a.label, run: a.run });
+      items.push({ kind: 'Action', icon: a.icon, label: a.label, labelLower: a.label.toLowerCase(), run: a.run });
     }
     // Notes (by title)
     const notes = (window.DATA && DATA.notes) || [];
@@ -20596,7 +20597,7 @@ setTimeout(() => {
       const fallback = (n.text || '').replace(/<[^>]*>/g, '').trim().slice(0, 60);
       const label = t || fallback || 'Untitled note';
       items.push({
-        kind: 'Note', icon: '📝', label,
+        kind: 'Note', icon: '📝', label, labelLower: label.toLowerCase(),
         meta: n.created || '',
         run: () => { window.navigateTo('notes'); setTimeout(() => window.openNoteEditor && window.openNoteEditor(n.id), 80); }
       });
@@ -20607,20 +20608,21 @@ setTimeout(() => {
       if (t.done || t.status === 'done' || t.parentId) continue;
       const label = (t.title || t.text || '').trim();
       if (!label) continue;
-      items.push({ kind: 'Task', icon: '✅', label, run: () => window.navigateTo('tasks') });
+      items.push({ kind: 'Task', icon: '✅', label, labelLower: label.toLowerCase(), run: () => window.navigateTo('tasks') });
     }
     // Projects
     const projects = (window.DATA && DATA.projects) || [];
     for (const p of projects) {
       const label = (p.name || p.title || '').trim();
       if (!label) continue;
-      items.push({ kind: 'Project', icon: '🚀', label, run: () => window.navigateTo('projects') });
+      items.push({ kind: 'Project', icon: '🚀', label, labelLower: label.toLowerCase(), run: () => window.navigateTo('projects') });
     }
     return items;
   }
 
   function refresh() {
     const q = state.query.trim();
+    const qLower = q.toLowerCase();
     // Use cached index built during open()
     const index = state.cachedIndex || buildIndex();
     let scored;
@@ -20628,7 +20630,7 @@ setTimeout(() => {
       // Empty query: pages + actions only, in declared order
       scored = index.filter(it => it.kind === 'Page' || it.kind === 'Action').map((it, i) => ({ it, s: 1000 - i }));
     } else {
-      scored = index.map(it => ({ it, s: score(it.label, q) })).filter(x => x.s > 0);
+      scored = index.map(it => ({ it, s: score(it.labelLower, qLower) })).filter(x => x.s > 0);
       scored.sort((a, b) => b.s - a.s);
       scored = scored.slice(0, 50);
     }
