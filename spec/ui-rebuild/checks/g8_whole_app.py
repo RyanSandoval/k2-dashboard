@@ -95,10 +95,19 @@ def main():
         #    has today", with the absolute numbers reported rather than hidden.
         for tag, pg, bucket in (("on", on, on_bad), ("off", off, off_bad)):
             for page in PAGES:
+                # A fixed 450ms sleep was enough when this gate ran alone and not when it
+                # ran inside the ledger with nine other browsers competing for the machine:
+                # the style count moved run to run and one page came back empty. Wait for
+                # the page to actually be on screen with text in it instead of guessing.
                 try:
-                    pg.evaluate(f"() => navigateTo('{page}')"); pg.wait_for_timeout(450)
+                    pg.evaluate(f"() => navigateTo('{page}')")
+                    pg.wait_for_function(
+                        "sel => { const e = document.querySelector(sel);"
+                        " return !!e && e.offsetParent !== null"
+                        " && (e.innerText || '').trim().length > 20; }",
+                        arg=f"#page-{page}", timeout=15000)
                 except Exception:
-                    fails.append(f"{page}: navigateTo threw"); continue
+                    fails.append(f"{page}: never rendered after navigateTo"); continue
                 rows = pg.evaluate(CONTRAST, f"#page-{page}")
                 if rows is None:
                     fails.append(f"{page}: page element not found"); continue

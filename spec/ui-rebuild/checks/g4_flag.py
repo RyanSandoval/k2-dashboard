@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """G4 — the flag round-trips. This is Ryan's rollback, not a nicety: he agreed to try the
-new design, not to lose the old one. Off must restore the flat rail exactly."""
+new design, not to lose the old one. Off must restore the flat rail exactly.
+
+Rewritten when the default flipped to on. The old first check booted with the key set to
+'0' and called that "the default", which tested explicit-off and would have passed either
+way. A default is what a browser that has never seen the setting loads, so it is now
+checked with no key at all — the state Ryan's desktop was actually in."""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from _boot import open_app
@@ -9,10 +14,16 @@ from playwright.sync_api import sync_playwright
 def main():
     fails = []
     with sync_playwright() as pw:
-        # 1. default is OFF — the previous UI is what loads until Ryan says otherwise
+        # 1. a device that has never touched the setting gets the new design
+        b, pg = open_app(pw, ui2=None)
+        if not pg.evaluate("() => document.body.classList.contains('ui2')"):
+            fails.append("a browser with no stored preference did not get the new design")
+        b.close()
+
+        # 2. an explicit off still wins — that is the rollback
         b, pg = open_app(pw, ui2=False)
         if pg.evaluate("() => document.body.classList.contains('ui2')"):
-            fails.append("new design is on by default; it must be opt-in")
+            fails.append("an explicit off was ignored; the rollback is gone")
         flat = pg.evaluate("() => document.querySelectorAll('#nav-section-everything-body .nav-item').length")
         groups_off = pg.evaluate("() => document.querySelectorAll('.u-grp').length")
         if groups_off: fails.append(f"{groups_off} group headers rendered while the flag is off")
@@ -48,7 +59,8 @@ def main():
 
     if fails:
         print("G4 FAIL:\n  " + "\n  ".join(fails)); return 1
-    print(f"G4 PASS: opt-in by default; flag on groups the same {flat} tools under 4 headers "
+    print(f"G4 PASS: on by default with no stored preference, explicit off still wins; "
+          f"flag on groups the same {flat} tools under 4 headers "
           f"with no change in count; off restores the flat rail live and persists; on again re-groups")
     return 0
 

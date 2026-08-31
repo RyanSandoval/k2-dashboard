@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v71-no-overlap';
+const CACHE_NAME = 'k2-hq-v72-default-on';
 const ASSETS = [
   './',
   './index.html',

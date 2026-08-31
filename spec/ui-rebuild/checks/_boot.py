@@ -17,8 +17,10 @@ def open_app(pw, ui2=True, scheme="dark", width=1440):
         status=200, content_type="application/json",
         body=json.dumps({"sha": "stub",
                          "content": b64(SNAP if "cron-snapshot" in r.request.url else DATA)})))
-    pg.add_init_script("localStorage.setItem('k2auth','true');localStorage.setItem('gh_token','stub');"
-                       + ("localStorage.setItem('k2.ui2','1');" if ui2 else "localStorage.setItem('k2.ui2','0');"))
+    # ui2=None leaves the key unset, which is the only way to test what a device that has
+    # never touched the setting actually loads — the state every new browser starts in.
+    pref = "" if ui2 is None else f"localStorage.setItem('k2.ui2','{'1' if ui2 else '0'}');"
+    pg.add_init_script("localStorage.setItem('k2auth','true');localStorage.setItem('gh_token','stub');" + pref)
     pg.goto("file:///Users/ryansandoval/k2-dashboard/index.html")
     pg.wait_for_function("window._dataLoaded === true", timeout=30000)
     pg.wait_for_timeout(900)
