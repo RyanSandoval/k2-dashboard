@@ -3697,35 +3697,35 @@ body.ui2 .ProseMirror p.is-editor-empty:first-child::before{
       <h3 style="font-size:16px;font-weight:700;margin-bottom:20px;">✨ New Smart List</h3>
       <div style="display:flex;gap:10px;margin-bottom:14px;">
         <div style="flex:0 0 auto;">
-          <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Icon</label>
+          <label for="sl-icon-input" style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Icon</label>
           <input id="sl-icon-input" type="text" value="📋" maxlength="2" style="width:52px;text-align:center;font-size:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;">
         </div>
         <div style="flex:1;">
-          <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Name</label>
+          <label for="sl-name-input" style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Name</label>
           <input id="sl-name-input" type="text" placeholder="My Smart List" style="width:100%;box-sizing:border-box;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
         </div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Filter Rules</div>
       <div style="display:grid;gap:10px;">
         <div class="ui-row">
-          <label class="ui-key is-col">Min Priority Score</label>
+          <label for="sl-rule-minscore" class="ui-key is-col">Min Priority Score</label>
           <input id="sl-rule-minscore" type="number" min="1" max="25" placeholder="e.g. 9" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Context</label>
+          <label for="sl-rule-context" class="ui-key is-col">Context</label>
           <select id="sl-rule-context" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
             <option value="">Any</option>
           </select>
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Project</label>
+          <label for="sl-rule-project" class="ui-key is-col">Project</label>
           <select id="sl-rule-project" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
             <option value="__any__">Any</option>
             <option value="">No project</option>
           </select>
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Due within (days)</label>
+          <label for="sl-rule-duesoon" class="ui-key is-col">Due within (days)</label>
           <input id="sl-rule-duesoon" type="number" min="0" max="365" placeholder="e.g. 0=today" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
         <div class="ui-row">
@@ -11631,17 +11631,17 @@ function openAddClipModal(prefillUrl) {
     overlay.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:92vw;box-shadow:0 20px 60px oklch(0% 0 0 / 0.5);">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">🔗 Add Clip</div>
-        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">URL *</label>
+        <label for="clip-url-input" style="font-size:12px;color:var(--text-dim);font-weight:600;">URL *</label>
         <input id="clip-url-input" type="url" placeholder="https://..."
           style="width:100%;padding:10px 12px;margin:4px 0 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;font-family:inherit;"
           oninput="debouncedClipUrlChanged(this.value)">
-        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">Title</label>
+        <label for="clip-title-input" style="font-size:12px;color:var(--text-dim);font-weight:600;">Title</label>
         <input id="clip-title-input" type="text" placeholder="Auto-fetched or enter manually"
           style="width:100%;padding:10px 12px;margin:4px 0 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;font-family:inherit;">
-        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+        <label for="clip-desc-input" style="font-size:12px;color:var(--text-dim);font-weight:600;">Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
         <textarea id="clip-desc-input" rows="2" placeholder="Brief description..."
           style="width:100%;padding:10px 12px;margin:4px 0 12px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;resize:vertical;"></textarea>
-        <label style="font-size:12px;color:var(--text-dim);font-weight:600;">Tags <span style="font-weight:400;color:var(--text-muted)">(comma-separated)</span></label>
+        <label for="clip-tags-input" style="font-size:12px;color:var(--text-dim);font-weight:600;">Tags <span style="font-weight:400;color:var(--text-muted)">(comma-separated)</span></label>
         <input id="clip-tags-input" type="text" placeholder="e.g. design, reference"
           style="width:100%;padding:10px 12px;margin:4px 0 14px;background:var(--surface2);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;">
         <div id="clip-existing-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;"></div>
@@ -12826,13 +12826,13 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
         <h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text);">🎫 Send to Jira</h3>
         <button id="jira-modal-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;" aria-label="Close">×</button>
       </div>
-      <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Title</label>
+      <label for="jira-modal-title" style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Title</label>
       <input id="jira-modal-title" type="text" value="${defaultTitle.replace(/"/g,'&quot;').slice(0,200)}" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;margin-bottom:12px;outline:none;">
-      <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Description</label>
+      <label for="jira-modal-desc" style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Description</label>
       <textarea id="jira-modal-desc" rows="8" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;resize:vertical;">${escapeHtml(plain)}</textarea>
       <div style="display:flex;gap:12px;margin-bottom:16px;">
         <div style="flex:1;">
-          <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Project</label>
+          <label for="jira-modal-project" style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Project</label>
           <select id="jira-modal-project" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;">
             <option value="MW">MW (default)</option>
             <option value="CMS">CMS</option>
@@ -12840,7 +12840,7 @@ window.openJiraTicketModal = function openJiraTicketModal(noteId) {
           </select>
         </div>
         <div style="flex:1;">
-          <label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Labels (comma-separated)</label>
+          <label for="jira-modal-labels" style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:4px;">Labels (comma-separated)</label>
           <input id="jira-modal-labels" type="text" value="async" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;outline:none;">
         </div>
       </div>
