@@ -2467,6 +2467,9 @@ body.ui2 .ProseMirror p.is-editor-empty:first-child::before{
 
   /* header: date and count on one line, not stacked into 51px */
   body.ui2 #page-jots .home-head{margin-bottom:var(--u-space-2)}
+  /* .home-due ships margin:16px 0 0 — space above, none below — so the due line butted
+     straight into the search field with no seam between them. */
+  body.ui2 #page-jots .home-due{margin:var(--u-space-3) 0 var(--u-space-3)}
   body.ui2 #page-jots .home-date{font-size:var(--u-text-xl);font-weight:600;letter-spacing:-.02em}
   body.ui2 #page-jots .home-sub{font-size:var(--u-text-xs);color:var(--u-text-3);margin-top:0}
   /* min-height, not just padding: compacting this to 37px put it under the 44px touch
@@ -2499,6 +2502,15 @@ body.ui2 .ProseMirror p.is-editor-empty:first-child::before{
      the screen for an action taken a few times a day. Float it into the corner of the
      canvas instead — same affordance, no band. */
   body.ui2 #page-jots .note-attach-bar{position:absolute;top:0;right:0;margin:0;z-index:2}
+  /* Floating it into the corner put it ON TOP of the first line — which, on an empty note,
+     is the placeholder telling Ryan what to do. A float in print does not cover the text,
+     it displaces it: reserve the corner on the first block only, so line one wraps around
+     the button and every line after it keeps the full measure. */
+  body.ui2 #page-jots .ProseMirror > *:first-child{padding-right:96px}
+  /* ui2 takes the placeholder out of flow (left:0;right:0) so it survives wrapping on a
+     narrow screen — which also means it does not see that padding, and the "Type / for
+     commands" line ran straight under the button. It needs the same corner reserved. */
+  body.ui2 #page-jots .ProseMirror p.is-editor-empty:first-child::before{right:96px}
   body.ui2 #page-jots .note-attach-btn{min-height:44px;min-width:44px;font-size:var(--u-text-xs);
     color:var(--u-text-3);display:inline-flex;align-items:center;justify-content:center;
     border-radius:var(--u-r)}
@@ -2511,6 +2523,13 @@ body.ui2 .ProseMirror p.is-editor-empty:first-child::before{
   body.ui2 .k2pal-mobile-fab{
     bottom:calc(var(--u-space-8) + var(--u-space-6) + env(safe-area-inset-bottom, 0));
     box-shadow:0 3px 6px hsla(0,0%,0%,.15), 0 1px 2px hsla(0,0%,0%,.24)}
+  /* ...and on Today it parked on top of a "-> note" button, which is a 44px target Ryan
+     then cannot tap. Moving it does not help: on a page that scrolls, a fixed button in a
+     corner will land on something eventually. Today is the one page that already has a
+     search field on screen, so the floating one is a duplicate control covering content.
+     Hidden here only — the other 33 pages have no search box and keep it, and the palette
+     is still in More on every page. */
+  body.ui2:has(#page-jots.active) .k2pal-mobile-fab{display:none}
 }
 </style>
 </head>

@@ -85,7 +85,7 @@ def main():
         print("G7 FAIL:\n  " + "\n  ".join(fails)); return 1
     print(f'G7 PASS: canvas {off["canvas"]["h"]} -> {a["canvas"]["h"]}px and starts {a["canvas"]["top"]}px in; '
           f'suggestions {off["start"]["h"]} -> {a["start"]["h"]}px ({len(a["picks"])} rows, tallest {max(a["picks"])}px); '
-          f'search button clears the tab bar by {a["navTop"]-a["fabBottom"]}px; '
+          f'{"search button clears the tab bar by %dpx" % (a["navTop"]-a["fabBottom"]) if a["fabVisible"] else "search button not shown on Today (G10: it covered a -> note button)"}; '
           f'smallest touch target {a["minTap"]}px; no sideways scroll')
     return 0
 
