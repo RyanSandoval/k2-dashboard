@@ -30,10 +30,17 @@ PROBE = r"""
 () => {
   const tabs=[...document.querySelectorAll('.mobile-nav .mobile-nav-item')];
   const ed=document.querySelector('#page-jots .ProseMirror');
-  const ph=document.querySelector('#page-jots .ProseMirror p.is-editor-empty:first-child');
+  // Deterministic rather than fixture-dependent: the End of Day block is appended in the
+  // evening, so an "empty note" fixture stops being empty after a certain hour and the
+  // placeholder never renders. Probe the rule with an element we control instead.
+  const ed0=document.querySelector('#page-jots .ProseMirror');
+  let probe=null;
+  if(ed0){probe=document.createElement('p');probe.className='is-editor-empty';
+    probe.setAttribute('data-placeholder','probe');ed0.insertBefore(probe,ed0.firstChild);}
+  const ph=probe;
   const edBox=ed?ed.getBoundingClientRect():null;
   const host=document.querySelector('.daily-doc-editor');
-  return {
+  const __r = {
     ui2: document.body.classList.contains('ui2'),
     tabs: tabs.length,
     svgTabs: tabs.filter(t=>t.querySelector('.icon svg')).length,
@@ -47,6 +54,8 @@ PROBE = r"""
     phPos: ph?getComputedStyle(ph,'::before').position:null,
     edOutlineStyle: ed?getComputedStyle(ed).outlineStyle:null,
   };
+  if(probe) probe.remove();
+  return __r;
 }
 """
 

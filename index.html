@@ -2258,7 +2258,11 @@ body.ui2{
   --u-text-3:hsl(220,10%,66%);    /* tertiary  */
   --u-border:var(--u-grey-700);   /* decorative dividers */
   --u-border-fn:var(--u-grey-400);/* functional: control outlines, >=3:1 */
-  --u-accent:var(--u-blue-400);
+  /* Not blue-400. That is hsl(206,82%,58%) = rgb(60,160,236), which lands at 4.15:1 as
+     text on --surface2/--surface3 — the single cause of most of this layer's contrast
+     regressions, since accent text on a card is everywhere. Lifted until it cleared AA on
+     the lightest surface it is used on. The mark gradient still uses blue-400. */
+  --u-accent:oklch(78% 0.12 245);
   --u-lip:hsl(220,10%,30%);       /* lit bottom edge of an inset shape */
 
   /* Retune the LEGACY tokens inside ui2 scope. --text-dim at oklch(75%) and --text-muted
@@ -2275,6 +2279,68 @@ body.ui2{
    a separate piece of work across the whole file, not a media query on this layer. */
 
 body.ui2{background:var(--u-surface);color:var(--u-text-1);color-scheme:dark}
+
+/* ── The rest of the app ──────────────────────────────────────────────────────
+   Today and the sidebar were styled directly; the other 33 pages were untouched,
+   so they still looked like the old app. Restyling 33 pages one at a time is the
+   wrong shape of work — they already share a token set and a component
+   vocabulary (.card appears 71 times, .page-header 32). Retuning those inside
+   ui2 scope repaints every page at once, and leaves the old UI exactly as it was
+   outside body.ui2.
+   ─────────────────────────────────────────────────────────────────────────── */
+body.ui2{
+  /* type: the legacy scale is clamp()-based, so every size is a fluid fractional
+     value — a scale that does not survive contact with a browser. Fixed steps. */
+  --text-xs:var(--u-text-xs); --text-sm:var(--u-text-sm); --text-base:var(--u-text-base);
+  --text-lg:var(--u-text-lg); --text-xl:var(--u-text-xl); --text-2xl:var(--u-text-2xl);
+  --text-3xl:var(--u-text-3xl);
+
+  /* spacing: 20 and 40 are the two steps that were not on the scale */
+  --sp-5:var(--u-space-5); --sp-10:var(--u-space-7);
+
+  /* one radius, everywhere — mixing 6/10/14 across one interface always looks worse */
+  --radius-sm:var(--u-r); --radius-md:var(--u-r); --radius-lg:var(--u-r);
+
+  /* surfaces, graphite. Lighter = closer: bg sits back, cards come forward. */
+  --bg:var(--u-surface);
+  --surface:hsl(220,14%,17%);
+  --surface2:var(--u-grey-800);
+  /* 27% put accent text at 4.15:1 — just under AA. Measured down until it cleared. */
+  --surface3:hsl(220,12%,22%);
+  --border:var(--u-grey-700);
+  --border-subtle:hsl(220,12%,20%);
+  --accent:var(--u-accent);
+  --accent-dim:hsl(206,60%,46%);
+  --accent-surface:hsl(212,40%,20%);
+  --accent2:var(--u-accent);
+  --editor-bg:var(--u-surface); --editor-text:var(--u-text-1); --editor-caret:var(--u-accent);
+
+  /* Semantic colours are used as text ON a tint of themselves (a red pill with red text).
+     At the legacy lightness that lands at 3.2-3.8:1. Lifting lightness fixes every one of
+     those pills at once without touching a single call site. */
+  /* 9-10px pills need the full 4.5:1, and these sit on a tint of themselves. Measured up
+     until each cleared rather than picked by eye. */
+  --red:oklch(86% 0.10 25);      --red-dim:oklch(26% 0.05 25);
+  --orange:oklch(89% 0.10 55);
+  --yellow:oklch(88% 0.12 90);
+  --green:oklch(84% 0.13 155);   --green-dim:oklch(26% 0.05 155);
+}
+
+/* the shared vocabulary */
+body.ui2 .card{background:var(--u-raised);border:1px solid var(--u-border);
+  border-radius:var(--u-r);box-shadow:none}
+body.ui2 .page-header{margin-bottom:var(--u-space-6)}
+body.ui2 .page-header h2{font-size:var(--u-text-3xl);font-weight:600;letter-spacing:-.02em;
+  line-height:1.1;color:var(--u-text-1)}
+body.ui2 .page-header p{font-size:var(--u-text-sm);color:var(--u-text-3);margin-top:var(--u-space-1)}
+body.ui2 .tag{border-radius:var(--u-r);font-size:var(--u-text-xs);font-weight:600;
+  padding:var(--u-space-1) var(--u-space-2)}
+body.ui2 .badge{border-radius:var(--u-r);font-size:var(--u-text-xs);font-weight:600}
+/* buttons: hierarchy, not semantics — one raised primary, everything else quiet */
+body.ui2 button,body.ui2 .ui-btn{border-radius:var(--u-r);font-family:inherit}
+body.ui2 .ui-btn{min-height:44px;font-size:var(--u-text-sm)}
+/* borders OR a background change, not both — that is what made every screen look boxed */
+body.ui2 .card .card,body.ui2 .card .stat{border:0}
 
 /* ── sidebar ─────────────────────────────────────────────────────────────── */
 body.ui2 .sidebar{background:var(--u-surface);border-right:1px solid var(--u-border);
@@ -13491,11 +13557,22 @@ function homePickToNote(id) {
     return;
   }
 
-  window._todayEditor.chain().focus('end')
-    .insertContent({ type: 'taskList', content: [{ type: 'taskItem',
-      attrs: { checked: !!t.done, taskId: String(t.id) },
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: t.text }] }] }] })
-    .run();
+  // focus('end') puts the cursor at the very end of the DOCUMENT, which is inside the last
+  // task item's paragraph — so inserting a taskList there nested the new task under the
+  // previous one, and every subsequent add went a level deeper. Insert at the top level
+  // instead, appending into the trailing task list when there already is one so repeated
+  // adds build one flat list rather than a stack of adjacent ones.
+  const ed = window._todayEditor;
+  const item = { type: 'taskItem',
+    attrs: { checked: !!t.done, taskId: String(t.id) },
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: t.text }] }] };
+  const doc = ed.state.doc;
+  const last = doc.lastChild;
+  if (last && last.type.name === 'taskList') {
+    ed.chain().focus().insertContentAt(doc.content.size - 1, item).run();   // inside that list
+  } else {
+    ed.chain().focus().insertContentAt(doc.content.size, { type: 'taskList', content: [item] }).run();
+  }
   showToast('✍️ Added to today');
 }
 
@@ -19178,6 +19255,13 @@ function createEditor(element, content, options = {}) {
           ...this.parent?.(),
           taskId: {
             default: null,
+            // Splitting a task item copies its attributes onto the new one by default, so
+            // pressing Enter at the end of a linked line produced a second item claiming
+            // the same task. That matters because this id is what lets a checkbox here
+            // close the real task — a duplicate would close someone else's row — and
+            // homePickToNote dedupes on it, so "already in today's note" would jump to the
+            // wrong line. A newly typed line belongs to no task until it is linked to one.
+            keepOnSplit: false,
             parseHTML: el => el.getAttribute('data-task-id'),
             renderHTML: attrs => attrs.taskId ? { 'data-task-id': attrs.taskId } : {},
           },
