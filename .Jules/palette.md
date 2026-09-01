@@ -8,3 +8,6 @@
 ## 2024-08-17 - Added aria-labels to orphaned inputs
 **Learning:** Found a pattern of orphaned search/capture input fields without labels in index.html (relying solely on placeholders). Placeholders are insufficient for screen readers as accessible names.
 **Action:** When adding new inputs, always include a corresponding `<label>` element or, if visually hidden, an `aria-label` attribute.
+## 2024-11-20 - Added aria-label to command palette search input
+**Learning:** Found an orphaned search input field inside the command palette (`k2pal-input`) relying only on its placeholder attribute. For screen readers, an `aria-label` is required for context when a visible `<label>` is not present.
+**Action:** When adding new search inputs or modifying existing ones without explicit labels, always ensure an `aria-label` attribute is added for accessibility.
