@@ -1484,27 +1484,12 @@ Current features: Notes (TipTap editors), Tasks (with extraction from notes/jots
   }
   .nav-everything .badge { margin-left: auto; }
 
-  .mobile-more-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    padding: 0 12px;
+  /* Drawer tiles are .tile buttons; .mobile-more-item is only the marking hook. */
+  .mobile-more-item.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface2));
   }
-  .mobile-more-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    padding: 14px 8px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    color: var(--text-dim);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    background: var(--surface2);
-  }
-  .mobile-more-item .icon { font-size: 26px; line-height: 1; }
-  .mobile-more-item.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface2)); }
+  .mobile-more-item.active .tile-nm { color: var(--accent); }
 
   /* Responsive */
   @media (max-width: 768px) {
@@ -3994,7 +3979,8 @@ function k2ToolCount(page) {
 function k2ToolTile(t) {
   const n = k2ToolCount(t.page);
   const badge = n > 0 ? `<span class="tile-count">${n > 99 ? '99+' : n}</span>` : '';
-  return `<button class="tile${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
+  // .mobile-more-item is the hook navigateTo()/mobileNavMore() mark the current page with.
+  return `<button class="tile mobile-more-item${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
      onclick="k2Launch('${t.page}')" title="${escapeHtml(t.label)}">
      ${badge}<span class="tile-ic">${t.icon}</span><span class="tile-nm">${escapeHtml(t.label)}</span></button>`;
 }
@@ -4037,7 +4023,15 @@ function k2FilterLauncher(q) {
   });
 }
 
+// Build the drawer at load so its tiles exist before the sheet is opened; openMobileMore()
+// still re-renders for live counts.
+document.addEventListener('DOMContentLoaded', () => {
+  try { renderLauncher(); } catch (e) { console.warn('[K2] renderLauncher (init):', e); }
+});
+
 function k2Launch(page) {
+  // mobileNavMore() closes, navigates and marks More — drawer pages have no tab of their own.
+  if (typeof mobileNavMore === 'function') return mobileNavMore(page);
   if (typeof closeMobileMore === 'function') closeMobileMore();
   navigateTo(page);
 }
@@ -14598,6 +14592,12 @@ function initKeyboardShortcuts() {
   });
 
   document.addEventListener('keydown', (e) => {
+    // ponytail: Escape jumps the typing guard below. That guard exists for the single-letter
+    // shortcuts (n / t d j p) so they don't fire mid-word; Escape is not one of them. Behind
+    // it, Escape was dead whenever focus sat in a field — including a field inside the modal
+    // it was meant to close, which is where openCreateSmartList() puts it on open.
+    if (e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.altKey) { closeAllModals(); return; }
+
     // Don't fire when typing in inputs/textareas
     const tag = document.activeElement?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable) return;
@@ -14636,9 +14636,6 @@ function initKeyboardShortcuts() {
       case '?': // Show shortcuts help
         e.preventDefault();
         toggleShortcutsHelp();
-        break;
-      case 'Escape': // Close modals
-        closeAllModals();
         break;
     }
   });
@@ -14681,7 +14678,13 @@ function syncUiTwoCheckbox() {
 function closeAllModals() {
   // Close any open modals
   document.querySelectorAll('[id$="-modal"]').forEach(m => {
-    if (m.style.display !== 'none') m.style.display = 'none';
+    if (m.classList.contains('ui-modal')) {
+      // .ui-modal.is-open sets display:block; an inline display:none here beat it forever.
+      m.classList.remove('is-open');
+      if (m.style.display) m.style.display = '';
+    } else if (m.style.display !== 'none') {
+      m.style.display = 'none';
+    }
   });
   document.getElementById('shortcuts-help')?.remove();
   document.body.style.overflow = '';

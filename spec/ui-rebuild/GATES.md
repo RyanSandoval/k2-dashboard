@@ -73,3 +73,8 @@ phone actually renders.
   CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g10_no_overlap.py
   EXPECT: G10 PASS
   EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; path=9574616d3339/13 entries; output=G10 PASS: no floating control overlaps text or a touch target, at rest or at the end of scroll; Attach clears the first line; nothing rests under the 755px tab bar; search button hidden
+
+- [x] G11: a ui-modal reopens after Escape, and the More drawer marks the page you are on
+  CHECK: python3 /Users/ryansandoval/k2-dashboard/spec/ui-rebuild/checks/g11_drawer_and_modals.py
+  EXPECT: G11 PASS
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/Users/ryansandoval/k2-dashboard/spec/ui-rebuild; output=G11 PASS: 4/4 ui-modals close on Escape and reopen after (old closeAllModals control-fails); 35 drawer tiles exist before the sheet is opened, k2Launch('reminders') navigates and marks that tile plus the More tab, and removing .mobile-more-item control-fails. Found while writing it: Escape sat behind the typing guard that exists for the single-letter shortcuts, so it never reached closeAllModals when focus was in a field — including the field openCreateSmartList() focuses inside the modal Escape was meant to close.

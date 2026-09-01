@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v72-default-on';
+const CACHE_NAME = 'k2-hq-v73-escape-drawer';
 const ASSETS = [
   './',
   './index.html',
