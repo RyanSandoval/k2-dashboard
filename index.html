@@ -13857,7 +13857,15 @@ function renderPreviousDays(today) {
   const visibleDates = filteredDates.slice(0, limit);
   const hiddenCount = filteredDates.length - visibleDates.length;
 
-  // Clear stale editor state before rebuilding DOM
+  // Clear stale editor state before rebuilding DOM.
+  // Destroy first: container.innerHTML below detaches the elements these TipTap editors
+  // are mounted on, and a dropped-but-not-destroyed editor keeps its ProseMirror view,
+  // its document-level listeners and its whole detached subtree alive. renderPreviousDays
+  // runs on every visit to Jots, so without this each visit leaks another set of days.
+  // Mirrors the destroy pass the notes list already does for window._noteEditors.
+  for (const ed of Object.values(window._previousEditors || {})) {
+    try { ed?.destroy?.(); } catch (e) { console.warn('[K2] previous-day editor destroy:', e); }
+  }
   window._previousEditors = {};
 
   const dayNodes = visibleDates.map(date => {
@@ -19577,11 +19585,17 @@ window._tiptapLoaded = true;
 if (window._pendingTodayInit) {
   window._createTodayEditor(window._pendingTodayInit);
 }
-// Init any previous-day editors that were open before TipTap loaded
+// Init any previous-day editors that were open before TipTap loaded.
+// Record them in _previousEditors: an untracked editor is invisible to
+// initPreviousDayEditor (which would mount a second editor on the same element)
+// and to the destroy pass in renderPreviousDays.
 if (window._openDocDays) {
+  if (!window._previousEditors) window._previousEditors = {};
   window._openDocDays.forEach(date => {
     const el = document.getElementById('doc-editor-' + date);
-    if (el) window._createReadonlyEditor(date, el);
+    if (el && !window._previousEditors[date]) {
+      window._previousEditors[date] = window._createReadonlyEditor(date, el);
+    }
   });
 }
 // Re-initialize any note editors that fell back to plain text
