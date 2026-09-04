@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v73-escape-drawer';
+const CACHE_NAME = 'k2-hq-v74-keyboard-triage';
 const ASSETS = [
   './',
   './index.html',

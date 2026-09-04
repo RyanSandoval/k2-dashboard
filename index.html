@@ -3197,6 +3197,11 @@ body.ui2 #page-jots .jot-search::placeholder{color:var(--u-text-3)}
           <button onclick="staleJotsClearSelection()" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;">Cancel</button>
         </div>
         <div id="stale-jots-meta" style="margin-top:8px;font-size:11px;color:var(--text-muted);"></div>
+        <div id="stale-jots-triage-bar" style="display:none;position:sticky;top:0;z-index:5;margin-top:10px;padding:8px 12px;background:color-mix(in srgb,var(--accent) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);border-radius:8px;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text-dim);">
+          <span id="stale-jots-triage-remaining" style="font-weight:700;color:var(--accent);">0 remaining</span>
+          <span style="flex:1;"></span>
+          <span><kbd class="ui-kbd">j</kbd>/<kbd class="ui-kbd">k</kbd> move · <kbd class="ui-kbd">t</kbd> task · <kbd class="ui-kbd">n</kbd> note · <kbd class="ui-kbd">s</kbd> someday · <kbd class="ui-kbd">x</kbd> trash · <kbd class="ui-kbd">u</kbd> undo · <kbd class="ui-kbd">esc</kbd> exit</span>
+        </div>
       </div>
       <div id="stale-jots-list"><!-- Populated by renderStaleJots() --></div>
     </div>
@@ -6912,6 +6917,7 @@ function renderStaleJots() {
   if (!container) return;
   const allVisible = _staleJotsCollectVisible();
   const all = _staleJotsCollectCandidates();
+  _staleJotsSyncTriageUI(allVisible.length);
 
   // Paginate: search shows all matches; no-search caps at STALE_JOTS_PAGE_SIZE per page.
   const q = (document.getElementById('stale-jots-search')?.value || '').toLowerCase().trim();
@@ -6920,6 +6926,13 @@ function renderStaleJots() {
   var items = q ? allVisible : allVisible.slice(pageStart, pageStart + STALE_JOTS_PAGE_SIZE);
   var hiddenCount = q ? 0 : Math.max(0, allVisible.length - (pageStart + items.length));
   var hasPrev = !q && page > 0;
+
+  // Triage reads the cursor off this exact slice, and clamping here is what makes j/k
+  // and "the row under the cursor left the list" both stay in range without their own checks.
+  window._staleJotsRendered = items;
+  if (window.K2Triage && K2Triage.active) {
+    K2Triage.cursor = Math.max(0, Math.min(K2Triage.cursor, items.length - 1));
+  }
 
   // Prune selection of anything no longer in the current page view
   const visibleKeys = new Set(items.map(i => i.key));
@@ -6944,14 +6957,17 @@ function renderStaleJots() {
   }
 
   const baseBtn = 'background:none;border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;white-space:nowrap;';
-  const rows = items.map(item => {
+  const rows = items.map((item, idx) => {
     const safeKey = item.key.replace(/'/g, "\\'");
+    const onCursor = !!(window.K2Triage && K2Triage.active && idx === K2Triage.cursor);
+    const cursorAttr = onCursor ? ' data-triage-cursor="1"' : '';
+    const cursorStyle = onCursor ? 'outline:2px solid var(--accent);outline-offset:2px;' : '';
     const selected = window._staleJotsSelection.has(item.key);
     const escText = escapeHtml(item.text || '');
     const typeChip = item.type === 'task'
       ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-weight:600;">unchecked task</span>'
       : '';
-    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;${selected ? 'background:color-mix(in srgb,var(--accent) 8%,transparent);border-left:3px solid var(--accent);' : ''}">
+    return `<div class="card"${cursorAttr} style="margin-bottom:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;${cursorStyle}${selected ? 'background:color-mix(in srgb,var(--accent) 8%,transparent);border-left:3px solid var(--accent);' : ''}">
       <input type="checkbox" ${selected ? 'checked' : ''} onclick="staleJotsToggleSelect('${safeKey}')" style="margin-top:3px;flex-shrink:0;cursor:pointer;width:16px;height:16px;accent-color:var(--accent);" aria-label="select" />
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="staleJotsJumpToSource('${safeKey}')">
         <div style="font-size:14px;color:var(--text);line-height:1.4;">${escText}</div>
@@ -6982,6 +6998,9 @@ function renderStaleJots() {
     : '';
 
   container.innerHTML = rows + pagerHtml;
+  if (window.K2Triage && K2Triage.active) {
+    container.querySelector('[data-triage-cursor]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 window.renderStaleJots = renderStaleJots;
 
@@ -7180,6 +7199,111 @@ async function staleJotDiscard(key) {
   K2Archive.toast({ message: 'Jot discarded', undoFn, durationMs: 8000 });
 }
 window.staleJotDiscard = staleJotDiscard;
+
+// ── Keyboard Triage Mode ─────────────────────────────────────────────────────
+// One full-keyboard pass over the stale jots: j/k move a cursor, t/n/s/x run the four
+// verbs the row buttons already run, u undoes. It owns no listener of its own —
+// initKeyboardShortcuts() routes into staleJotsTriageKey(), which is the only reason
+// one keypress cannot both triage a row and navigate away via the global n/t/d/j/p.
+window.K2Triage = { active: false, cursor: 0, undo: [] };
+
+function _staleJotsSyncTriageUI(remaining) {
+  const bar = document.getElementById('stale-jots-triage-bar');
+  const count = document.getElementById('stale-jots-triage-remaining');
+  if (bar) bar.style.display = K2Triage.active ? 'flex' : 'none';
+  if (count) count.textContent = remaining + ' remaining';
+}
+
+function staleJotsTriageStart() {
+  // ponytail: viewport width is the phone test. The mode is j/k/t/n/s/x and nothing else;
+  // a touch device has none of those keys, so it must not be able to enter at all.
+  if (window.innerWidth < 900) return false;
+  if (!document.getElementById('page-stale-jots')?.classList.contains('active')) return false;
+  if (!_staleJotsCollectVisible().length) return false;
+  K2Triage.active = true;
+  K2Triage.cursor = 0;
+  K2Triage.undo = [];
+  renderStaleJots();
+  return true;
+}
+window.staleJotsTriageStart = staleJotsTriageStart;
+
+function staleJotsTriageExit() {
+  if (!K2Triage.active) return false;
+  K2Triage.active = false;
+  K2Triage.undo = [];
+  renderStaleJots();
+  return true;
+}
+window.staleJotsTriageExit = staleJotsTriageExit;
+
+function _triageSnapshot() {
+  // ponytail: note bodies and doc contents are immutable strings, so an object reference
+  // plus its old value is a complete restore. No deep clone of the daily docs per keypress.
+  const docs = Object.values(DATA.dailyDocs || {});
+  const notes = DATA.notes || [];
+  return {
+    cursor: K2Triage.cursor,
+    tasks: (DATA.tasks || []).slice(),
+    state: Object.assign({}, DATA.staleJotState || {}),
+    docs: docs.map(d => ({ d, content: d.content, updatedAt: d.updatedAt })),
+    notes: notes.map(n => ({ n, text: n.text, updatedAt: n.updatedAt }))
+  };
+}
+
+function _triageRestore(s) {
+  DATA.tasks = s.tasks;
+  DATA.staleJotState = s.state;
+  s.docs.forEach(e => { e.d.content = e.content; e.d.updatedAt = e.updatedAt; });
+  s.notes.forEach(e => { e.n.text = e.text; e.n.updatedAt = e.updatedAt; });
+  K2Triage.cursor = s.cursor;
+}
+
+async function _triageRun(verb) {
+  const item = (window._staleJotsRendered || [])[K2Triage.cursor];
+  if (!item) return;
+  const snap = _triageSnapshot();
+  if (await verb(item.key) === false) return;  // verb declined; nothing to undo
+  K2Triage.undo.push(snap);
+  renderStaleJots();
+}
+
+async function _triageUndo() {
+  const snap = K2Triage.undo.pop();
+  if (!snap) return;
+  _triageRestore(snap);
+  await saveData();
+  renderStaleJots();
+  if (typeof renderTasks === 'function') renderTasks();
+  if (typeof renderJots === 'function') renderJots();
+}
+
+function _triageNoteTarget() {
+  // Same order the note picker lists in, so `n` lands where the picker's top button would.
+  const key = n => String(n.updatedAt || n.createdAt || n.created || '');
+  return (DATA.notes || []).slice().sort((a, b) => key(b).localeCompare(key(a)))[0];
+}
+
+function staleJotsTriageKey(e) {
+  if (!K2Triage.active) return e.key === 't' && staleJotsTriageStart();
+  switch (e.key) {
+    case 'j': K2Triage.cursor += 1; renderStaleJots(); break;
+    case 'k': K2Triage.cursor -= 1; renderStaleJots(); break;
+    case 't': _triageRun(staleJotConvertToTask); break;
+    case 'n': _triageRun(key => {
+      const note = _triageNoteTarget();
+      if (!note) { showToast?.('No notes yet — press s to shelve it instead'); return false; }
+      return _staleJotsConfirmLinkToNote(key, note.id);
+    }); break;
+    case 's': _triageRun(staleJotArchive); break;
+    case 'x': _triageRun(staleJotDiscard); break;
+    case 'u': _triageUndo(); break;
+  }
+  // Triage owns every unmodified key while it is on, so a stray letter cannot navigate
+  // out from under the cursor mid-pass. Escape is handled above the typing guard.
+  return true;
+}
+window.staleJotsTriageKey = staleJotsTriageKey;
 
 async function staleJotsBulkAction(action) {
   const keys = Array.from(window._staleJotsSelection);
@@ -14604,7 +14728,13 @@ function initKeyboardShortcuts() {
     // shortcuts (n / t d j p) so they don't fire mid-word; Escape is not one of them. Behind
     // it, Escape was dead whenever focus sat in a field — including a field inside the modal
     // it was meant to close, which is where openCreateSmartList() puts it on open.
-    if (e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.altKey) { closeAllModals(); return; }
+    if (e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Escape is the single exit from triage: `t` is a verb inside the mode, so it cannot
+      // also be the toggle without one keypress meaning two things.
+      if (staleJotsTriageExit()) return;
+      closeAllModals();
+      return;
+    }
 
     // Don't fire when typing in inputs/textareas
     const tag = document.activeElement?.tagName;
@@ -14612,6 +14742,11 @@ function initKeyboardShortcuts() {
 
     // Don't fire with modifier keys (except shift for ?)
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    // Keyboard triage claims the key before the global set below, inside this one handler,
+    // so `t` on Stale Jots enters the mode instead of navigating to Tasks — and falls
+    // through to Tasks anywhere else, or whenever staleJotsTriageStart() declines.
+    if (staleJotsTriageKey(e)) { e.preventDefault(); return; }
 
     switch (e.key) {
       case 'n': // New jot
@@ -14671,6 +14806,7 @@ function toggleShortcutsHelp() {
         <kbd class="ui-kbd">p</kbd><span>Projects</span>
         <kbd class="ui-kbd">?</kbd><span>This help</span>
         <kbd class="ui-kbd">esc</kbd><span>Close modals</span>
+        <kbd class="ui-kbd">t</kbd><span>On Stale Jots: keyboard triage (j/k move, t/n/s/x file, u undo, esc out)</span>
       </div>
       <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--text-dim);">Press any key or click outside to close</div>
     </div>
