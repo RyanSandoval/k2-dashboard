@@ -3980,7 +3980,9 @@ function k2ToolTile(t) {
   const n = k2ToolCount(t.page);
   const badge = n > 0 ? `<span class="tile-count">${n > 99 ? '99+' : n}</span>` : '';
   // .mobile-more-item is the hook navigateTo()/mobileNavMore() mark the current page with.
+  // Performance Optimization: Cache lowercased label in data-search to avoid dynamic conversion during filter loop
   return `<button class="tile mobile-more-item${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
+     data-search="${escapeHtml(t.label.toLowerCase())}"
      onclick="k2Launch('${t.page}')" title="${escapeHtml(t.label)}">
      ${badge}<span class="tile-ic">${t.icon}</span><span class="tile-nm">${escapeHtml(t.label)}</span></button>`;
 }
@@ -3993,12 +3995,13 @@ function renderLauncher() {
   const head = `
     <div class="launcher-hd">
       <input class="launcher-search" type="search" placeholder="Jump to anything"
-        oninput="k2FilterLauncher(this.value)" aria-label="Filter tools">
+        oninput="debouncedFilterLauncher(this.value)" aria-label="Filter tools">
       <p class="launcher-sub">${K2_TOOLS.length} tools · ${live.length} have something in them</p>
     </div>`;
   const actions = `<div class="launcher-group"><div class="launcher-ghd"><span>Do</span><hr></div>
     <div class="launcher-grid">${K2_ACTIONS.map((a, i) =>
-      `<button class="tile is-action" onclick="k2RunAction(${i})" title="${escapeHtml(a.label)}">
+      // Performance Optimization: Cache lowercased label in data-search
+      `<button class="tile is-action" onclick="k2RunAction(${i})" title="${escapeHtml(a.label)}" data-search="${escapeHtml(a.label.toLowerCase())}">
          <span class="tile-ic">${a.icon}</span><span class="tile-nm">${escapeHtml(a.label)}</span></button>`
     ).join('')}</div></div>`;
   const groups = K2_GROUPS.map(([key, name]) => {
@@ -4014,7 +4017,8 @@ function renderLauncher() {
 function k2FilterLauncher(q) {
   const needle = (q || '').trim().toLowerCase();
   document.querySelectorAll('#launcher-grid .tile').forEach(tile => {
-    const nm = (tile.querySelector('.tile-nm')?.textContent || '').toLowerCase();
+    // Performance Optimization: Use pre-lowercased string from data-search to avoid main-thread blocking
+    const nm = tile.getAttribute('data-search') || '';
     tile.classList.toggle('is-hidden', !!needle && !nm.includes(needle));
   });
   document.querySelectorAll('#launcher-grid .launcher-group').forEach(g => {
@@ -4247,6 +4251,7 @@ const debouncedRenderTaskRetirement = debounce(() => { if (typeof renderTaskReti
 const debouncedRenderSkills = debounce(() => { if (typeof renderSkills === 'function') renderSkills(false); }, 250);
 const debouncedRenderJiraLedger = debounce(() => { if (typeof renderJiraLedger === 'function') renderJiraLedger(); }, 250);
 const debouncedRenderNotes = debounce(() => { if (typeof renderNotes === 'function') renderNotes(0); }, 250);
+const debouncedFilterLauncher = debounce((val) => { if (typeof k2FilterLauncher === 'function') k2FilterLauncher(val); }, 250);
 const debouncedFilterDocs = debounce(() => { if (typeof filterDocs === 'function') filterDocs(); }, 250);
 const debouncedRenderDepDropdown = debounce((el, id) => { if (typeof renderDepDropdown === 'function') renderDepDropdown(el, id); }, 250);
 const debouncedClipUrlChanged = debounce((val) => { if (typeof clipUrlChanged === 'function') clipUrlChanged(val); }, 250);
