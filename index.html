@@ -4734,7 +4734,6 @@ function _cleanupTransientUI() {
     'stale-note-project-picker',
     'quick-hide-until-picker',
     'kairos-picker-overlay',
-    'context-picker-overlay',
     'note-action-backdrop',
     'shortcuts-help',
     'waiting-inline-form',
@@ -4742,6 +4741,9 @@ function _cleanupTransientUI() {
   for (const id of TRANSIENT_IDS) {
     document.getElementById(id)?.remove();
   }
+  // Context picker owns a document-level Escape handler; tear it down through its
+  // own helper so the listener is unbound too, not just the overlay removed.
+  try { if (typeof _teardownContextPicker === 'function') _teardownContextPicker(); } catch (e) { console.warn('[K2] _cleanupTransientUI: context picker teardown failed', e); }
   // Capture popover is a reused singleton — hide it and clear its input rather
   // than destroying it, so the next open doesn't need to rebuild the DOM.
   try { if (typeof closeCapturePopover === 'function') closeCapturePopover(); } catch (e) {}
@@ -11584,8 +11586,7 @@ function addContextPrompt() {
 }
 
 function openContextPicker() {
-  const existing = document.getElementById('context-picker-overlay');
-  if (existing) { existing.remove(); return; }
+  if (document.getElementById('context-picker-overlay')) { _teardownContextPicker(); return; }
   const contexts = DATA.contexts || [];
   const overlay = document.createElement('div');
   overlay.id = 'context-picker-overlay';
@@ -11593,17 +11594,39 @@ function openContextPicker() {
   overlay.innerHTML = `
     <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">📍 Filter by Context</div>
     <div style="display:flex;flex-direction:column;gap:6px;">
-      <button onclick="setActiveContext(null);document.getElementById('context-picker-overlay').remove()" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:${!window._activeContext ? 'var(--accent-surface)' : 'var(--surface2)'};color:var(--text);font-size:13px;">All Tasks</button>
-      ${contexts.map(ctx => `<button onclick="setActiveContext('${ctx.replace(/'/g, "\\'")}');document.getElementById('context-picker-overlay').remove()" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:${window._activeContext === ctx ? 'var(--accent-surface)' : 'var(--surface2)'};color:var(--text);font-size:13px;">📍 ${ctx}</button>`).join('')}
+      <button onclick="setActiveContext(null);_teardownContextPicker()" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:${!window._activeContext ? 'var(--accent-surface)' : 'var(--surface2)'};color:var(--text);font-size:13px;">All Tasks</button>
+      ${contexts.map(ctx => `<button onclick="setActiveContext('${ctx.replace(/'/g, "\\'")}');_teardownContextPicker()" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:${window._activeContext === ctx ? 'var(--accent-surface)' : 'var(--surface2)'};color:var(--text);font-size:13px;">📍 ${ctx}</button>`).join('')}
     </div>
     <div style="margin-top:10px;font-size:10px;color:var(--text-muted);text-align:center;">Esc or ⌘⇧C to close</div>
   `;
   document.body.appendChild(overlay);
-  const close = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', close); } };
+  // The Escape handler used to detach itself only on Escape. Every other close path
+  // (a context button, the outside-click handler, _cleanupTransientUI on navigate)
+  // left it bound to document, holding the now-detached overlay alive — one more
+  // permanent listener + detached subtree per open. Route all paths through
+  // _teardownContextPicker() so at most one handler is ever registered.
+  const close = (e) => { if (e.key === 'Escape') _teardownContextPicker(); };
+  window._contextPickerKeyHandler = close;
   document.addEventListener('keydown', close);
   overlay.addEventListener('click', e => e.stopPropagation());
-  setTimeout(() => document.addEventListener('click', function once() { overlay.remove(); document.removeEventListener('click', once); }), 100);
+  setTimeout(() => document.addEventListener('click', function once() {
+    document.removeEventListener('click', once);
+    // Only close the picker this handler was opened for — a stale handler from an
+    // earlier open must not dismiss a freshly reopened picker.
+    if (overlay.isConnected) _teardownContextPicker();
+  }), 100);
 }
+
+// Removes the context picker overlay and unbinds its document-level Escape handler.
+// Safe to call when nothing is open.
+function _teardownContextPicker() {
+  if (window._contextPickerKeyHandler) {
+    document.removeEventListener('keydown', window._contextPickerKeyHandler);
+    window._contextPickerKeyHandler = null;
+  }
+  document.getElementById('context-picker-overlay')?.remove();
+}
+window._teardownContextPicker = _teardownContextPicker;
 
 // Cmd+Shift+C — open context picker
 document.addEventListener('keydown', (e) => {
