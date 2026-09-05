@@ -6693,7 +6693,7 @@ function renderJotMatchNudge(match) {
     '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(snippet) + '…</span>' +
     '<button onclick="_memMatchNavigate(\'' + String(match.kind).replace(/'/g,"\\'") + '\',\'' + String(match.id).replace(/'/g,"\\'") + '\');" ' +
     'style="flex-shrink:0;padding:3px 10px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">Compare →</button>' +
-    '<button onclick="_memMatchDismiss();" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
+    '<button onclick="_memMatchDismiss();" aria-label="Dismiss" style="flex-shrink:0;padding:3px 7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-dim);cursor:pointer;font-family:inherit;">×</button>';
   el.classList.add('is-open');
 }
 function _memMatchDismiss() {
