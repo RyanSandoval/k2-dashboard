@@ -10877,21 +10877,12 @@ async function addTask() {
   renderTasks();
 }
 
-// Date.now() is unique when a human types one task at a time; a template spawns a
-// whole checklist inside one millisecond and would hand every step the same id.
-let _lastTaskId = 0;
-function nextTaskId() {
-  const now = Date.now();
-  _lastTaskId = now > _lastTaskId ? now : _lastTaskId + 1;
-  return _lastTaskId;
-}
-
 // The one place that decides what a new task looks like. addTask() resolves urgency,
 // importance and dueDate from what the user typed; a template step arrives already
 // parsed (it was parsed once, when the task it was learned from was created).
 function makeTask(text, project, urgency, importance, dueDate) {
   return {
-    id: nextTaskId(),
+    id: Date.now(),
     text: text,
     urgency: urgency,
     importance: importance,
@@ -10993,12 +10984,9 @@ function renderTaskTemplates() {
   window._ttSuggestion = detectTaskTemplates(DATA.tasks).filter(p => !known[p.signature])[0] || null;
 
   const parts = store.filter(t => !t.dismissed).map(t =>
-    '<span style="display:inline-flex;align-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:999px;">' +
     '<button onclick="spawnTaskTemplate(\'' + escapeHtml(t.id) + '\')" title="' + escapeHtml(t.steps.join(' · ')) + '"' +
-    ' style="background:none;border:none;color:var(--text);font-size:11px;font-weight:600;padding:4px 4px 4px 12px;cursor:pointer;white-space:nowrap;">' +
-    '📋 ' + escapeHtml(t.name) + ' <span style="color:var(--text-dim);">' + t.steps.length + '</span></button>' +
-    '<button onclick="deleteTaskTemplate(\'' + escapeHtml(t.id) + '\')" title="Delete template"' +
-    ' style="background:none;border:none;color:var(--text-dim);font-size:11px;padding:4px 10px 4px 4px;cursor:pointer;">✕</button></span>');
+    ' style="border:1px solid var(--border);background:var(--surface2);border-radius:999px;color:var(--text);font-size:11px;font-weight:600;padding:4px 12px;cursor:pointer;white-space:nowrap;">' +
+    '📋 ' + escapeHtml(t.name) + ' <span style="color:var(--text-dim);">' + t.steps.length + '</span></button>');
 
   const s = window._ttSuggestion;
   if (s) {
@@ -11041,20 +11029,17 @@ async function dismissTaskTemplate() {
   renderTaskTemplates();
 }
 
-async function deleteTaskTemplate(id) {
-  const store = ttStore();
-  const i = store.findIndex(t => t.id === id);
-  if (i < 0) return;
-  if (!confirm('Delete template "' + store[i].name + '"?')) return;
-  store.splice(i, 1);
-  await saveData();
-  renderTaskTemplates();
-}
-
 async function spawnTaskTemplate(id) {
   const tpl = ttStore().find(t => t.id === id);
   if (!tpl) return;
-  tpl.steps.forEach(text => DATA.tasks.push(makeTask(text, tpl.project, 2, 2)));
+  // A whole checklist lands inside one millisecond, so makeTask()'s Date.now() id is
+  // the same for every step. Offset by index; nothing else in the app spawns in batch.
+  const base = Date.now();
+  tpl.steps.forEach((text, i) => {
+    const t = makeTask(text, tpl.project, 2, 2);
+    t.id = base + i;
+    DATA.tasks.push(t);
+  });
   await saveData();
   renderTasks();
   showToast(tpl.steps.length + ' tasks added from ' + tpl.name);

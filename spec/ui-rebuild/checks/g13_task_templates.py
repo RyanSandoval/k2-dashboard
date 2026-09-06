@@ -162,19 +162,16 @@ def g13(pw):
     if missing:
         FAIL.append(f"spawned tasks are in DATA but the Tasks board did not render {missing}")
 
-    # ── control 3: restore Date.now() ids and require the uniqueness assertion to fail
-    pg.evaluate("() => { window.__realNextTaskId = window.nextTaskId; window.nextTaskId = () => Date.now(); }")
-    pre = pg.evaluate("() => DATA.tasks.length")
-    pg.click("#task-templates-strip button[onclick^='spawnTaskTemplate']")
-    pg.wait_for_timeout(800)
+    # ── control 3: makeTask()'s bare Date.now() id must collide across a batch, or the
+    # +i offset in spawnTaskTemplate() is decoration and the uniqueness assertion above
+    # proves nothing. Called directly rather than stubbed — no production code to restore.
     collided = pg.evaluate(f"""() => {{
-      const t = DATA.tasks.slice({pre});
-      return new Set(t.map(x => x.id)).size < t.length;
+      const ids = Array.from({{length: {len(STEPS)}}}, () => makeTask('x', 'proj-x', 2, 2).id);
+      return new Set(ids).size < ids.length;
     }}""")
     if not collided:
-        FAIL.append("CONTROL: Date.now() ids did not collide across a 4-step spawn — the gate's "
-                    "id assertion proves nothing on this machine")
-    pg.evaluate("() => { window.nextTaskId = window.__realNextTaskId; }")
+        FAIL.append(f"CONTROL: {len(STEPS)} bare makeTask() calls produced distinct ids — the "
+                    "gate's id assertion proves nothing on this machine")
     reseed(pg, 3)
 
     # ── dismiss suppresses the same signature without saving a template
