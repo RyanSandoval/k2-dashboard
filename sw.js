@@ -1,5 +1,5 @@
 // K-2 Command Center Service Worker
-const CACHE_NAME = 'k2-hq-v74-keyboard-triage';
+const CACHE_NAME = 'k2-hq-v75-task-templates';
 const ASSETS = [
   './',
   './index.html',

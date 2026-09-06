@@ -2927,6 +2927,9 @@ body.ui2 #page-jots .jot-search::placeholder{color:var(--u-text-3)}
         <select id="new-task-project" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;"><option value="">Project</option></select>
         <button onclick="addTask()" style="background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;">Add</button>
       </div>
+      <div id="task-templates-strip" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <!-- Populated by renderTaskTemplates() -->
+      </div>
       <div id="smart-list-indicator" style="display:none;align-items:center;gap:10px;padding:8px 12px;background:var(--accent-surface);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:8px;margin-bottom:10px;">
         <span id="smart-list-indicator-label" style="font-size:13px;font-weight:600;color:var(--accent);flex:1;"></span>
         <button onclick="clearActiveSmartList()" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:13px;font-weight:700;padding:0 4px;" title="Clear smart list filter">✕ Clear</button>
@@ -10706,6 +10709,8 @@ function renderTaskSection(id, icon, label, tasks, collapsed, limit) {
   // home-page list went stale. renderDashboard never calls back into renderTasks,
   // so no recursion. Guarded in case it runs before renderDashboard is defined.
   try { if (typeof renderDashboard === 'function') renderDashboard(); } catch (e) { console.error('[K2] renderTasks→renderDashboard refresh failed:', e); }
+
+  renderTaskTemplates();
 }
 
 function parseNaturalLanguageTask(rawText) {
@@ -10827,19 +10832,7 @@ async function addTask() {
   const urgency = parsed.urgency !== null ? parsed.urgency : uiUrgency;
   const importance = parsed.importance !== null ? parsed.importance : uiImportance;
 
-  const newTask = {
-    id: Date.now(),
-    text: text,
-    urgency: urgency,
-    importance: importance,
-    priority: urgency >= 3 ? 'high' : urgency >= 2 ? 'medium' : 'low', // backward compat
-    project: project,
-    owner: 'ryan',
-    done: false,
-    dueDate: parsed.dueDate || undefined,
-    created: (function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")})(),
-    messages: []
-  };
+  const newTask = makeTask(text, project, urgency, importance, parsed.dueDate);
 
   if (k2Agent) {
     newTask.k2Intent = { agent: k2Agent.agent.id, label: k2Agent.agent.label, route: k2Agent.agent.route, icon: k2Agent.agent.icon };
@@ -10882,6 +10875,189 @@ async function addTask() {
 
   await saveData();
   renderTasks();
+}
+
+// Date.now() is unique when a human types one task at a time; a template spawns a
+// whole checklist inside one millisecond and would hand every step the same id.
+let _lastTaskId = 0;
+function nextTaskId() {
+  const now = Date.now();
+  _lastTaskId = now > _lastTaskId ? now : _lastTaskId + 1;
+  return _lastTaskId;
+}
+
+// The one place that decides what a new task looks like. addTask() resolves urgency,
+// importance and dueDate from what the user typed; a template step arrives already
+// parsed (it was parsed once, when the task it was learned from was created).
+function makeTask(text, project, urgency, importance, dueDate) {
+  return {
+    id: nextTaskId(),
+    text: text,
+    urgency: urgency,
+    importance: importance,
+    priority: urgency >= 3 ? 'high' : urgency >= 2 ? 'medium' : 'low', // backward compat
+    project: project,
+    owner: 'ryan',
+    done: false,
+    dueDate: dueDate || undefined,
+    created: getTodayStr(),
+    messages: []
+  };
+}
+
+// ── Reusable task templates ──────────────────────────────────────────────────
+// Detection is client-side over DATA.tasks: done + completedAt + project is all the
+// signal there is, and it is already loaded. No cron, no second store.
+const TT_WINDOW_DAYS = 7;  // completions further apart than this start a new run
+const TT_MIN_STEPS = 3;    // fewer steps than this is not worth naming
+const TT_MIN_RUNS = 3;     // "a pattern repeats 3+ times"
+
+function ttStepKey(text) {
+  return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function ttStore() {
+  if (!Array.isArray(DATA.taskTemplates)) DATA.taskTemplates = [];
+  return DATA.taskTemplates;
+}
+
+// Completed tasks per project, split into runs of completions <= TT_WINDOW_DAYS apart.
+// ponytail: plan-sync rows are excluded by field, not by heuristic — the ~610 of them
+// share a project and would otherwise read as one enormous perfectly-repeating run.
+function ttRuns(tasks) {
+  const byProject = {};
+  (tasks || []).forEach(t => {
+    if (!t || t.done !== true || !t.completedAt || t.sourcePlanFile) return;
+    const p = t.project || '';
+    (byProject[p] || (byProject[p] = [])).push(t);
+  });
+  const out = {};
+  Object.keys(byProject).forEach(p => {
+    const list = byProject[p].slice()
+      .sort((a, b) => String(a.completedAt).localeCompare(String(b.completedAt)));
+    const runs = [];
+    let cur = [], prev = null;
+    list.forEach(t => {
+      const at = Date.parse(String(t.completedAt).slice(0, 10));
+      if (prev !== null && at - prev > TT_WINDOW_DAYS * 86400000) { runs.push(cur); cur = []; }
+      cur.push(t);
+      prev = at;
+    });
+    if (cur.length) runs.push(cur);
+    out[p] = runs;
+  });
+  return out;
+}
+
+// A pattern is >= TT_MIN_RUNS runs in one project sharing >= TT_MIN_STEPS steps.
+// Intersecting the runs that contain a seed step — rather than counting each step's
+// frequency on its own — is what stops two steps that each recur separately from
+// being glued into one template that never actually happened.
+function detectTaskTemplates(tasks) {
+  const found = {};
+  const runsByProject = ttRuns(tasks);
+  Object.keys(runsByProject).forEach(project => {
+    const runs = runsByProject[project].map(r => {
+      const m = {};
+      r.forEach(t => { const k = ttStepKey(t.text); if (k && !m[k]) m[k] = t.text; });
+      return m;
+    });
+    const allKeys = {};
+    runs.forEach(r => Object.keys(r).forEach(k => { allKeys[k] = 1; }));
+    Object.keys(allKeys).forEach(seed => {
+      const hits = runs.filter(r => r[seed]);
+      if (hits.length < TT_MIN_RUNS) return;
+      // insertion order of the earliest run = the order Ryan completed them in
+      const common = Object.keys(hits[0]).filter(k => hits.every(r => r[k]));
+      if (common.length < TT_MIN_STEPS) return;
+      const signature = project + '|' + common.slice().sort().join('|');
+      if (!found[signature]) {
+        found[signature] = {
+          signature: signature,
+          project: project,
+          runs: hits.length,
+          steps: common.map(k => hits[hits.length - 1][k])
+        };
+      }
+    });
+  });
+  return Object.keys(found).map(s => found[s]);
+}
+
+function renderTaskTemplates() {
+  const el = document.getElementById('task-templates-strip');
+  if (!el) return;
+  const store = ttStore();
+  const known = {};
+  store.forEach(t => { known[t.signature] = 1; });
+  window._ttSuggestion = detectTaskTemplates(DATA.tasks).filter(p => !known[p.signature])[0] || null;
+
+  const parts = store.filter(t => !t.dismissed).map(t =>
+    '<span style="display:inline-flex;align-items:center;border:1px solid var(--border);background:var(--surface2);border-radius:999px;">' +
+    '<button onclick="spawnTaskTemplate(\'' + escapeHtml(t.id) + '\')" title="' + escapeHtml(t.steps.join(' · ')) + '"' +
+    ' style="background:none;border:none;color:var(--text);font-size:11px;font-weight:600;padding:4px 4px 4px 12px;cursor:pointer;white-space:nowrap;">' +
+    '📋 ' + escapeHtml(t.name) + ' <span style="color:var(--text-dim);">' + t.steps.length + '</span></button>' +
+    '<button onclick="deleteTaskTemplate(\'' + escapeHtml(t.id) + '\')" title="Delete template"' +
+    ' style="background:none;border:none;color:var(--text-dim);font-size:11px;padding:4px 10px 4px 4px;cursor:pointer;">✕</button></span>');
+
+  const s = window._ttSuggestion;
+  if (s) {
+    parts.push('<span id="task-template-suggestion" style="display:inline-flex;align-items:center;gap:8px;padding:4px 12px;font-size:11px;border-radius:999px;' +
+      'border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:var(--accent-surface);color:var(--accent);">' +
+      'You have rebuilt these ' + s.steps.length + ' steps ' + s.runs + ' times' +
+      '<button onclick="saveTaskTemplate()" style="background:var(--accent);color:var(--bg);border:none;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;cursor:pointer;">Save as template</button>' +
+      '<button onclick="dismissTaskTemplate()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;">Dismiss</button></span>');
+  }
+
+  el.innerHTML = parts.join('');
+  el.style.display = parts.length ? 'flex' : 'none';
+}
+
+async function saveTaskTemplate() {
+  const s = window._ttSuggestion;
+  if (!s) return;
+  const name = prompt('Name this template', s.steps[0].slice(0, 40));
+  if (!name || !name.trim()) return;
+  ttStore().push({
+    id: 'tt-' + Date.now().toString(36),
+    name: name.trim(),
+    project: s.project,
+    steps: s.steps,
+    signature: s.signature,
+    created: new Date().toISOString()
+  });
+  await saveData();
+  renderTaskTemplates();
+  showToast('Template saved · ' + s.steps.length + ' steps');
+}
+
+// A dismissal is a row in the same store carrying only the signature, so the
+// suggestion is suppressed by the same lookup that suppresses an already-saved one.
+async function dismissTaskTemplate() {
+  const s = window._ttSuggestion;
+  if (!s) return;
+  ttStore().push({ id: 'tt-' + Date.now().toString(36), signature: s.signature, dismissed: true });
+  await saveData();
+  renderTaskTemplates();
+}
+
+async function deleteTaskTemplate(id) {
+  const store = ttStore();
+  const i = store.findIndex(t => t.id === id);
+  if (i < 0) return;
+  if (!confirm('Delete template "' + store[i].name + '"?')) return;
+  store.splice(i, 1);
+  await saveData();
+  renderTaskTemplates();
+}
+
+async function spawnTaskTemplate(id) {
+  const tpl = ttStore().find(t => t.id === id);
+  if (!tpl) return;
+  tpl.steps.forEach(text => DATA.tasks.push(makeTask(text, tpl.project, 2, 2)));
+  await saveData();
+  renderTasks();
+  showToast(tpl.steps.length + ' tasks added from ' + tpl.name);
 }
 
 async function toggleTask(taskId) {
