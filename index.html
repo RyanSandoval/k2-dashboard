@@ -2653,25 +2653,25 @@ body.ui2 #page-jots .jot-search::placeholder{color:var(--u-text-3)}
     <!-- Six surfaces. Everything that was a top-level page is still reachable one
          disclosure down, until it has gone unmissed long enough to delete. -->
     <div class="nav-section">
-      <div class="nav-item active" data-page="jots">
+      <div class="nav-item active" data-page="jots" role="button" tabindex="0" aria-label="Today" onclick="navigateTo('jots')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('jots');}">
         <span class="icon">✍️</span> Today
       </div>
-      <div class="nav-item" data-page="reminders">
+      <div class="nav-item" data-page="reminders" role="button" tabindex="0" aria-label="Reminders" onclick="navigateTo('reminders')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('reminders');}">
         <span class="icon">⏰</span> Reminders
         <span class="badge" id="reminders-badge" style="display:none">0</span>
       </div>
-      <div class="nav-item" data-page="action-inbox">
+      <div class="nav-item" data-page="action-inbox" role="button" tabindex="0" aria-label="Inbox" onclick="navigateTo('action-inbox')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('action-inbox');}">
         <span class="icon">📥</span> Inbox
         <span class="badge" id="action-inbox-badge" style="display:none">0</span>
       </div>
-      <div class="nav-item" data-page="tasks">
+      <div class="nav-item" data-page="tasks" role="button" tabindex="0" aria-label="Work" onclick="navigateTo('tasks')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('tasks');}">
         <span class="icon">✅</span> Work
         <span class="badge" id="task-count">0</span>
       </div>
-      <div class="nav-item" data-page="notes">
+      <div class="nav-item" data-page="notes" role="button" tabindex="0" aria-label="Notes" onclick="navigateTo('notes')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('notes');}">
         <span class="icon">📄</span> Notes
       </div>
-      <div class="nav-item" data-page="workers">
+      <div class="nav-item" data-page="workers" role="button" tabindex="0" aria-label="System" onclick="navigateTo('workers')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('workers');}">
         <span class="icon">⚙️</span> System
         <span class="badge" id="workers-badge" style="display:none">0</span>
       </div>
@@ -4088,7 +4088,7 @@ function uNavRow(t) {
   const n = k2ToolCount(t.page);
   const icon = uiTwoOn() ? uIcon(t.page, '') : `<span class="icon">${t.icon}</span>`;
   const wrapped = uiTwoOn() && U_ICONS[t.page] ? `<span class="icon">${icon}</span>` : icon;
-  return `<div class="nav-item" data-page="${t.page}" onclick="navigateTo('${t.page}')">
+  return `<div class="nav-item" data-page="${t.page}" role="button" tabindex="0" aria-label="${escapeHtml(t.label)}" onclick="navigateTo('${t.page}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('${t.page}');}">
     ${wrapped} ${escapeHtml(t.label)}
     ${n > 0 ? `<span class="badge">${n}</span>` : ''}</div>`;
 }
@@ -4113,7 +4113,7 @@ function renderSidebarRest() {
   if (!uiTwoOn()) {                       // previous UI: one flat list, unchanged
     el.innerHTML = rest.map(t => {
       const n = k2ToolCount(t.page);
-      return `<div class="nav-item" data-page="${t.page}" onclick="navigateTo('${t.page}')">
+      return `<div class="nav-item" data-page="${t.page}" role="button" tabindex="0" aria-label="${escapeHtml(t.label)}" onclick="navigateTo('${t.page}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateTo('${t.page}');}">
         <span class="icon">${t.icon}</span> ${escapeHtml(t.label)}
         ${n > 0 ? `<span class="badge">${n}</span>` : ''}</div>`;
     }).join('');

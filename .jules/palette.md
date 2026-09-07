@@ -1,0 +1,3 @@
+## 2025-02-28 - Sidebar Keyboard Accessibility
+**Learning:** The sidebar navigation items (`.nav-item`) were built as `div` elements and completely lacked keyboard accessibility (no `tabindex`, no `role`, no key handlers). This is a common pattern for custom navigation sidebars that must be explicitly accounted for, especially ensuring 'Enter' and 'Space' keypress events are handled and default scrolling behavior for 'Space' is prevented.
+**Action:** Always verify that interactive non-native elements (like custom `div` tabs or nav items) receive full accessibility scaffolding (`role="button"`, `tabindex="0"`, `aria-label`, and `onkeydown` for Enter/Space).
