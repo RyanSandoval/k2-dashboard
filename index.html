@@ -21011,10 +21011,8 @@ setTimeout(() => {
 
   // ── Scoring ──
   // Simple fuzzy: substring (case-insensitive). Score by where the match starts.
-  function score(haystack, needle) {
-    if (!needle) return 1;
-    const h = haystack.toLowerCase();
-    const n = needle.toLowerCase();
+  function score(h, n) {
+    if (!n) return 1;
     const idx = h.indexOf(n);
     if (idx === -1) {
       // fallback: all-chars-in-order subsequence
@@ -21068,6 +21066,9 @@ setTimeout(() => {
       if (!label) continue;
       items.push({ kind: 'Project', icon: '🚀', label, run: () => window.navigateTo('projects') });
     }
+    for (const item of items) {
+      item.labelLower = item.label.toLowerCase();
+    }
     return items;
   }
 
@@ -21080,7 +21081,8 @@ setTimeout(() => {
       // Empty query: pages + actions only, in declared order
       scored = index.filter(it => it.kind === 'Page' || it.kind === 'Action').map((it, i) => ({ it, s: 1000 - i }));
     } else {
-      scored = index.map(it => ({ it, s: score(it.label, q) })).filter(x => x.s > 0);
+      const qLower = q.toLowerCase();
+      scored = index.map(it => ({ it, s: score(it.labelLower, qLower) })).filter(x => x.s > 0);
       scored.sort((a, b) => b.s - a.s);
       scored = scored.slice(0, 50);
     }
