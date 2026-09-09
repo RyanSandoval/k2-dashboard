@@ -9737,7 +9737,7 @@ function openTaskModal(taskId) {
       <span class="ui-key">Due Date</span>
       <input type="date" min="${new Date(Date.now()-365*86400000).toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.dueDate || ''}" onchange="setTaskDueDate(${safeId(task.id)}, this.value)" class="ui-select">
       ${dueDateDisplay}
-      ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date" aria-label="Clear due date" role="button" tabindex="0">✕</span>` : ''}
+      ${task.dueDate ? `<span onclick="setTaskDueDate(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear due date" aria-label="Clear due date" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTaskDueDate(${safeId(task.id)},'');}">✕</span>` : ''}
     </div>
 
     <div class="ui-panel is-row">
@@ -9756,7 +9756,7 @@ function openTaskModal(taskId) {
       <span class="ui-key">Show me this on:</span>
       <input type="date" min="${new Date().toISOString().slice(0,10)}" max="${new Date(Date.now()+5*365*86400000).toISOString().slice(0,10)}" value="${task.hideUntil || ''}" onchange="setTaskHideUntil(${safeId(task.id)}, this.value)" class="ui-select">
       ${task.hideUntil && task.hideUntil > getTodayStr() ? `<span style="font-size:11px;color:var(--yellow);font-weight:600;">Hidden until ${task.hideUntil}</span>` : (task.hideUntil ? `<span class="ui-meta">Visible now</span>` : `<span class="ui-meta">Always visible</span>`)}
-      ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule" aria-label="Clear schedule" role="button" tabindex="0">✕</span>` : ''}
+      ${task.hideUntil ? `<span onclick="setTaskHideUntil(${safeId(task.id)},'')" style="cursor:pointer;font-size:11px;color:var(--text-dim);opacity:0.6;" title="Clear schedule" aria-label="Clear schedule" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setTaskHideUntil(${safeId(task.id)},'');}">✕</span>` : ''}
     </div>
 
     <div class="ui-panel">
@@ -9817,7 +9817,7 @@ function openTaskModal(taskId) {
       const blockerRows = blockers.map(b => {
         return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-subtle);">
           <span onclick="openTaskModal(${safeId(b.id)})" class="${b.done ? 'ui-done' : ''}" style="flex:1;font-size:12px;cursor:pointer;">${b.done ? '✅' : '🔒'} ${b.text || 'Untitled'}</span>
-          <span onclick="removeDependency(${safeId(task.id)},${safeId(b.id)})" style="cursor:pointer;font-size:12px;color:var(--text-dim);padding:2px 6px;border-radius:4px;" title="Remove dependency" aria-label="Remove dependency" role="button" tabindex="0">✕</span>
+          <span onclick="removeDependency(${safeId(task.id)},${safeId(b.id)})" style="cursor:pointer;font-size:12px;color:var(--text-dim);padding:2px 6px;border-radius:4px;" title="Remove dependency" aria-label="Remove dependency" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();removeDependency(${safeId(task.id)},${safeId(b.id)});}">✕</span>
         </div>`;
       }).join('');
       return `<div class="ui-panel">
@@ -11698,7 +11698,7 @@ function renderKairosTopBar() {
     const lbl = kairosLabel(a.trigger);
     const esc = a.trigger.replace(/'/g, "\\'");
     return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:12px;background:var(--accent);color:var(--bg);font-weight:700;">'
-      + lbl + '<span onclick="deactivateTrigger(\'' + esc + '\')" style="cursor:pointer;font-size:13px;line-height:1;opacity:0.7;" title="End moment" aria-label=\'End moment\' role=\'button\' tabindex=\'0\'>✕</span></span>';
+      + lbl + '<span onclick="deactivateTrigger(\'' + esc + '\')" style="cursor:pointer;font-size:13px;line-height:1;opacity:0.7;" title="End moment" aria-label=\'End moment\' role=\'button\' tabindex=\'0\' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();deactivateTrigger(\'' + esc + '\');}">✕</span></span>';
   }).join('');
   const addBtn = '<button onclick="openKairosPicker()" style="font-size:11px;padding:4px 12px;border-radius:12px;border:1px dashed var(--border);cursor:pointer;background:transparent;color:var(--text-muted);">'
     + (active.length ? '+ another moment' : '🎯 I\'m in a moment…') + '</button>';
