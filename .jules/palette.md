@@ -1,0 +1,3 @@
+## 2025-02-12 - Added Keyboard Interactivity for Custom Buttons
+**Learning:** Custom UI elements (like `<span>` or `<div>`) using `role="button"` and `tabindex="0"` allow keyboard focus but do not inherently trigger `onclick` events via keyboard keys. They must explicitly map the `Enter` and `Space` keydowns to their action.
+**Action:** When creating or identifying custom buttons without a native `<button>` element, ensure an `onkeydown` handler checks for `event.key === 'Enter'` and `event.key === ' '`, calls the action, and crucially includes `event.preventDefault()` to stop unwanted page scrolling when using `Space`.
