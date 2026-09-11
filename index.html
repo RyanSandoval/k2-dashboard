@@ -21011,23 +21011,22 @@ setTimeout(() => {
 
   // ── Scoring ──
   // Simple fuzzy: substring (case-insensitive). Score by where the match starts.
-  function score(haystack, needle) {
-    if (!needle) return 1;
-    const h = haystack.toLowerCase();
-    const n = needle.toLowerCase();
-    const idx = h.indexOf(n);
+  // ⚡ Bolt: Expect pre-lowercased strings to avoid repeated string allocations
+  function score(haystackLower, needleLower) {
+    if (!needleLower) return 1;
+    const idx = haystackLower.indexOf(needleLower);
     if (idx === -1) {
       // fallback: all-chars-in-order subsequence
       let hi = 0, ni = 0;
-      while (hi < h.length && ni < n.length) {
-        if (h[hi] === n[ni]) ni++;
+      while (hi < haystackLower.length && ni < needleLower.length) {
+        if (haystackLower[hi] === needleLower[ni]) ni++;
         hi++;
       }
-      if (ni < n.length) return 0;
+      if (ni < needleLower.length) return 0;
       return 0.1; // subseq match — low score
     }
     // boost prefix matches and word-start matches
-    const boundary = idx === 0 || /\s/.test(h[idx - 1]) ? 2 : 1;
+    const boundary = idx === 0 || /\s/.test(haystackLower[idx - 1]) ? 2 : 1;
     return boundary + (100 - idx) / 100;
   }
 
@@ -21035,11 +21034,11 @@ setTimeout(() => {
     const items = [];
     // Pages
     for (const [id, icon, label] of PAGES) {
-      items.push({ kind: 'Page', icon, label, run: () => window.navigateTo(id) });
+      items.push({ kind: 'Page', icon, label, labelLower: label.toLowerCase(), run: () => window.navigateTo(id) });
     }
     // Actions
     for (const a of ACTIONS) {
-      items.push({ kind: 'Action', icon: a.icon, label: a.label, run: a.run });
+      items.push({ kind: 'Action', icon: a.icon, label: a.label, labelLower: a.label.toLowerCase(), run: a.run });
     }
     // Notes (by title)
     const notes = (window.DATA && DATA.notes) || [];
@@ -21048,7 +21047,7 @@ setTimeout(() => {
       const fallback = (n.text || '').replace(/<[^>]*>/g, '').trim().slice(0, 60);
       const label = t || fallback || 'Untitled note';
       items.push({
-        kind: 'Note', icon: '📝', label,
+        kind: 'Note', icon: '📝', label, labelLower: label.toLowerCase(),
         meta: n.created || '',
         run: () => { window.navigateTo('notes'); setTimeout(() => window.openNoteEditor && window.openNoteEditor(n.id), 80); }
       });
@@ -21059,14 +21058,14 @@ setTimeout(() => {
       if (t.done || t.status === 'done' || t.parentId) continue;
       const label = (t.title || t.text || '').trim();
       if (!label) continue;
-      items.push({ kind: 'Task', icon: '✅', label, run: () => window.navigateTo('tasks') });
+      items.push({ kind: 'Task', icon: '✅', label, labelLower: label.toLowerCase(), run: () => window.navigateTo('tasks') });
     }
     // Projects
     const projects = (window.DATA && DATA.projects) || [];
     for (const p of projects) {
       const label = (p.name || p.title || '').trim();
       if (!label) continue;
-      items.push({ kind: 'Project', icon: '🚀', label, run: () => window.navigateTo('projects') });
+      items.push({ kind: 'Project', icon: '🚀', label, labelLower: label.toLowerCase(), run: () => window.navigateTo('projects') });
     }
     return items;
   }
@@ -21080,7 +21079,9 @@ setTimeout(() => {
       // Empty query: pages + actions only, in declared order
       scored = index.filter(it => it.kind === 'Page' || it.kind === 'Action').map((it, i) => ({ it, s: 1000 - i }));
     } else {
-      scored = index.map(it => ({ it, s: score(it.label, q) })).filter(x => x.s > 0);
+      // ⚡ Bolt: Cache lowercase query to avoid redundant allocations during scoring
+      const qLower = q.toLowerCase();
+      scored = index.map(it => ({ it, s: score(it.labelLower || it.label.toLowerCase(), qLower) })).filter(x => x.s > 0);
       scored.sort((a, b) => b.s - a.s);
       scored = scored.slice(0, 50);
     }
