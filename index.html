@@ -3783,35 +3783,35 @@ body.ui2 #page-jots .jot-search::placeholder{color:var(--u-text-3)}
       <h3 style="font-size:16px;font-weight:700;margin-bottom:20px;">✨ New Smart List</h3>
       <div style="display:flex;gap:10px;margin-bottom:14px;">
         <div style="flex:0 0 auto;">
-          <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Icon</label>
+          <label for="sl-icon-input" style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Icon</label>
           <input id="sl-icon-input" type="text" value="📋" maxlength="2" style="width:52px;text-align:center;font-size:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;">
         </div>
         <div style="flex:1;">
-          <label style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Name</label>
+          <label for="sl-name-input" style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Name</label>
           <input id="sl-name-input" type="text" placeholder="My Smart List" style="width:100%;box-sizing:border-box;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
         </div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Filter Rules</div>
       <div style="display:grid;gap:10px;">
         <div class="ui-row">
-          <label class="ui-key is-col">Min Priority Score</label>
+          <label class="ui-key is-col" for="sl-rule-minscore">Min Priority Score</label>
           <input id="sl-rule-minscore" type="number" min="1" max="25" placeholder="e.g. 9" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Context</label>
+          <label class="ui-key is-col" for="sl-rule-context">Context</label>
           <select id="sl-rule-context" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
             <option value="">Any</option>
           </select>
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Project</label>
+          <label class="ui-key is-col" for="sl-rule-project">Project</label>
           <select id="sl-rule-project" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
             <option value="__any__">Any</option>
             <option value="">No project</option>
           </select>
         </div>
         <div class="ui-row">
-          <label class="ui-key is-col">Due within (days)</label>
+          <label class="ui-key is-col" for="sl-rule-duesoon">Due within (days)</label>
           <input id="sl-rule-duesoon" type="number" min="0" max="365" placeholder="e.g. 0=today" style="width:80px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
         </div>
         <div class="ui-row">
