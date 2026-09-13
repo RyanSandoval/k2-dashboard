@@ -3989,7 +3989,7 @@ function k2ToolTile(t) {
   const badge = n > 0 ? `<span class="tile-count">${n > 99 ? '99+' : n}</span>` : '';
   // .mobile-more-item is the hook navigateTo()/mobileNavMore() mark the current page with.
   return `<button class="tile mobile-more-item${n > 0 ? ' is-live' : ''}" data-page="${t.page}"
-     onclick="k2Launch('${t.page}')" title="${escapeHtml(t.label)}">
+     onclick="k2Launch('${t.page}')" title="${escapeHtml(t.label)}" data-search="${escapeHtml(t.label).toLowerCase()}">
      ${badge}<span class="tile-ic">${t.icon}</span><span class="tile-nm">${escapeHtml(t.label)}</span></button>`;
 }
 
@@ -4001,12 +4001,12 @@ function renderLauncher() {
   const head = `
     <div class="launcher-hd">
       <input class="launcher-search" type="search" placeholder="Jump to anything"
-        oninput="k2FilterLauncher(this.value)" aria-label="Filter tools">
+        oninput="debouncedK2FilterLauncher(this.value)" aria-label="Filter tools">
       <p class="launcher-sub">${K2_TOOLS.length} tools · ${live.length} have something in them</p>
     </div>`;
   const actions = `<div class="launcher-group"><div class="launcher-ghd"><span>Do</span><hr></div>
     <div class="launcher-grid">${K2_ACTIONS.map((a, i) =>
-      `<button class="tile is-action" onclick="k2RunAction(${i})" title="${escapeHtml(a.label)}">
+      `<button class="tile is-action" onclick="k2RunAction(${i})" title="${escapeHtml(a.label)}" data-search="${escapeHtml(a.label).toLowerCase()}">
          <span class="tile-ic">${a.icon}</span><span class="tile-nm">${escapeHtml(a.label)}</span></button>`
     ).join('')}</div></div>`;
   const groups = K2_GROUPS.map(([key, name]) => {
@@ -4019,10 +4019,12 @@ function renderLauncher() {
   el.innerHTML = head + actions + groups;
 }
 
+const debouncedK2FilterLauncher = debounce((q) => k2FilterLauncher(q), 250);
+
 function k2FilterLauncher(q) {
   const needle = (q || '').trim().toLowerCase();
   document.querySelectorAll('#launcher-grid .tile').forEach(tile => {
-    const nm = (tile.querySelector('.tile-nm')?.textContent || '').toLowerCase();
+    const nm = tile.getAttribute('data-search') || '';
     tile.classList.toggle('is-hidden', !!needle && !nm.includes(needle));
   });
   document.querySelectorAll('#launcher-grid .launcher-group').forEach(g => {
