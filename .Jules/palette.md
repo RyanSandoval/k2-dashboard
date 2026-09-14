@@ -8,3 +8,7 @@
 ## 2024-08-17 - Added aria-labels to orphaned inputs
 **Learning:** Found a pattern of orphaned search/capture input fields without labels in index.html (relying solely on placeholders). Placeholders are insufficient for screen readers as accessible names.
 **Action:** When adding new inputs, always include a corresponding `<label>` element or, if visually hidden, an `aria-label` attribute.
+
+## 2024-05-24 - Link form labels to inputs in modals
+**Learning:** Custom-built modals in the application lacked explicit `for` attributes on form labels connecting them to their inputs. This resulted in poor accessibility and users missing the click-to-focus functionality. This happens frequently when custom modals are quickly built to collect simple input.
+**Action:** When adding or modifying form fields, particularly in custom UI modals, always explicitly link the `<label>` to its corresponding input element using matching `for` and `id` attributes. This ensures click-to-focus functionality and robust screen reader accessibility.
