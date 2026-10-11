@@ -4827,7 +4827,7 @@ function navigateTo(page) {
   if (page === 'trading') { renderTrading(); renderCombinedMm(); }
   if (page === 'growth') renderGrowth();
   if (page === 'clips') renderClips();
-  if (page === 'dashboard') { renderFloatingDecisions(); renderSessionResidue(); renderTaskHeatmap(); }
+  if (page === 'dashboard') { renderDashboard(); renderFloatingDecisions(); renderSessionResidue(); renderTaskHeatmap(); }
 }
 
 function renderJiraLedger() {
@@ -8330,6 +8330,9 @@ function renderDashWaitingFor() {
 }
 
 function renderDashboard() {
+  const dashPage = document.getElementById('page-dashboard');
+  if (dashPage && !dashPage.classList.contains('active')) return;
+
   const today = getTodayStr();
   const now = new Date();
   const hour = now.getHours();
