@@ -4489,6 +4489,39 @@ const SERVER_OWNED_KEYS = new Set([
   'reminderActionsMeta', 'pushSubscriptionsMeta',
 ]);
 
+// User-set flags on server-owned rows: the server row stays the base, the listed fields cross
+// over only when the local stamp is newer. Arrays match by id on `flagsAt` (_stampUserFlags);
+// staleJotState matches by key on `handledAt`. Keyed on the stamp so an un-set persists too.
+const _ROW_FLAGS = ['handled', 'handledAt', 'dismissed', 'dismissedAt', 'pinned', 'pinnedAt',
+  'demoted', 'demotedAt', 'archived', 'archivedAt', 'archivedHard', 'flagsAt'];
+const USER_FLAG_FIELDS = {
+  actionInbox: _ROW_FLAGS,
+  floatingDecisions: [..._ROW_FLAGS, 'logged', 'loggedAt'],
+  specOpenQuestions: [..._ROW_FLAGS, 'status', 'confirmedAt', 'overrideText'],
+};
+
+function _stampUserFlags(item) { item.flagsAt = new Date().toISOString(); }
+
+function _mergeUserFlags(k, local, server) {
+  if (k === 'staleJotState') {
+    // No cron writes this key, so a newer local entry is taken whole.
+    const out = Object.assign({}, server);
+    for (const [key, l] of Object.entries(local || {})) {
+      if (l && l.handledAt && !(out[key] && out[key].handledAt >= l.handledAt)) out[key] = l;
+    }
+    return out;
+  }
+  if (!Array.isArray(local) || !Array.isArray(server)) return server;
+  const byId = new Map(local.map(r => [r && r.id, r]));
+  return server.map(s => {
+    const l = s && byId.get(s.id);
+    if (!l || !l.flagsAt || (s.flagsAt && s.flagsAt >= l.flagsAt)) return s;
+    const out = Object.assign({}, s);
+    for (const f of USER_FLAG_FIELDS[k]) { if (f in l) out[f] = l[f]; else delete out[f]; }
+    return out;
+  });
+}
+
 async function saveData() {
   if (!GH_TOKEN) { console.warn('[K2] saveData: No GH_TOKEN set'); return; }
   const syncEl = document.getElementById('last-sync');
@@ -4506,7 +4539,8 @@ async function saveData() {
       // in-memory DATA; leave every user-edited key untouched so it persists.
       for (const k of Object.keys(server)) {
         if (SIDECAR_KEYS.has(k)) continue;   // cron-snapshot.json owns these, not data.json
-        if (SERVER_OWNED_KEYS.has(k) || !(k in DATA)) DATA[k] = server[k];
+        if (Object.hasOwn(USER_FLAG_FIELDS, k) || k === 'staleJotState') DATA[k] = _mergeUserFlags(k, DATA[k], server[k]);
+        else if (SERVER_OWNED_KEYS.has(k) || !(k in DATA)) DATA[k] = server[k];
       }
       // Write back whatever the server already had for the sidecar keys, so this save is
       // a no-op for them rather than pushing the snapshot into data.json.
@@ -5751,6 +5785,7 @@ async function actionInboxHandled(id) {
   item.handledAt = new Date().toISOString();
   item.dismissed = false;
   item.dismissedAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('Marked handled');
@@ -5764,6 +5799,7 @@ async function actionInboxDismiss(id) {
   item.dismissedAt = new Date().toISOString();
   item.handled = false;
   item.handledAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('Dismissed');
@@ -5777,6 +5813,7 @@ async function actionInboxRestore(id) {
   item.handledAt = null;
   item.dismissed = false;
   item.dismissedAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('Restored');
@@ -5791,6 +5828,7 @@ async function actionInboxPin(id) {
   // Pinning clears demote (mutually exclusive)
   item.demoted = false;
   item.demotedAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('⭐ Pinned to top');
@@ -5802,6 +5840,7 @@ async function actionInboxUnpin(id) {
   if (!item) return;
   item.pinned = false;
   item.pinnedAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('Unpinned');
@@ -5816,6 +5855,7 @@ async function actionInboxDemote(id) {
   // Demoting clears pin (mutually exclusive)
   item.pinned = false;
   item.pinnedAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('⬇ Sent to bottom');
@@ -5827,6 +5867,7 @@ async function actionInboxUndemote(id) {
   if (!item) return;
   item.demoted = false;
   item.demotedAt = null;
+  _stampUserFlags(item);
   await saveData();
   renderActionInbox();
   showToast?.('Restored from demoted');
@@ -7042,6 +7083,12 @@ function _staleJotsSetState(key, patch) {
   });
 }
 
+// Undo leaves a fresh, flagless entry rather than deleting the key: saveData() only carries
+// staleJotState entries with a newer handledAt, so a deleted key never reaches the server.
+function _staleJotsUnset(key) {
+  DATA.staleJotState[key] = { handledAt: new Date().toISOString() };
+}
+
 async function staleJotConvertToTask(key) {
   const item = _staleJotsResolveItem(key);
   if (!item) return;
@@ -7195,7 +7242,7 @@ async function staleJotDiscard(key) {
     if (priorContent && DATA.dailyDocs?.[item.date]) {
       DATA.dailyDocs[item.date].content = priorContent;
     }
-    if (DATA.staleJotState?.[key]) delete DATA.staleJotState[key];
+    if (DATA.staleJotState?.[key]) _staleJotsUnset(key);
     await saveData();
     renderStaleJots();
     if (typeof renderJots === 'function') renderJots();
@@ -7257,8 +7304,10 @@ function _triageSnapshot() {
 }
 
 function _triageRestore(s) {
+  const prev = DATA.staleJotState || {};
   DATA.tasks = s.tasks;
   DATA.staleJotState = s.state;
+  for (const k in prev) if (!(k in s.state)) _staleJotsUnset(k);
   s.docs.forEach(e => { e.d.content = e.content; e.d.updatedAt = e.updatedAt; });
   s.notes.forEach(e => { e.n.text = e.text; e.n.updatedAt = e.updatedAt; });
   K2Triage.cursor = s.cursor;
@@ -7334,7 +7383,7 @@ async function staleJotsBulkAction(action) {
     K2Archive.toast({ message: `Jot discarded (${n})`, undoFn: async () => {
       for (const [k, v] of Object.entries(priorByKey)) {
         if (v.prior && DATA.dailyDocs?.[v.date]) DATA.dailyDocs[v.date].content = v.prior;
-        if (DATA.staleJotState?.[k]) delete DATA.staleJotState[k];
+        if (DATA.staleJotState?.[k]) _staleJotsUnset(k);
       }
       await saveData();
       renderStaleJots();
@@ -8032,6 +8081,7 @@ async function confirmSpecQuestion(id) {
   if (!q) return;
   q.status = 'confirmed';
   q.confirmedAt = new Date().toISOString();
+  _stampUserFlags(q);
   await saveData();
   showToast?.('✓ Marked confirmed — cron will stamp the spec file on next pass (~30 min).');
   renderSpecOpenQuestionsPanel();
@@ -8054,6 +8104,7 @@ async function overrideSpecQuestion(id) {
       q.status = 'overridden';
       q.overrideText = v;
       q.confirmedAt = new Date().toISOString();
+      _stampUserFlags(q);
       await saveData();
       showToast?.('✓ Override saved — cron will rewrite the line on next pass.');
     }
@@ -15557,6 +15608,7 @@ function _fdLog(id, text) {
   if (!item) return;
   item.logged = true;
   item.loggedAt = new Date().toISOString();
+  _stampUserFlags(item);
   if (!Array.isArray(DATA.decisions)) DATA.decisions = [];
   DATA.decisions.push({
     id: 'dec-' + Date.now().toString(36),
@@ -15577,6 +15629,7 @@ function _fdDismiss(id) {
   if (!item) return;
   item.dismissed = true;
   item.dismissedAt = new Date().toISOString();
+  _stampUserFlags(item);
   saveData();
   renderFloatingDecisions();
   showToast?.('Dismissed');
@@ -20681,6 +20734,7 @@ setTimeout(() => {
       fresh.archived = true;
       fresh.archivedAt = nowIso;
       if (hard) fresh.archivedHard = true; else delete fresh.archivedHard;
+      _stampUserFlags(fresh);
     };
 
     applyArchiveFlag();
@@ -20716,6 +20770,7 @@ setTimeout(() => {
             f.archived = false;
             delete f.archivedAt;
             delete f.archivedHard;
+            _stampUserFlags(f);
           };
           restoreFlag();
           await saveWithRetry(restoreFlag);
@@ -20736,6 +20791,7 @@ setTimeout(() => {
           if (!f) return;
           f.archived = false;
           delete f.archivedAt;
+          _stampUserFlags(f);
         };
         restoreFlag();
         await saveWithRetry(restoreFlag);
@@ -20760,6 +20816,7 @@ setTimeout(() => {
       f.archived = false;
       delete f.archivedAt;
       delete f.archivedHard;
+      _stampUserFlags(f);
     };
     restoreFlag();
     await saveWithRetry(restoreFlag);
